@@ -1,0 +1,100 @@
+from __future__ import annotations
+
+import structlog
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.config import get_settings
+from app.logging import configure_logging
+
+logger = structlog.get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # type: ignore[type-arg]
+    configure_logging()
+    settings = get_settings()
+    logger.info("starting up", env=settings.APP_ENV)
+
+    # Import lazily to avoid module-level engine creation in tests
+    from app.db.session import engine
+    from app.models.order import Base as OrderBase
+    from app.models.event_log import Base as EventBase
+    from app.models.product import Base as ProductBase
+    from app.models.admin_user import Base as AdminUserBase
+    from app.models.ticket import Base as TicketBase
+    from app.models.webhook_event import Base as WebhookEventBase      # Sprint 10
+    from app.models.channel_order import Base as ChannelOrderBase      # Sprint 10
+    from app.models.publish_job import Base as PublishJobBase          # Sprint 12
+    from app.models.market_price import Base as MarketPriceBase        # Sprint 13
+    from app.models.supplier_order import Base as SupplierOrderBase     # Sprint 14
+    from app.models.trend_product import Base as TrendProductBase       # Sprint 15
+    from app.models.product_candidate import Base as ProductCandidateBase  # Sprint 15
+    from app.models.alert import Base as AlertBase                      # Sprint 16
+    from app.models.product_candidate_v2 import Base as CandidateV2Base  # Sprint 17
+    from app.models.trend_signal_v2 import Base as TrendSignalV2Base      # Sprint 18
+
+    async with engine.begin() as conn:
+        await conn.run_sync(OrderBase.metadata.create_all)
+        await conn.run_sync(EventBase.metadata.create_all)
+        await conn.run_sync(ProductBase.metadata.create_all)
+        await conn.run_sync(AdminUserBase.metadata.create_all)
+        await conn.run_sync(TicketBase.metadata.create_all)
+        await conn.run_sync(WebhookEventBase.metadata.create_all)      # Sprint 10
+        await conn.run_sync(ChannelOrderBase.metadata.create_all)      # Sprint 10
+        await conn.run_sync(PublishJobBase.metadata.create_all)        # Sprint 12
+        await conn.run_sync(MarketPriceBase.metadata.create_all)       # Sprint 13
+        await conn.run_sync(SupplierOrderBase.metadata.create_all)      # Sprint 14
+        await conn.run_sync(TrendProductBase.metadata.create_all)       # Sprint 15
+        await conn.run_sync(ProductCandidateBase.metadata.create_all)   # Sprint 15
+        await conn.run_sync(AlertBase.metadata.create_all)              # Sprint 16
+        await conn.run_sync(CandidateV2Base.metadata.create_all)       # Sprint 17
+        await conn.run_sync(TrendSignalV2Base.metadata.create_all)     # Sprint 18
+
+    logger.info("database tables ensured")
+    yield
+    logger.info("shutting down")
+    await engine.dispose()
+
+
+def create_app(use_lifespan: bool = True) -> FastAPI:
+    configure_logging()
+    settings = get_settings()
+
+    from app.webhooks.shopify import router as shopify_router
+    from app.webhooks.ingress import router as ingress_router       # Sprint 10
+    from app.routers.admin import router as admin_router
+    from app.routers.tools import router as tools_router            # Phase 15
+    from app.routers.devtools import router as devtools_router      # Phase 16
+    from app.routers.orchestration import router as orchestration_router  # Phase 17
+
+    app = FastAPI(
+        title="KBeauty AutoCommerce API",
+        version="0.7.0",
+        debug=settings.DEBUG,
+        lifespan=lifespan if use_lifespan else None,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.include_router(shopify_router,       prefix="/webhooks/shopify", tags=["webhooks-legacy"])
+    app.include_router(ingress_router,       prefix="/webhook",          tags=["webhooks"])      # Sprint 10
+    app.include_router(admin_router,         prefix="/admin",            tags=["admin"])
+    app.include_router(tools_router,         prefix="/tools",            tags=["tools"])         # Phase 15
+    app.include_router(devtools_router,      prefix="/devtools",         tags=["devtools"])      # Phase 16
+    app.include_router(orchestration_router, prefix="/orchestration",    tags=["orchestration"]) # Phase 17
+
+    @app.get("/health", tags=["ops"])
+    async def health() -> dict[str, str]:
+        return {"status": "ok", "env": settings.APP_ENV}
+
+    return app
+
+
+app = create_app()

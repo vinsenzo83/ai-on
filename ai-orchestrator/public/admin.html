@@ -1,0 +1,2356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 오케스트레이터 — Admin</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{font-size:14px}
+    body{font-family:'Inter',sans-serif;background:#0a0a14;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column}
+    a{color:inherit;text-decoration:none}
+    button{cursor:pointer;font-family:inherit}
+    input,select,textarea{font-family:inherit}
+
+    /* ── Login ── */
+    #login-page{display:flex;align-items:center;justify-content:center;min-height:100vh;
+      background:radial-gradient(ellipse at 30% 50%,rgba(109,40,217,.15) 0%,transparent 60%),
+                 radial-gradient(ellipse at 70% 20%,rgba(219,39,119,.10) 0%,transparent 50%),#0a0a14}
+    #login-page.hidden{display:none}
+    .login-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);border-radius:20px;
+      padding:40px 44px;width:400px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+    .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;justify-content:center}
+    .login-logo-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#db2777);
+      display:flex;align-items:center;justify-content:center;font-size:20px}
+    .login-logo-text{font-size:18px;font-weight:800}
+    .login-logo-badge{font-size:10px;font-weight:800;background:#ef4444;color:#fff;padding:2px 6px;border-radius:6px;margin-left:4px}
+    .login-title{font-size:22px;font-weight:800;text-align:center;margin-bottom:6px}
+    .login-sub{font-size:13px;color:#6b7280;text-align:center;margin-bottom:28px}
+    .f-group{margin-bottom:16px}
+    .f-label{display:block;font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:6px}
+    .f-input{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;
+      padding:10px 14px;color:#e2e8f0;font-size:14px;outline:none}
+    .f-input:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+    .btn-login{width:100%;padding:12px;border-radius:10px;border:none;
+      background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-size:14px;font-weight:700;transition:opacity .15s;margin-top:4px}
+    .btn-login:hover{opacity:.9}
+    #login-err{margin-top:14px;padding:10px 14px;border-radius:8px;background:rgba(239,68,68,.15);
+      border:1px solid rgba(239,68,68,.3);color:#f87171;font-size:13px;display:none}
+    .login-hint{margin-top:16px;text-align:center;font-size:11px;color:#374151}
+    .login-hint code{background:rgba(255,255,255,.06);border-radius:4px;padding:1px 5px;color:#6b7280}
+
+    /* ── Admin Layout ── */
+    #admin-page{display:none;flex-direction:column;min-height:100vh}
+    #admin-page.show{display:flex}
+
+    /* Header */
+    .adm-hdr{height:52px;background:#0f0f20;border-bottom:1px solid rgba(255,255,255,.06);
+      display:flex;align-items:center;padding:0 16px;gap:12px;position:sticky;top:0;z-index:100;flex-shrink:0}
+    .adm-logo{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:#a78bfa;white-space:nowrap}
+    .adm-logo-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#db2777);
+      display:flex;align-items:center;justify-content:center;font-size:14px}
+    .adm-logo-badge{font-size:9px;font-weight:900;background:#ef4444;color:#fff;padding:1px 5px;border-radius:4px}
+    .adm-sep{width:1px;height:24px;background:rgba(255,255,255,.08);flex-shrink:0}
+    .adm-hnav{display:flex;gap:2px;overflow-x:auto}
+    .adm-htab{padding:5px 11px;border-radius:7px;border:none;background:none;color:#6b7280;
+      font-size:11px;font-weight:600;transition:all .15s;white-space:nowrap}
+    .adm-htab:hover{background:rgba(255,255,255,.06);color:#e2e8f0}
+    .adm-htab.on{background:rgba(139,92,246,.15);color:#a78bfa}
+    .adm-hspace{flex:1}
+    .adm-huser{display:flex;align-items:center;gap:8px;flex-shrink:0}
+    .adm-hname{font-size:12px;color:#94a3b8;white-space:nowrap}
+    .adm-hrole{font-size:10px;font-weight:700;background:rgba(239,68,68,.2);color:#f87171;padding:2px 7px;border-radius:99px}
+    .adm-hdot{width:7px;height:7px;border-radius:50%;background:#10b981}
+    .adm-hlogout{padding:4px 10px;border-radius:7px;border:none;background:rgba(255,255,255,.07);color:#94a3b8;font-size:11px}
+    .adm-hlogout:hover{background:rgba(239,68,68,.2);color:#f87171}
+
+    /* Body */
+    .adm-body{display:flex;flex:1;overflow:hidden}
+
+    /* Sidebar */
+    .adm-side{width:190px;min-width:190px;background:#0f0f20;border-right:1px solid rgba(255,255,255,.06);
+      padding:12px 0;display:flex;flex-direction:column;overflow-y:auto}
+    .adm-nav-sec{font-size:9px;font-weight:800;color:#374151;padding:8px 14px 4px;letter-spacing:1px;text-transform:uppercase}
+    .adm-nbtn{display:flex;align-items:center;gap:8px;padding:8px 14px;background:none;border:none;
+      color:#6b7280;font-size:12px;cursor:pointer;text-align:left;border-right:3px solid transparent;
+      transition:all .15s;width:100%}
+    .adm-nbtn:hover{background:rgba(255,255,255,.04);color:#e2e8f0}
+    .adm-nbtn.on{background:rgba(139,92,246,.12);color:#a78bfa;border-right-color:#a78bfa}
+    .adm-nicon{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+    .adm-ndiv{height:1px;background:rgba(255,255,255,.06);margin:8px 14px}
+    .adm-nbtn-danger{color:#f87171!important}
+    .adm-nbtn-danger:hover{background:rgba(239,68,68,.1)!important}
+    .adm-side-foot{padding:10px 14px;margin-top:auto}
+    .adm-side-link{display:flex;align-items:center;gap:6px;color:#374151;font-size:11px;padding:6px 8px;border-radius:6px;transition:color .15s}
+    .adm-side-link:hover{color:#6b7280}
+
+    /* Content */
+    .adm-cnt{flex:1;padding:24px;overflow-y:auto}
+    .adm-sec{display:none}
+    .adm-sec.on{display:block}
+    .adm-sec-title{font-size:18px;font-weight:700;color:#e2e8f0;margin:0 0 20px;display:flex;align-items:center;gap:8px}
+    .adm-sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+
+    /* KPI */
+    .kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+    @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+    .kpi-card{border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px;border:1px solid rgba(255,255,255,.08)}
+    .kpi-icon{font-size:18px}.kpi-val{font-size:24px;font-weight:800;color:#f1f5f9;line-height:1.1}.kpi-lbl{font-size:11px;color:#94a3b8}
+    .kb{background:linear-gradient(135deg,rgba(59,130,246,.15),rgba(59,130,246,.04));border-color:rgba(59,130,246,.2)}
+    .kg{background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(16,185,129,.04));border-color:rgba(16,185,129,.2)}
+    .kp{background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(139,92,246,.04));border-color:rgba(139,92,246,.2)}
+    .ka{background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.04));border-color:rgba(245,158,11,.2)}
+    .kc{background:linear-gradient(135deg,rgba(6,182,212,.15),rgba(6,182,212,.04));border-color:rgba(6,182,212,.2)}
+    .kr{background:linear-gradient(135deg,rgba(244,63,94,.15),rgba(244,63,94,.04));border-color:rgba(244,63,94,.2)}
+
+    /* Two-col */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+    @media(max-width:900px){.two-col{grid-template-columns:1fr}}
+
+    /* Card */
+    .adm-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:18px;margin-bottom:16px}
+    .adm-card-title{font-size:13px;font-weight:600;color:#c4b5fd;margin:0 0 14px;display:flex;align-items:center;gap:6px}
+
+    /* Btn */
+    .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:8px;border:none;
+      font-size:11px;font-weight:600;transition:all .15s;white-space:nowrap}
+    .btn-p{background:#6d28d9;color:#fff}.btn-p:hover{background:#7c3aed}
+    .btn-w{background:#d97706;color:#fff}.btn-w:hover{background:#f59e0b}
+    .btn-d{background:#dc2626;color:#fff}.btn-d:hover{background:#ef4444}
+    .btn-s{background:#059669;color:#fff}.btn-s:hover{background:#10b981}
+    .btn-g{background:rgba(255,255,255,.07);color:#94a3b8}.btn-g:hover{background:rgba(255,255,255,.12);color:#e2e8f0}
+    .btn-sm{padding:3px 9px;font-size:10px}
+    .btn-lg{padding:10px 22px;font-size:13px}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+
+    /* Input */
+    .inp{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;
+      padding:7px 11px;color:#e2e8f0;font-size:12px;outline:none;width:100%}
+    .inp:focus{border-color:#6d28d9}
+    .inp option{background:#1a1a35}
+    .inp-ta{resize:vertical;min-height:80px}
+    .search-row{display:flex;gap:8px;align-items:center}
+    .search-row .inp{width:240px}
+
+    /* Table */
+    .tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid rgba(255,255,255,.06)}
+    .tbl{width:100%;border-collapse:collapse;font-size:11px}
+    .tbl thead tr{background:#1a1a35}
+    .tbl th{padding:10px 12px;text-align:left;color:#94a3b8;font-weight:600;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.06)}
+    .tbl td{padding:9px 12px;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+    .tbl tbody tr:hover{background:rgba(255,255,255,.03)}
+    .td-empty{text-align:center;color:#4b5563;padding:24px!important}
+
+    /* Badges */
+    .badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:700}
+    .br-admin{background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+    .br-moderator{background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.3)}
+    .br-user{background:rgba(99,102,241,.2);color:#818cf8;border:1px solid rgba(99,102,241,.3)}
+    .br-guest{background:rgba(107,114,128,.2);color:#9ca3af;border:1px solid rgba(107,114,128,.3)}
+    .bs-waiting{background:rgba(107,114,128,.2);color:#9ca3af}
+    .bs-running{background:rgba(59,130,246,.2);color:#60a5fa}
+    .bs-completed,.bs-active{background:rgba(16,185,129,.2);color:#34d399}
+    .bs-failed{background:rgba(239,68,68,.2);color:#f87171}
+    .bs-draft{background:rgba(107,114,128,.2);color:#9ca3af}
+
+    /* Progress */
+    .prog{background:rgba(255,255,255,.07);border-radius:4px;height:5px;overflow:hidden;display:inline-block}
+    .prog-fill{height:100%;background:linear-gradient(90deg,#6d28d9,#8b5cf6);border-radius:4px}
+
+    /* Job stat */
+    .jstat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+    .jstat{background:rgba(255,255,255,.04);border-radius:8px;padding:10px;text-align:center}
+    .jstat-val{font-size:22px;font-weight:800;color:#f1f5f9}
+    .jstat-lbl{font-size:10px;color:#6b7280;margin-top:2px}
+
+    /* Mini list */
+    .mini-list{display:flex;flex-direction:column;gap:8px}
+    .mini-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px}
+    .mini-ico{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-size:12px;background:rgba(139,92,246,.2);flex-shrink:0}
+    .mini-info{flex:1;min-width:0}
+    .mini-name{color:#e2e8f0;font-weight:600;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mini-sub{color:#6b7280;font-size:10px;margin-top:1px}
+    .mini-time{color:#4b5563;font-size:10px;white-space:nowrap}
+
+    /* Sys grid */
+    .sys-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    @media(max-width:800px){.sys-grid{grid-template-columns:repeat(2,1fr)}}
+    .sys-item{background:rgba(255,255,255,.04);border-radius:8px;padding:10px 12px}
+    .sys-key{font-size:10px;color:#6b7280;margin-bottom:3px}
+    .sys-val{font-size:13px;font-weight:700;color:#e2e8f0}
+
+    /* Form */
+    .fg{margin-bottom:14px}
+    .fl{display:block;font-size:11px;color:#94a3b8;margin-bottom:5px;font-weight:600}
+
+    /* Result */
+    .res-msg{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:12px}
+    .res-ok{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#34d399}
+    .res-err{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171}
+    .res-warn{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#fbbf24}
+
+    /* API Key */
+    .key-display{background:rgba(0,0,0,.4);border:1px solid rgba(139,92,246,.3);border-radius:8px;
+      padding:10px 14px;font-family:monospace;font-size:12px;color:#a78bfa;word-break:break-all;
+      display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .key-copy{background:rgba(139,92,246,.2);border:none;color:#a78bfa;padding:4px 8px;border-radius:5px;font-size:10px;cursor:pointer;flex-shrink:0}
+    .key-copy:hover{background:rgba(139,92,246,.4)}
+
+    /* Toast */
+    .toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:#1e293b;border-radius:10px;
+      padding:14px 18px;max-width:340px;box-shadow:0 8px 30px rgba(0,0,0,.5);animation:slideUp .3s ease}
+    @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+    /* 토글 스위치 */
+    .toggle-switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0}
+    .toggle-switch input{opacity:0;width:0;height:0}
+    .toggle-slider{position:absolute;cursor:pointer;inset:0;background:#374151;border-radius:22px;transition:.3s}
+    .toggle-slider::before{content:'';position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+    .toggle-switch input:checked + .toggle-slider{background:#22c55e}
+    .toggle-switch input:checked + .toggle-slider::before{transform:translateX(18px)}
+
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px}
+  </style>
+</head>
+<body>
+
+<!-- ── Login ── -->
+<div id="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">🛡️</div>
+      <div>
+        <span class="login-logo-text">AI 오케스트레이터</span>
+        <span class="login-logo-badge">ADMIN</span>
+      </div>
+    </div>
+    <div class="login-title">관리자 로그인</div>
+    <div class="login-sub">어드민 계정으로 로그인하세요</div>
+    <div class="f-group"><label class="f-label">아이디 / 이메일</label><input id="l-user" class="f-input" type="text" placeholder="admin" autocomplete="username"></div>
+    <div class="f-group"><label class="f-label">비밀번호</label><input id="l-pass" class="f-input" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+    <button id="btn-login" class="btn-login">🔐 로그인</button>
+    <div id="login-err"></div>
+    <div class="login-hint">기본 계정: <code>admin</code> / <code>admin1234</code></div>
+  </div>
+</div>
+
+<!-- ── Admin Page ── -->
+<div id="admin-page">
+  <!-- Header -->
+  <header class="adm-hdr">
+    <div class="adm-logo"><div class="adm-logo-icon">🛡️</div>Admin Panel<span class="adm-logo-badge">ADMIN</span></div>
+    <div class="adm-sep"></div>
+    <nav class="adm-hnav">
+      <button class="adm-htab on" data-sec="overview">📊 현황</button>
+      <button class="adm-htab" data-sec="users">👥 사용자</button>
+      <button class="adm-htab" data-sec="jobs">⚙️ 잡</button>
+      <button class="adm-htab" data-sec="costs">💰 비용</button>
+      <button class="adm-htab" data-sec="beta">🚀 베타 관리</button>
+      <button class="adm-htab" data-sec="apikeys">🔑 API 키</button>
+      <button class="adm-htab" data-sec="apiconfig">⚙️ API 등록</button>
+      <button class="adm-htab" data-sec="models">🤖 모델 관리</button>
+      <button class="adm-htab" data-sec="pipelines">🧩 파이프라인</button>
+      <button class="adm-htab" data-sec="audit">📋 감사</button>
+      <button class="adm-htab" data-sec="system">🖥️ 시스템</button>
+      <button class="adm-htab" data-sec="broadcast">📢 공지</button>
+    </nav>
+    <div class="adm-hspace"></div>
+    <div class="adm-huser">
+      <div class="adm-hdot" title="서버 온라인"></div>
+      <span class="adm-hname" id="adm-username">—</span>
+      <span class="adm-hrole">ADMIN</span>
+      <button id="btn-logout" class="adm-hlogout">로그아웃</button>
+    </div>
+  </header>
+
+  <!-- Body -->
+  <div class="adm-body">
+    <!-- Sidebar -->
+    <nav class="adm-side">
+      <div class="adm-nav-sec">대시보드</div>
+      <button class="adm-nbtn on" data-sec="overview"><span class="adm-nicon">📊</span>전체 현황</button>
+      <div class="adm-nav-sec">관리</div>
+      <button class="adm-nbtn" data-sec="users"><span class="adm-nicon">👥</span>사용자</button>
+      <button class="adm-nbtn" data-sec="jobs"><span class="adm-nicon">⚙️</span>잡 관리</button>
+      <button class="adm-nbtn" data-sec="pipelines"><span class="adm-nicon">🧩</span>파이프라인</button>
+      <button class="adm-nbtn" data-sec="apikeys"><span class="adm-nicon">🔑</span>API 키 관리</button>
+      <button class="adm-nbtn" data-sec="apiconfig"><span class="adm-nicon">⚙️</span>API 등록관리</button>
+      <button class="adm-nbtn" data-sec="models"><span class="adm-nicon">🤖</span>모델 화이트리스트</button>
+      <div class="adm-nav-sec">분석</div>
+      <button class="adm-nbtn" data-sec="costs"><span class="adm-nicon">💰</span>비용 분석</button>
+      <button class="adm-nbtn" data-sec="audit"><span class="adm-nicon">📋</span>감사 로그</button>
+      <button class="adm-nbtn" data-sec="system"><span class="adm-nicon">🖥️</span>시스템</button>
+      <div class="adm-ndiv"></div>
+      <button class="adm-nbtn" data-sec="broadcast"><span class="adm-nicon">📢</span>공지 발송</button>
+      <div class="adm-ndiv"></div>
+      <button class="adm-nbtn adm-nbtn-danger" id="btn-seed"><span class="adm-nicon">🌱</span>시드 데이터</button>
+      <div class="adm-side-foot">
+        <a href="/" class="adm-side-link">← 메인으로</a>
+      </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="adm-cnt">
+
+      <!-- ① 전체 현황 -->
+      <section class="adm-sec on" id="sec-overview">
+        <h2 class="adm-sec-title">📊 전체 현황</h2>
+        <div class="kpi-grid">
+          <div class="kpi-card kb"><div class="kpi-icon">👥</div><div class="kpi-val" id="kv-users">—</div><div class="kpi-lbl">총 사용자</div></div>
+          <div class="kpi-card kg"><div class="kpi-icon">⚙️</div><div class="kpi-val" id="kv-jobs">—</div><div class="kpi-lbl">총 작업</div></div>
+          <div class="kpi-card kp"><div class="kpi-icon">💰</div><div class="kpi-val" id="kv-cost">—</div><div class="kpi-lbl">총 비용 (USD)</div></div>
+          <div class="kpi-card ka"><div class="kpi-icon">🔢</div><div class="kpi-val" id="kv-tokens">—</div><div class="kpi-lbl">총 토큰</div></div>
+          <div class="kpi-card kc"><div class="kpi-icon">🧩</div><div class="kpi-val" id="kv-pipes">—</div><div class="kpi-lbl">빌더 파이프라인</div></div>
+          <div class="kpi-card kr"><div class="kpi-icon">📋</div><div class="kpi-val" id="kv-audit">—</div><div class="kpi-lbl">감사 로그</div></div>
+        </div>
+        <div class="two-col">
+          <div class="adm-card">
+            <div class="adm-card-title">⚙️ 잡 상태</div>
+            <div class="jstat-grid" id="jstat-grid">로딩 중...</div>
+            <div style="position:relative;height:150px;margin-top:12px"><canvas id="ch-jobs"></canvas></div>
+          </div>
+          <div class="adm-card">
+            <div class="adm-card-title">📈 오늘 시간별 비용</div>
+            <div style="position:relative;height:190px"><canvas id="ch-hourly"></canvas></div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="adm-card">
+            <div class="adm-card-title">👥 최근 가입 사용자</div>
+            <div id="rec-users" class="mini-list">로딩 중...</div>
+          </div>
+          <div class="adm-card">
+            <div class="adm-card-title">⚙️ 최근 작업</div>
+            <div id="rec-jobs" class="mini-list">로딩 중...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ② 사용자 관리 -->
+      <section class="adm-sec" id="sec-users">
+        <div class="adm-sec-hdr">
+          <h2 class="adm-sec-title">👥 사용자 관리</h2>
+          <div class="search-row">
+            <input type="text" id="user-search" class="inp" placeholder="이름/이메일/역할 검색...">
+            <button class="btn btn-p" id="btn-refresh-users">🔄 새로고침</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>ID</th><th>사용자명</th><th>이메일</th><th>역할</th><th>API 키</th><th>마지막 로그인</th><th>가입일</th><th>액션</th></tr></thead>
+            <tbody id="users-tbody"><tr><td colspan="8" class="td-empty">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ③ 잡 관리 -->
+      <section class="adm-sec" id="sec-jobs">
+        <div class="adm-sec-hdr">
+          <h2 class="adm-sec-title">⚙️ 잡 관리</h2>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-w" id="btn-clear-completed">🗑️ 완료 삭제</button>
+            <button class="btn btn-d" id="btn-clear-failed">⚠️ 실패 삭제</button>
+            <button class="btn btn-p" id="btn-refresh-jobs">🔄 새로고침</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>ID</th><th>큐</th><th>파이프라인</th><th>상태</th><th>진행률</th><th>생성시각</th><th>액션</th></tr></thead>
+            <tbody id="jobs-tbody"><tr><td colspan="7" class="td-empty">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ④ 비용 분석 -->
+      <section class="adm-sec" id="sec-costs">
+        <h2 class="adm-sec-title">💰 비용 분석</h2>
+        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+          <div class="kpi-card kb"><div class="kpi-icon">💲</div><div class="kpi-val" id="cv-total">—</div><div class="kpi-lbl">총 비용(USD)</div></div>
+          <div class="kpi-card kg"><div class="kpi-icon">📞</div><div class="kpi-val" id="cv-calls">—</div><div class="kpi-lbl">API 호출</div></div>
+          <div class="kpi-card kp"><div class="kpi-icon">📥</div><div class="kpi-val" id="cv-inputs">—</div><div class="kpi-lbl">입력 토큰</div></div>
+          <div class="kpi-card ka"><div class="kpi-icon">📤</div><div class="kpi-val" id="cv-outputs">—</div><div class="kpi-lbl">출력 토큰</div></div>
+        </div>
+        <div class="two-col">
+          <div class="adm-card"><div class="adm-card-title">📅 일별 비용 (30일)</div><div style="position:relative;height:200px"><canvas id="ch-daily"></canvas></div></div>
+          <div class="adm-card"><div class="adm-card-title">🤖 모델별 비용</div><div style="position:relative;height:200px"><canvas id="ch-models"></canvas></div></div>
+        </div>
+        <div class="adm-card">
+          <div class="adm-card-title">🧩 파이프라인별 비용 Top 10</div>
+          <div style="position:relative;height:220px"><canvas id="ch-pipecost"></canvas></div>
+        </div>
+      </section>
+
+      <!-- ④-B 베타 사용자 관리 -->
+      <section class="adm-sec" id="sec-beta">
+        <div class="adm-sec-hdr">
+          <h2 class="adm-sec-title">🚀 베타 사용자 관리</h2>
+          <button class="btn btn-p" onclick="loadBetaSection()">🔄 새로고침</button>
+        </div>
+
+        <!-- 베타 통계 KPI -->
+        <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px" id="beta-kpi">
+          <div class="kpi-card kb"><div class="kpi-icon">👥</div><div class="kpi-val" id="bk-total">—</div><div class="kpi-lbl">전체 베타 유저</div></div>
+          <div class="kpi-card kg"><div class="kpi-icon">✅</div><div class="kpi-val" id="bk-active">—</div><div class="kpi-lbl">활성 유저</div></div>
+          <div class="kpi-card kp"><div class="kpi-icon">💲</div><div class="kpi-val" id="bk-cost">—</div><div class="kpi-lbl">월 누적 비용</div></div>
+          <div class="kpi-card ka"><div class="kpi-icon">📞</div><div class="kpi-val" id="bk-reqtoday">—</div><div class="kpi-lbl">오늘 요청</div></div>
+          <div class="kpi-card" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)"><div class="kpi-icon">⚠️</div><div class="kpi-val" id="bk-overquota" style="color:#f87171">—</div><div class="kpi-lbl">쿼터 초과</div></div>
+        </div>
+
+        <div class="two-col">
+          <!-- 초대 코드 발급 -->
+          <div class="adm-card">
+            <div class="adm-card-title">🎟️ 초대 코드 발급</div>
+            <div class="fg">
+              <label class="fl">이메일 (선택 – 특정인 초대)</label>
+              <input class="fi" id="inv-email" placeholder="user@example.com (비워두면 누구나 사용 가능)">
+            </div>
+            <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label class="fl">역할</label>
+                <select class="fi" id="inv-role">
+                  <option value="beta">beta</option>
+                  <option value="user">user</option>
+                  <option value="pro">pro</option>
+                </select>
+              </div>
+              <div>
+                <label class="fl">만료일 (선택)</label>
+                <input class="fi" id="inv-expires" type="date">
+              </div>
+            </div>
+            <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label class="fl">발급 개수</label>
+                <input class="fi" id="inv-count" type="number" value="1" min="1" max="20">
+              </div>
+              <div style="display:flex;align-items:flex-end">
+                <button class="btn btn-p" style="width:100%" onclick="createInviteCodes()">🎟️ 발급</button>
+              </div>
+            </div>
+            <div id="inv-result" style="margin-top:10px"></div>
+          </div>
+
+          <!-- 초대 코드 목록 -->
+          <div class="adm-card">
+            <div class="adm-card-title">📋 발급된 초대 코드 <button class="btn btn-s" style="float:right" onclick="loadInviteCodes()">🔄</button></div>
+            <div id="inv-list" style="max-height:260px;overflow-y:auto">
+              <p style="color:#6b7280;text-align:center;padding:20px">로딩 중...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 베타 유저 목록 + 쿼터 -->
+        <div class="adm-card" style="margin-top:16px">
+          <div class="adm-card-title">👥 베타 사용자 목록 & 쿼터 현황</div>
+          <div style="overflow-x:auto">
+            <table class="tbl" id="beta-user-table">
+              <thead><tr>
+                <th>이메일</th><th>역할</th><th>플랜</th><th>활성</th>
+                <th>오늘 요청</th><th>일 한도</th><th>월 비용</th><th>가입일</th><th>액션</th>
+              </tr></thead>
+              <tbody id="beta-user-tbody"><tr><td colspan="9" style="text-align:center;color:#6b7280">로딩 중...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑤ API 키 관리 -->
+      <section class="adm-sec" id="sec-apikeys">
+        <div class="adm-sec-hdr">
+          <h2 class="adm-sec-title">🔑 API 키 관리</h2>
+          <button class="btn btn-p" id="btn-refresh-apikeys">🔄 새로고침</button>
+        </div>
+
+        <!-- 신규 발급 -->
+        <div class="adm-card" style="max-width:560px;margin-bottom:20px">
+          <div class="adm-card-title">➕ API 키 신규 발급</div>
+          <div class="fg">
+            <label class="fl">대상 사용자</label>
+            <select id="apikey-user-sel" class="inp"><option value="">-- 사용자 선택 --</option></select>
+          </div>
+          <button class="btn btn-s" id="btn-gen-apikey">🔑 API 키 발급</button>
+          <div id="gen-result" style="display:none;margin-top:14px">
+            <div class="fl">발급된 키 (한번만 표시됩니다 — 복사해두세요)</div>
+            <div class="key-display">
+              <span id="gen-key-text" style="flex:1">—</span>
+              <button class="key-copy" id="btn-copy-newkey">복사</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 현재 키 목록 -->
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>사용자</th><th>이메일</th><th>역할</th><th>API 키 (마스킹)</th><th>전체 키</th><th>발급일</th><th>액션</th></tr></thead>
+            <tbody id="apikeys-tbody"><tr><td colspan="7" class="td-empty">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ⑥ API 등록관리 -->
+      <section class="adm-sec" id="sec-apiconfig">
+        <div class="adm-sec-hdr">
+          <h2 class="adm-sec-title">⚙️ API 등록관리 <span style="font-size:12px;color:#6b7280;font-weight:400">— 총 33개 모델 / 9개 공급자</span></h2>
+          <button class="btn btn-p" id="btn-refresh-apiconfig">🔄 새로고침</button>
+        </div>
+
+        <!-- 공급자 9개 현황 바 -->
+        <div id="ac-provider-status-bar" style="display:grid;grid-template-columns:repeat(9,1fr);gap:6px;margin-bottom:20px"></div>
+
+        <!-- 탭: 공급자 카드 | API 키 등록 | 모델 우선순위 -->
+        <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:10px">
+          <button class="btn btn-p" id="actab-providers" data-actab="providers">🗂️ 공급자 현황</button>
+          <button class="btn btn-g" id="actab-register"  data-actab="register">➕ API 키 등록</button>
+          <button class="btn btn-g" id="actab-priority"  data-actab="priority">🎯 모델 우선순위</button>
+        </div>
+
+        <!-- 탭: 공급자 현황 -->
+        <div id="ac-tab-providers">
+          <div id="ac-provider-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px"></div>
+        </div>
+
+        <!-- 탭: API 키 등록 -->
+        <div id="ac-tab-register" style="display:none">
+          <div style="max-width:640px">
+            <div class="adm-card">
+              <div class="adm-card-title">➕ API 키 등록 / 업데이트</div>
+              <div class="fg">
+                <label class="fl">공급자 (Provider)</label>
+                <select id="ac-provider" class="inp">
+                  <option value="openai">🤖 OpenAI — GPT-5.2, GPT-5, GPT-5 mini 외 10개</option>
+                  <option value="anthropic">🧠 Anthropic — Claude Opus 4.6, Sonnet 5 외 3개</option>
+                  <option value="google">🔮 Google — Gemini 3 Pro, 2.5 Flash, 3 Flash</option>
+                  <option value="deepseek">🐋 DeepSeek — DeepSeek V3.2, R1, R2</option>
+                  <option value="meta">🦙 Meta (Llama) — Llama 4 Scout, Maverick 외 1개</option>
+                  <option value="xai">⚡ xAI — Grok 4.1, Grok 4.2</option>
+                  <option value="alibaba">🌏 Alibaba — Qwen 3.5 Plus, Max</option>
+                  <option value="moonshot">🌙 Moonshot — Kimi K2.5</option>
+                  <option value="mistral">💫 Mistral AI — Mistral Large 3</option>
+                  <option value="azure">☁️ Azure OpenAI (별도 Base URL 필요)</option>
+                  <option value="openrouter">🌐 OpenRouter (다중 모델 게이트웨이)</option>
+                  <option value="groq">⚡ Groq (고속 추론 인프라)</option>
+                  <option value="custom">🔧 Custom (직접 입력)</option>
+                </select>
+              </div>
+              <div class="fg" id="ac-custom-name-fg" style="display:none">
+                <label class="fl">공급자 이름 (커스텀)</label>
+                <input id="ac-custom-name" class="inp" type="text" placeholder="예: my-llm-provider">
+              </div>
+              <!-- 선택된 공급자 모델 미리보기 -->
+              <div id="ac-model-preview" style="margin-bottom:12px;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06)">
+                <div style="font-size:10px;color:#6b7280;margin-bottom:6px">이 공급자의 등록 모델</div>
+                <div id="ac-model-preview-list" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+              </div>
+              <div class="fg">
+                <label class="fl">API 키 <span id="ac-key-hint" style="color:#6b7280;font-weight:400"></span></label>
+                <div style="display:flex;gap:6px">
+                  <input id="ac-apikey" class="inp" type="password" placeholder="API 키 입력" autocomplete="off">
+                  <button class="btn btn-g btn-sm" id="btn-ac-toggle-show" style="flex-shrink:0;padding:6px 10px">👁</button>
+                </div>
+              </div>
+              <div class="fg" id="ac-baseurl-fg" style="display:none">
+                <label class="fl">Base URL</label>
+                <input id="ac-baseurl" class="inp" type="text" placeholder="https://your-endpoint.openai.azure.com/">
+              </div>
+              <div class="fg">
+                <label class="fl">메모 (선택)</label>
+                <input id="ac-memo" class="inp" type="text" placeholder="프로젝트명, 용도 등">
+              </div>
+              <div style="display:flex;gap:8px;margin-top:4px">
+                <button class="btn btn-s btn-lg" id="btn-ac-save">💾 저장</button>
+                <button class="btn btn-g" id="btn-ac-test">🔬 연결 테스트</button>
+              </div>
+              <div id="ac-result" class="res-msg" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 탭: 모델 우선순위 -->
+        <div id="ac-tab-priority" style="display:none">
+          <div class="adm-card">
+            <div class="adm-card-title">🎯 작업 유형별 기본 모델 설정</div>
+            <p style="font-size:11px;color:#6b7280;margin-bottom:14px">파이프라인 실행 시 용도에 맞는 기본 모델이 자동 선택됩니다.</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="model-priority-grid">
+              <div class="sys-item">
+                <div class="sys-key">🔤 텍스트 생성</div>
+                <select id="mp-text" class="inp" style="margin-top:6px"></select>
+              </div>
+              <div class="sys-item">
+                <div class="sys-key">🔍 분석 / 추론</div>
+                <select id="mp-analysis" class="inp" style="margin-top:6px"></select>
+              </div>
+              <div class="sys-item">
+                <div class="sys-key">💬 채팅 / 대화</div>
+                <select id="mp-chat" class="inp" style="margin-top:6px"></select>
+              </div>
+              <div class="sys-item">
+                <div class="sys-key">💻 코딩 / 개발</div>
+                <select id="mp-code" class="inp" style="margin-top:6px"></select>
+              </div>
+              <div class="sys-item">
+                <div class="sys-key">🎨 창의 글쓰기</div>
+                <select id="mp-creative" class="inp" style="margin-top:6px"></select>
+              </div>
+              <div class="sys-item">
+                <div class="sys-key">⚡ 고속 처리 (라우팅)</div>
+                <select id="mp-fast" class="inp" style="margin-top:6px"></select>
+              </div>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:8px">
+              <button class="btn btn-p" id="btn-save-model-priority">💾 우선순위 저장</button>
+              <button class="btn btn-g" id="btn-load-model-priority">🔄 현재 설정 불러오기</button>
+            </div>
+            <div id="mp-result" class="res-msg" style="display:none"></div>
+          </div>
+
+          <!-- 전체 모델 목록 테이블 -->
+          <div class="adm-card">
+            <div class="adm-card-title">📊 전체 모델 목록 (33개)</div>
+            <div class="tbl-wrap">
+              <table class="tbl" id="all-models-tbl">
+                <thead><tr><th>공급자</th><th>모델 ID</th><th>이름</th><th>티어</th><th>벤치마크</th><th>비용/1k</th><th>응답속도</th><th>컨텍스트</th><th>특기</th><th>상태</th></tr></thead>
+                <tbody id="all-models-tbody"><tr><td colspan="10" class="td-empty">로딩 중...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑦ 모델 화이트리스트 & 우선순위 -->
+      <section class="adm-sec" id="sec-models">
+        <div class="adm-sec-hdr">
+          <h2 class="adm-sec-title">🤖 모델 화이트리스트 & 우선순위 관리</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-p" id="btn-refresh-models">🔄 새로고침</button>
+            <button class="btn btn-s" id="btn-save-whitelist">💾 변경사항 저장</button>
+          </div>
+        </div>
+
+        <!-- 요약 KPI -->
+        <div class="kpi-grid" id="models-kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+          <div class="kpi-card"><div class="kpi-icon">🤖</div><div class="kpi-label">전체 모델</div><div class="kpi-val" id="kpi-models-total">—</div></div>
+          <div class="kpi-card"><div class="kpi-icon">✅</div><div class="kpi-label">활성 모델</div><div class="kpi-val" id="kpi-models-enabled">—</div></div>
+          <div class="kpi-card"><div class="kpi-icon">🏢</div><div class="kpi-label">등록된 공급자</div><div class="kpi-val" id="kpi-providers-count">—</div></div>
+          <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-label">최저비용 활성모델</div><div class="kpi-val" id="kpi-cheapest-model">—</div></div>
+        </div>
+
+        <!-- 탭 -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--brd);margin-bottom:20px">
+          <button class="btn" id="tab-whitelist" style="border-radius:8px 8px 0 0;border-bottom:none;background:var(--bg2);font-weight:700" onclick="showModelTab('whitelist')">📋 화이트리스트</button>
+          <button class="btn" id="tab-priority" style="border-radius:8px 8px 0 0;border-bottom:none;margin-left:4px" onclick="showModelTab('priority')">🎯 태스크 우선순위</button>
+        </div>
+
+        <!-- 화이트리스트 탭 -->
+        <div id="models-tab-whitelist">
+          <p style="color:var(--tx2);font-size:13px;margin-bottom:16px">공급자별 모델을 ON/OFF하여 파이프라인에서 사용할 모델을 제어합니다. 예산 설정 시 해당 금액 초과 시 자동 차단됩니다.</p>
+          <div id="models-whitelist-body">로딩 중...</div>
+        </div>
+
+        <!-- 우선순위 탭 -->
+        <div id="models-tab-priority" style="display:none">
+          <p style="color:var(--tx2);font-size:13px;margin-bottom:16px">태스크별로 실제 파이프라인에서 사용할 모델을 지정합니다. 지정 모델이 비활성화된 경우 같은 공급자의 활성 모델로 자동 대체됩니다.</p>
+          <div id="models-priority-body">로딩 중...</div>
+          <div style="margin-top:20px;display:flex;gap:10px">
+            <button class="btn btn-p" id="btn-save-priority">💾 우선순위 저장</button>
+            <button class="btn" id="btn-reload-priority">🔄 되돌리기</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ⑧ 파이프라인 -->
+
+      <section class="adm-sec" id="sec-pipelines">
+        <div class="adm-sec-hdr">
+          <h2 class="adm-sec-title">🧩 빌더 파이프라인</h2>
+          <button class="btn btn-p" id="btn-refresh-pipes">🔄 새로고침</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>ID</th><th>이름</th><th>상태</th><th>노드</th><th>실행</th><th>마지막 실행</th><th>생성일</th><th>액션</th></tr></thead>
+            <tbody id="pipes-tbody"><tr><td colspan="8" class="td-empty">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ⑦ 감사 로그 -->
+      <section class="adm-sec" id="sec-audit">
+        <div class="adm-sec-hdr">
+          <h2 class="adm-sec-title">📋 감사 로그</h2>
+          <button class="btn btn-p" id="btn-refresh-audit">🔄 새로고침</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>시각</th><th>사용자 ID</th><th>액션</th><th>리소스</th><th>IP</th><th>상세</th></tr></thead>
+            <tbody id="audit-tbody"><tr><td colspan="6" class="td-empty">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ⑧ 시스템 -->
+      <section class="adm-sec" id="sec-system">
+        <h2 class="adm-sec-title">🖥️ 시스템 정보</h2>
+        <div class="two-col">
+          <div class="adm-card">
+            <div class="adm-card-title">🧠 메모리 사용량</div>
+            <div id="sys-mem" class="sys-grid">로딩 중...</div>
+            <div style="position:relative;height:150px;margin-top:14px"><canvas id="ch-mem"></canvas></div>
+          </div>
+          <div class="adm-card">
+            <div class="adm-card-title">⚙️ 프로세스 정보</div>
+            <div id="sys-proc" class="sys-grid">로딩 중...</div>
+          </div>
+        </div>
+        <div class="adm-card">
+          <div class="adm-card-title">🌐 환경 정보</div>
+          <div id="sys-env" class="sys-grid">로딩 중...</div>
+        </div>
+      </section>
+
+      <!-- ⑨ 공지 발송 -->
+      <section class="adm-sec" id="sec-broadcast">
+        <h2 class="adm-sec-title">📢 전체 공지 발송</h2>
+        <div class="adm-card" style="max-width:560px">
+          <div class="fg"><label class="fl">공지 유형</label>
+            <select id="bc-type" class="inp">
+              <option value="info">ℹ️ 정보</option>
+              <option value="warning">⚠️ 경고</option>
+              <option value="success">✅ 성공</option>
+              <option value="error">🚨 긴급</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">메시지</label>
+            <textarea id="bc-msg" class="inp inp-ta" rows="4" placeholder="전체 사용자에게 전달할 메시지를 입력하세요..."></textarea>
+          </div>
+          <button class="btn btn-p btn-lg" id="btn-broadcast">📢 전체 발송</button>
+          <div id="bc-result" class="res-msg" style="display:none"></div>
+        </div>
+        <div class="adm-card" style="margin-top:16px">
+          <div class="adm-card-title">📜 발송 이력</div>
+          <div id="bc-history" class="mini-list">—</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Chart.js — 로컬 번들 -->
+<script src="/js/chart.min.js"></script>
+<script>
+/* ════════════════════════════════════════════════
+   Admin Panel — pure JS, no onclick attributes
+════════════════════════════════════════════════ */
+
+let _tok  = localStorage.getItem('adm_tok') || '';
+let _user = null;
+const _ch = {};        // chart instances
+const _bcLog = [];
+let _usersCache = [];
+
+// ── helpers ───────────────────────────────────────
+const $ = id => document.getElementById(id);
+const fmtDt = iso => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+};
+const fmtMoney = v => { const n = parseFloat(v)||0; return n<0.001?`$${(n*1000).toFixed(3)}m`:`$${n.toFixed(4)}`; };
+const fmtN    = v => Number(v||0).toLocaleString();
+const set$    = (id,v) => { const e=$(id); if(e) e.textContent = v; };
+
+function toast(msg, type='info') {
+  const c = {info:'#3b82f6',warning:'#f59e0b',success:'#10b981',error:'#ef4444'};
+  const i = {info:'ℹ️',warning:'⚠️',success:'✅',error:'🚨'};
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.borderLeft = `4px solid ${c[type]||c.info}`;
+  t.innerHTML = `<div style="font-weight:700;color:#e2e8f0;margin-bottom:4px">${i[type]||'📢'} 알림</div><div style="color:#94a3b8;font-size:12px">${msg}</div>`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+async function api(path, opts={}) {
+  return fetch(path, {
+    ...opts,
+    headers: {'Content-Type':'application/json','Authorization':'Bearer '+_tok,...(opts.headers||{})},
+  });
+}
+
+function mkChart(id, type, labels, datasets, extra={}) {
+  const canvas = $(id); if (!canvas) return;
+  if (_ch[id]) _ch[id].destroy();
+  _ch[id] = new Chart(canvas, {
+    type, data:{labels,datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}}}},
+      scales: type!=='doughnut'&&type!=='pie' ? {
+        x:{ticks:{color:'#64748b',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,.04)'}},
+        y:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(255,255,255,.06)'}},
+      } : undefined,
+      ...extra,
+    },
+  });
+}
+
+// ── Navigation ────────────────────────────────────
+const SECS = ['overview','users','jobs','costs','apikeys','apiconfig','pipelines','audit','system','broadcast'];
+
+// LOADERS는 모든 함수 선언 후에 초기화 (함수 호이스팅 의존하지 않도록 lazy 방식 사용)
+function goto(name) {
+  SECS.forEach(s => {
+    const sec=$('sec-'+s); if(sec) sec.classList.toggle('on', s===name);
+  });
+  document.querySelectorAll('.adm-htab').forEach(b => b.classList.toggle('on', b.dataset.sec===name));
+  document.querySelectorAll('.adm-nbtn[data-sec]').forEach(b => b.classList.toggle('on', b.dataset.sec===name));
+  // lazy loader lookup — 함수 정의 후 참조
+  const loaders = {
+    overview: typeof loadOverview   === 'function' ? loadOverview   : null,
+    users:    typeof loadUsers      === 'function' ? loadUsers      : null,
+    jobs:     typeof loadJobs       === 'function' ? loadJobs       : null,
+    costs:    typeof loadCosts      === 'function' ? loadCosts      : null,
+    apikeys:  typeof loadApiKeys    === 'function' ? loadApiKeys    : null,
+    apiconfig:typeof loadApiConfig  === 'function' ? loadApiConfig  : null,
+    models:   typeof loadModels     === 'function' ? loadModels     : null,
+    pipelines:typeof loadPipes      === 'function' ? loadPipes      : null,
+    audit:    typeof loadAudit      === 'function' ? loadAudit      : null,
+    system:   typeof loadSys        === 'function' ? loadSys        : null,
+  };
+  if (loaders[name]) loaders[name]();
+}
+
+// Bind nav buttons
+document.querySelectorAll('[data-sec]').forEach(btn => {
+  btn.addEventListener('click', () => goto(btn.dataset.sec));
+});
+
+// ── Login ─────────────────────────────────────────
+async function doLogin() {
+  const username = $('l-user').value.trim();
+  const password = $('l-pass').value.trim();
+  const err = $('login-err');
+  err.style.display = 'none';
+  if (!username || !password) { err.textContent='아이디와 비밀번호를 입력하세요'; err.style.display='block'; return; }
+  try {
+    const res = await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+    const d = await res.json();
+    if (!d.token) { err.textContent = d.error||'로그인 실패'; err.style.display='block'; return; }
+    if (d.user?.role !== 'admin') { err.textContent = '⛔ 관리자 권한이 없습니다.'; err.style.display='block'; return; }
+    _tok = d.token; _user = d.user;
+    localStorage.setItem('adm_tok', _tok);
+    showAdmin();
+  } catch(e) { err.textContent='서버 오류: '+e.message; err.style.display='block'; }
+}
+
+function showAdmin() {
+  $('login-page').classList.add('hidden');
+  $('admin-page').classList.add('show');
+  $('adm-username').textContent = '👤 ' + (_user?.username||'admin');
+  goto('overview');
+}
+
+function doLogout() {
+  _tok=''; _user=null; localStorage.removeItem('adm_tok');
+  $('admin-page').classList.remove('show');
+  $('login-page').classList.remove('hidden');
+}
+
+$('btn-login').addEventListener('click', doLogin);
+$('btn-logout').addEventListener('click', doLogout);
+$('l-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+$('l-user').addEventListener('keydown', e => { if(e.key==='Enter') $('l-pass').focus(); });
+
+// ── ① Overview ───────────────────────────────────
+async function loadOverview() {
+  try {
+    const r = await api('/api/admin/stats');
+    if (r.status===401) { doLogout(); return; }
+    const d = await r.json();
+    const ov = d.overview||{}, js=d.jobStats||{};
+    set$('kv-users',  ov.totalUsers   ||0);
+    set$('kv-jobs',   ov.total         ||0);
+    set$('kv-cost',   fmtMoney(ov.totalCostUsd));
+    set$('kv-tokens', fmtN(ov.totalTokens));
+    set$('kv-pipes',  ov.totalPipelines||0);
+    set$('kv-audit',  ov.totalAuditLogs||0);
+
+    const jg=$('jstat-grid');
+    if(jg) jg.innerHTML=[
+      {l:'대기',v:js.waiting  ||0,c:'#94a3b8'},{l:'실행',v:js.running  ||0,c:'#60a5fa'},
+      {l:'완료',v:js.completed||0,c:'#34d399'},{l:'실패',v:js.failed   ||0,c:'#f87171'},
+    ].map(x=>`<div class="jstat"><div class="jstat-val" style="color:${x.c}">${x.v}</div><div class="jstat-lbl">${x.l}</div></div>`).join('');
+
+    mkChart('ch-jobs','doughnut',['대기','실행','완료','실패'],
+      [{data:[js.waiting||0,js.running||0,js.completed||0,js.failed||0],
+        backgroundColor:['#475569','#3b82f6','#10b981','#ef4444'],borderWidth:0}]);
+
+    const h=d.hourly||[];
+    mkChart('ch-hourly','line',
+      h.length?h.map(x=>x.hour+'시'):['00시','06시','12시','18시'],
+      [{label:'비용',data:h.length?h.map(x=>parseFloat(x.cost||0)):[0,0,0,0],
+        borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.15)',fill:true,tension:.4,pointRadius:3}]);
+
+    const ruEl=$('rec-users'); const u=d.recentUsers||[];
+    if(ruEl) ruEl.innerHTML=u.length?u.map(u=>`<div class="mini-item">
+      <div class="mini-ico">👤</div><div class="mini-info">
+        <div class="mini-name">${u.username||u.email}</div>
+        <div class="mini-sub">${u.email} · <span class="badge br-${u.role||'user'}">${u.role||'user'}</span></div>
+      </div><div class="mini-time">${fmtDt(u.created_at)}</div></div>`).join(''):'<div class="td-empty">없음</div>';
+
+    const rjEl=$('rec-jobs'); const j=d.recentJobs||[];
+    if(rjEl) rjEl.innerHTML=j.length?j.map(j=>`<div class="mini-item">
+      <div class="mini-ico">⚙️</div><div class="mini-info">
+        <div class="mini-name">${j.pipeline||j.queue||'ai-task'}</div>
+        <div class="mini-sub">${j.action||'—'} · <span class="badge bs-${j.status||'waiting'}">${j.status}</span></div>
+      </div><div class="mini-time">${fmtDt(j.created_at)}</div></div>`).join(''):'<div class="td-empty">없음</div>';
+  } catch(e){console.error('[overview]',e);}
+}
+
+// ── ② Users ──────────────────────────────────────
+async function loadUsers() {
+  const tb=$('users-tbody');
+  if(tb) tb.innerHTML='<tr><td colspan="8" class="td-empty">로딩 중...</td></tr>';
+  try {
+    const d = await (await api('/api/admin/users')).json();
+    _usersCache = d.users||[];
+    renderUsers(_usersCache);
+    // also refresh user select in API key section
+    populateUserSel(_usersCache);
+  } catch(e) { if(tb) tb.innerHTML=`<tr><td colspan="8" class="td-empty" style="color:#f87171">${e.message}</td></tr>`; }
+}
+
+$('user-search').addEventListener('input', () => {
+  const q = $('user-search').value.toLowerCase();
+  renderUsers(_usersCache.filter(u=>(u.username||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)||(u.role||'').includes(q)));
+});
+$('btn-refresh-users').addEventListener('click', loadUsers);
+
+function renderUsers(users) {
+  const tb=$('users-tbody'); if(!tb) return;
+  if(!users.length){tb.innerHTML='<tr><td colspan="8" class="td-empty">없음</td></tr>';return;}
+  tb.innerHTML=users.map(u=>`<tr>
+    <td style="font-size:9px;color:#4b5563" title="${u.id}">${(u.id||'').slice(0,10)}…</td>
+    <td><strong style="color:#e2e8f0">${u.username||'—'}</strong></td>
+    <td style="color:#94a3b8">${u.email||'—'}</td>
+    <td><span class="badge br-${u.role||'user'}">${u.role||'user'}</span></td>
+    <td style="font-size:10px;color:${u.api_key?'#10b981':'#4b5563'}">${u.api_key?'✅ 있음':'—'}</td>
+    <td style="color:#64748b;font-size:10px">${fmtDt(u.last_login)||'—'}</td>
+    <td style="color:#64748b;font-size:10px">${fmtDt(u.created_at)}</td>
+    <td><div style="display:flex;gap:3px">
+      <select class="inp" style="padding:2px 5px;font-size:10px;width:100px" data-uid="${u.id}" data-action="role">
+        <option value="user"${u.role==='user'?' selected':''}>user</option>
+        <option value="moderator"${u.role==='moderator'?' selected':''}>moderator</option>
+        <option value="admin"${u.role==='admin'?' selected':''}>admin</option>
+      </select>
+      <button class="btn btn-g btn-sm" data-uid="${u.id}" data-uname="${u.username||u.email}" data-action="pw">🔑 PW</button>
+      <button class="btn btn-d btn-sm" data-uid="${u.id}" data-uname="${u.username||u.email}" data-action="del" ${u.id===(_user?.id||'')?'disabled':''}>🗑️</button>
+    </div></td>
+  </tr>`).join('');
+
+  // bind events on newly rendered buttons
+  tb.querySelectorAll('select[data-action="role"]').forEach(sel => {
+    sel.addEventListener('change', () => changeRole(sel.dataset.uid, sel.value, sel));
+  });
+  tb.querySelectorAll('button[data-action="pw"]').forEach(btn => {
+    btn.addEventListener('click', () => resetPw(btn.dataset.uid, btn.dataset.uname));
+  });
+  tb.querySelectorAll('button[data-action="del"]').forEach(btn => {
+    btn.addEventListener('click', () => delUser(btn.dataset.uid, btn.dataset.uname));
+  });
+}
+
+async function changeRole(uid, role, selEl) {
+  const d = await (await api(`/api/admin/users/${uid}/role`,{method:'PUT',body:JSON.stringify({role})})).json();
+  if(!d.success){toast('역할 변경 실패: '+d.error,'error'); if(selEl) loadUsers();}
+  else toast('역할이 변경되었습니다.','success');
+}
+async function resetPw(uid, name) {
+  const pw = prompt(`[${name}] 새 비밀번호 (4자 이상):`);
+  if(!pw||pw.length<4){alert('4자 이상 입력');return;}
+  const d = await (await api(`/api/admin/users/${uid}/password`,{method:'PUT',body:JSON.stringify({password:pw})})).json();
+  toast(d.success?'✅ 비밀번호 변경 완료':d.error,'success');
+}
+async function delUser(uid, name) {
+  if(!confirm(`[${name}] 삭제?\n되돌릴 수 없습니다.`)) return;
+  const d = await (await api(`/api/admin/users/${uid}`,{method:'DELETE'})).json();
+  if(d.success){toast('사용자 삭제 완료','success');loadUsers();}
+  else alert('실패: '+d.error);
+}
+
+// ── ③ Jobs ────────────────────────────────────────
+async function loadJobs() {
+  const tb=$('jobs-tbody');
+  if(tb) tb.innerHTML='<tr><td colspan="7" class="td-empty">로딩 중...</td></tr>';
+  try {
+    const d = await (await api('/api/admin/jobs?limit=200')).json();
+    const j = d.jobs||[];
+    if(!j.length){tb.innerHTML='<tr><td colspan="7" class="td-empty">없음</td></tr>';return;}
+    tb.innerHTML=j.map(j=>`<tr>
+      <td style="font-size:9px;color:#4b5563" title="${j.id}">${(j.id||'').slice(0,12)}…</td>
+      <td style="color:#94a3b8">${j.queue||'ai-task'}</td>
+      <td style="color:#c4b5fd">${j.pipeline||'—'}</td>
+      <td><span class="badge bs-${j.status||'waiting'}">${j.status||'waiting'}</span></td>
+      <td><div class="prog" style="width:72px"><div class="prog-fill" style="width:${j.progress||0}%"></div></div>
+          <span style="font-size:9px;color:#6b7280;margin-left:4px">${j.progress||0}%</span></td>
+      <td style="font-size:10px;color:#64748b">${fmtDt(j.created_at)}</td>
+      <td><button class="btn btn-d btn-sm" data-jid="${j.id}" data-action="deljob">🗑️</button></td>
+    </tr>`).join('');
+    tb.querySelectorAll('button[data-action="deljob"]').forEach(btn => {
+      btn.addEventListener('click', () => delJob(btn.dataset.jid));
+    });
+  } catch(e){if(tb)tb.innerHTML=`<tr><td colspan="7" class="td-empty" style="color:#f87171">${e.message}</td></tr>`;}
+}
+async function delJob(id){if(!confirm('삭제?'))return;await api(`/api/admin/jobs/${id}`,{method:'DELETE'});loadJobs();}
+async function clearJobs(s){if(!confirm(`'${s}' 잡 전체 삭제?`))return;await api('/api/admin/jobs/clear',{method:'POST',body:JSON.stringify({status:s})});loadJobs();}
+
+$('btn-clear-completed').addEventListener('click', () => clearJobs('completed'));
+$('btn-clear-failed').addEventListener('click', () => clearJobs('failed'));
+$('btn-refresh-jobs').addEventListener('click', loadJobs);
+
+// ── ④ Costs ───────────────────────────────────────
+async function loadCosts() {
+  try {
+    const d = await (await api('/api/admin/costs')).json();
+    const t = d.total||{};
+    set$('cv-total',   fmtMoney(t.total||0));
+    set$('cv-calls',   fmtN(t.calls||0));
+    set$('cv-inputs',  fmtN(t.inputs||0));
+    set$('cv-outputs', fmtN(t.outputs||0));
+
+    const dl=d.daily||[];
+    mkChart('ch-daily','line',dl.map(x=>(x.date||'').slice(5)),
+      [{label:'USD',data:dl.map(x=>parseFloat(x.total||0)),
+        borderColor:'#06b6d4',backgroundColor:'rgba(6,182,212,.12)',fill:true,tension:.4,pointRadius:2}]);
+
+    const ml=d.byModel||[];
+    mkChart('ch-models','bar',ml.map(m=>m.model||m.model_name||'—'),
+      [{label:'USD',data:ml.map(m=>parseFloat(m.total||m.cost||0)),
+        backgroundColor:['#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899']}]);
+
+    const tr=await (await api('/api/cost/top-pipelines?limit=10')).json();
+    const tops=tr.topPipelines||[];
+    mkChart('ch-pipecost','bar',tops.map(p=>p.pipeline||'—'),
+      [{label:'USD',data:tops.map(p=>parseFloat(p.total_cost||p.cost||0)),
+        backgroundColor:'rgba(139,92,246,.6)',borderColor:'#8b5cf6',borderWidth:1}],
+      {indexAxis:'y'});
+  } catch(e){console.error('[costs]',e);}
+}
+
+// ── ⑤ API 키 관리 ─────────────────────────────────
+function populateUserSel(users) {
+  const sel=$('apikey-user-sel'); if(!sel) return;
+  sel.innerHTML='<option value="">-- 사용자 선택 --</option>'+
+    users.map(u=>`<option value="${u.id}">${u.username||u.email} (${u.role})</option>`).join('');
+}
+
+async function loadApiKeys() {
+  const tb=$('apikeys-tbody');
+  if(tb) tb.innerHTML='<tr><td colspan="7" class="td-empty">로딩 중...</td></tr>';
+  // also reload user list for the select
+  if(!_usersCache.length){
+    const ud = await (await api('/api/admin/users')).json();
+    _usersCache = ud.users||[];
+    populateUserSel(_usersCache);
+  }
+  try {
+    const d = await (await api('/api/admin/apikeys')).json();
+    const keys = d.apiKeys||[];
+    if(!keys.length){tb.innerHTML='<tr><td colspan="7" class="td-empty">발급된 API 키 없음</td></tr>';return;}
+    tb.innerHTML=keys.map(k=>`<tr>
+      <td><strong style="color:#e2e8f0">${k.username||'—'}</strong></td>
+      <td style="color:#94a3b8">${k.email||'—'}</td>
+      <td><span class="badge br-${k.role||'user'}">${k.role||'user'}</span></td>
+      <td style="font-family:monospace;font-size:10px;color:#a78bfa">${k.keyMasked}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-family:monospace;font-size:10px;color:#64748b;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${k.keyFull}">${k.keyFull}</span>
+          <button class="key-copy" data-kval="${k.keyFull}" data-action="cpkey">복사</button>
+        </div>
+      </td>
+      <td style="font-size:10px;color:#64748b">${fmtDt(k.createdAt)}</td>
+      <td><button class="btn btn-d btn-sm" data-uid="${k.userId}" data-action="revoke">🗑️ 폐기</button></td>
+    </tr>`).join('');
+
+    tb.querySelectorAll('button[data-action="revoke"]').forEach(btn => {
+      btn.addEventListener('click', () => revokeApiKey(btn.dataset.uid));
+    });
+    tb.querySelectorAll('button[data-action="cpkey"]').forEach(btn => {
+      btn.addEventListener('click', () => { navigator.clipboard.writeText(btn.dataset.kval); toast('복사됨','success'); });
+    });
+  } catch(e){if(tb)tb.innerHTML=`<tr><td colspan="7" class="td-empty" style="color:#f87171">${e.message}</td></tr>`;}
+}
+
+async function genApiKey() {
+  const uid = $('apikey-user-sel').value;
+  if(!uid){toast('사용자를 선택하세요','error');return;}
+  const d = await (await api('/api/admin/apikeys',{method:'POST',body:JSON.stringify({userId:uid})})).json();
+  if(d.success) {
+    $('gen-key-text').textContent = d.apiKey;
+    $('gen-result').style.display = 'block';
+    toast('API 키가 발급되었습니다.','success');
+    loadApiKeys();
+  } else { toast(d.error,'error'); }
+}
+
+async function revokeApiKey(uid) {
+  if(!confirm('이 API 키를 폐기하시겠습니까?')) return;
+  const d = await (await api(`/api/admin/apikeys/${uid}`,{method:'DELETE'})).json();
+  if(d.success){toast('API 키 폐기 완료','success');loadApiKeys();}
+  else toast(d.error,'error');
+}
+
+$('btn-gen-apikey').addEventListener('click', genApiKey);
+$('btn-refresh-apikeys').addEventListener('click', loadApiKeys);
+$('btn-copy-newkey').addEventListener('click', () => {
+  const v=$('gen-key-text').textContent;
+  if(v&&v!=='—'){navigator.clipboard.writeText(v);toast('클립보드에 복사됨','success');}
+});
+
+// ── ⑥ API 등록관리 ────────────────────────────────
+
+// ▸ 33개 모델 + 9개 공급자 전체 데이터 (MODEL_REGISTRY 기반)
+const PROVIDER_META = {
+  openai:    { label:'OpenAI',             icon:'🤖', color:'#10a37f', envKey:'OPENAI_API_KEY',    keyHint:'sk-...',      needsBase:false },
+  anthropic: { label:'Anthropic (Claude)', icon:'🧠', color:'#d97706', envKey:'ANTHROPIC_API_KEY', keyHint:'sk-ant-...',  needsBase:false },
+  google:    { label:'Google Gemini',      icon:'🔮', color:'#4285f4', envKey:'GEMINI_API_KEY',    keyHint:'AIza...',     needsBase:false },
+  deepseek:  { label:'DeepSeek',           icon:'🐋', color:'#7c3aed', envKey:'DEEPSEEK_API_KEY',  keyHint:'sk-...',      needsBase:false },
+  meta:      { label:'Meta (Llama 4)',     icon:'🦙', color:'#1877f2', envKey:'META_API_KEY',      keyHint:'...',         needsBase:true  },
+  xai:       { label:'xAI (Grok)',         icon:'⚡', color:'#9ca3af', envKey:'XAI_API_KEY',       keyHint:'xai-...',     needsBase:false },
+  alibaba:   { label:'Alibaba (Qwen)',     icon:'🌏', color:'#ff6900', envKey:'DASHSCOPE_API_KEY', keyHint:'sk-...',      needsBase:false },
+  moonshot:  { label:'Moonshot (Kimi)',    icon:'🌙', color:'#8b5cf6', envKey:'MOONSHOT_API_KEY',  keyHint:'sk-...',      needsBase:false },
+  mistral:   { label:'Mistral AI',         icon:'💫', color:'#ff7000', envKey:'MISTRAL_API_KEY',   keyHint:'...',         needsBase:false },
+  azure:     { label:'Azure OpenAI',       icon:'☁️', color:'#0078d4', envKey:'AZURE_OPENAI_KEY',  keyHint:'...',         needsBase:true  },
+  openrouter:{ label:'OpenRouter',         icon:'🌐', color:'#6d28d9', envKey:'OPENROUTER_API_KEY',keyHint:'sk-or-...',   needsBase:false },
+  groq:      { label:'Groq',              icon:'⚡', color:'#f59e0b', envKey:'GROQ_API_KEY',      keyHint:'gsk_...',     needsBase:false },
+  custom:    { label:'Custom',             icon:'🔧', color:'#6b7280', envKey:'',                  keyHint:'...',         needsBase:true  },
+};
+
+const MODEL_LIST = [
+  // OpenAI (13)
+  { provider:'openai', id:'gpt-5.2',        name:'GPT-5.2',         tier:'flagship',    bench:90.3, cost:0.030, ctx:'128k', latency:3200, specialty:'종합 1위 · MMLU·AIME', avail:true },
+  { provider:'openai', id:'gpt-5.1',        name:'GPT-5.1',         tier:'flagship',    bench:87.4, cost:0.025, ctx:'128k', latency:2800, specialty:'창의 글쓰기 1위',      avail:true },
+  { provider:'openai', id:'gpt-5',          name:'GPT-5',           tier:'flagship',    bench:85.7, cost:0.015, ctx:'128k', latency:2600, specialty:'범용 오케스트레이터',   avail:true },
+  { provider:'openai', id:'gpt-5.4',        name:'GPT-5.4',         tier:'flagship',    bench:88.1, cost:0.020, ctx:'200k', latency:2400, specialty:'장문 처리 · 멀티모달',  avail:true },
+  { provider:'openai', id:'gpt-5.4-pro',    name:'GPT-5.4 Pro',     tier:'flagship',    bench:89.5, cost:0.035, ctx:'200k', latency:2800, specialty:'엔터프라이즈 최고급',   avail:true },
+  { provider:'openai', id:'gpt-5-mini',     name:'GPT-5 mini',      tier:'mini',        bench:78.5, cost:0.0006,ctx:'32k',  latency:800,  specialty:'저비용 고속 검증/분류', avail:true },
+  { provider:'openai', id:'gpt-5-nano',     name:'GPT-5 nano',      tier:'nano',        bench:68.0, cost:0.0002,ctx:'16k',  latency:400,  specialty:'초고속 라우팅 전용',    avail:true },
+  { provider:'openai', id:'gpt-5-codex',    name:'GPT-5 Codex',     tier:'specialized', bench:86.0, cost:0.020, ctx:'128k', latency:2200, specialty:'코딩 특화 (일반형)',    avail:true },
+  { provider:'openai', id:'gpt-5.2-codex',  name:'GPT-5.2 Codex',   tier:'specialized', bench:88.5, cost:0.030, ctx:'200k', latency:3200, specialty:'코딩 최고 · HumanEval 97.5%', avail:true },
+  { provider:'openai', id:'gpt-5.1-codex',  name:'GPT-5.1 Codex',   tier:'specialized', bench:85.0, cost:0.022, ctx:'128k', latency:2600, specialty:'창의+코딩 융합',       avail:true },
+  { provider:'openai', id:'gpt-5.3-codex',  name:'GPT-5.3 Codex',   tier:'specialized', bench:88.6, cost:0.040, ctx:'200k', latency:3800, specialty:'SWE-bench 83%',        avail:false },
+  { provider:'openai', id:'o3',             name:'o3',               tier:'flagship',    bench:91.0, cost:0.060, ctx:'128k', latency:8000, specialty:'최강 추론 · 수학 올림',  avail:true },
+  { provider:'openai', id:'o4-mini',        name:'o4-mini',          tier:'mini',        bench:83.0, cost:0.004, ctx:'64k',  latency:2000, specialty:'추론형 mini · 균형',    avail:true },
+  // Anthropic (5)
+  { provider:'anthropic', id:'claude-opus-4-6',          name:'Claude Opus 4.6',      tier:'flagship',  bench:89.5, cost:0.075, ctx:'200k', latency:4000, specialty:'Anthropic 최고급',      avail:true },
+  { provider:'anthropic', id:'claude-opus-4-5',          name:'Claude Opus 4.5',      tier:'flagship',  bench:88.0, cost:0.060, ctx:'200k', latency:3500, specialty:'장문·분석 특화',         avail:true },
+  { provider:'anthropic', id:'claude-sonnet-5',          name:'Claude Sonnet 5',      tier:'standard',  bench:86.0, cost:0.015, ctx:'200k', latency:2000, specialty:'성능·비용 균형',         avail:true },
+  { provider:'anthropic', id:'claude-sonnet-4-6',        name:'Claude Sonnet 4.6',    tier:'standard',  bench:84.0, cost:0.012, ctx:'200k', latency:1800, specialty:'한국어 자연스러움',       avail:true },
+  { provider:'anthropic', id:'claude-haiku-4-5',         name:'Claude Haiku 4.5',     tier:'mini',      bench:75.0, cost:0.0008,ctx:'200k', latency:600,  specialty:'초고속 · 저비용',        avail:true },
+  // Google (3)
+  { provider:'google', id:'gemini-3-pro',    name:'Gemini 3 Pro',   tier:'flagship',  bench:88.5, cost:0.020, ctx:'1M',   latency:2500, specialty:'멀티모달 1M 컨텍스트',  avail:true },
+  { provider:'google', id:'gemini-2.5-flash',name:'Gemini 2.5 Flash',tier:'mini',     bench:78.0, cost:0.0004,ctx:'512k', latency:500,  specialty:'초고속 · 긴 컨텍스트',  avail:true },
+  { provider:'google', id:'gemini-3-flash',  name:'Gemini 3 Flash', tier:'mini',      bench:80.0, cost:0.0008,ctx:'512k', latency:700,  specialty:'고속 멀티모달',          avail:true },
+  // DeepSeek (3)
+  { provider:'deepseek', id:'deepseek-v3-2', name:'DeepSeek V3.2',  tier:'standard',  bench:87.0, cost:0.0014,ctx:'128k', latency:1800, specialty:'오픈소스 최고 성능',     avail:true },
+  { provider:'deepseek', id:'deepseek-r1',   name:'DeepSeek R1',    tier:'standard',  bench:85.0, cost:0.002, ctx:'64k',  latency:5000, specialty:'추론형 · 수학/코딩',     avail:true },
+  { provider:'deepseek', id:'deepseek-r2',   name:'DeepSeek R2',    tier:'flagship',  bench:88.0, cost:0.004, ctx:'128k', latency:4500, specialty:'R1 후속 · 최강 추론',    avail:true },
+  // Meta (3)
+  { provider:'meta', id:'llama-4-scout',          name:'Llama 4 Scout',         tier:'open',  bench:78.0, cost:0.0005,ctx:'128k', latency:800,  specialty:'소형 오픈소스 고성능',   avail:true },
+  { provider:'meta', id:'llama-4-maverick',        name:'Llama 4 Maverick',      tier:'open',  bench:82.0, cost:0.001, ctx:'256k', latency:1200, specialty:'멀티모달 오픈소스',      avail:true },
+  { provider:'meta', id:'llama-4-1-maverick',      name:'Llama 4.1 Maverick',    tier:'open',  bench:83.5, cost:0.0012,ctx:'256k', latency:1300, specialty:'Maverick 업그레이드',    avail:true },
+  // xAI (2)
+  { provider:'xai', id:'grok-4-1',   name:'Grok 4.1',  tier:'flagship',  bench:87.5, cost:0.020, ctx:'128k', latency:2800, specialty:'실시간 X 데이터 연동',   avail:true },
+  { provider:'xai', id:'grok-4-2',   name:'Grok 4.2',  tier:'flagship',  bench:89.0, cost:0.030, ctx:'256k', latency:3200, specialty:'Grok 최신 플래그십',      avail:true },
+  // Alibaba (2)
+  { provider:'alibaba', id:'qwen3.5-plus', name:'Qwen 3.5 Plus', tier:'standard', bench:83.0, cost:0.003, ctx:'128k', latency:1500, specialty:'중국어 최강 · 다국어',  avail:true },
+  { provider:'alibaba', id:'qwen3.5-max',  name:'Qwen 3.5 Max',  tier:'flagship', bench:86.0, cost:0.008, ctx:'128k', latency:2200, specialty:'Alibaba 최고급',        avail:true },
+  // Moonshot (1)
+  { provider:'moonshot', id:'kimi-k2-5', name:'Kimi K2.5', tier:'flagship', bench:84.0, cost:0.012, ctx:'200k', latency:2000, specialty:'장문 200k · 코딩 강점',   avail:true },
+  // Mistral (1)
+  { provider:'mistral', id:'mistral-large-3', name:'Mistral Large 3', tier:'flagship', bench:82.0, cost:0.006, ctx:'128k', latency:1500, specialty:'유럽 최고급 · 다국어',  avail:true },
+];
+
+const TIER_BADGE = {
+  flagship:   { bg:'rgba(239,68,68,.2)',    color:'#f87171',  label:'Flagship' },
+  standard:   { bg:'rgba(59,130,246,.2)',   color:'#60a5fa',  label:'Standard' },
+  mini:       { bg:'rgba(16,185,129,.2)',   color:'#34d399',  label:'Mini'     },
+  nano:       { bg:'rgba(107,114,128,.2)',  color:'#9ca3af',  label:'Nano'     },
+  specialized:{ bg:'rgba(245,158,11,.2)',   color:'#fbbf24',  label:'Special'  },
+  open:       { bg:'rgba(139,92,246,.2)',   color:'#a78bfa',  label:'Open'     },
+  economy:    { bg:'rgba(6,182,212,.2)',    color:'#22d3ee',  label:'Economy'  },
+};
+
+// 내부 상태
+let _acProviders = [];    // 서버에서 로드된 공급자 목록
+let _acCurrentTab = 'providers';
+
+function gotoActab(name) {
+  _acCurrentTab = name;
+  ['providers','register','priority'].forEach(t => {
+    const el = $('ac-tab-'+t); if(el) el.style.display = t===name ? 'block' : 'none';
+    const btn = $('actab-'+t);
+    if(btn){ btn.className = t===name ? 'btn btn-p' : 'btn btn-g'; }
+  });
+  if (name === 'priority') renderAllModelsTable();
+}
+
+// 공급자 상태 바 (9개)
+function renderProviderStatusBar(registeredMap) {
+  const el = $('ac-provider-status-bar'); if (!el) return;
+  const CORE = ['openai','anthropic','google','deepseek','meta','xai','alibaba','moonshot','mistral'];
+  el.innerHTML = CORE.map(p => {
+    const meta = PROVIDER_META[p] || {};
+    const reg  = registeredMap[p];
+    const modelCount = MODEL_LIST.filter(m => m.provider === p).length;
+    return `<div style="background:rgba(255,255,255,.03);border:1px solid ${reg ? meta.color+'55' : 'rgba(255,255,255,.06)'};
+      border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;transition:all .15s"
+      data-provider="${p}" data-actab-action="register-for">
+      <div style="font-size:18px">${meta.icon||'🔧'}</div>
+      <div style="font-size:10px;font-weight:700;color:${reg ? '#e2e8f0' : '#6b7280'};margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${meta.label||p}</div>
+      <div style="font-size:9px;margin-top:2px;color:#4b5563">${modelCount}개 모델</div>
+      <div style="font-size:9px;margin-top:3px;padding:1px 4px;border-radius:4px;display:inline-block;
+        background:${reg ? 'rgba(16,185,129,.2)' : 'rgba(107,114,128,.15)'};
+        color:${reg ? '#34d399' : '#6b7280'}">${reg ? '✅ 등록됨' : '미등록'}</div>
+    </div>`;
+  }).join('');
+
+  // 클릭 시 등록 탭으로 이동하며 공급자 선택
+  el.querySelectorAll('[data-actab-action="register-for"]').forEach(card => {
+    card.addEventListener('click', () => {
+      const sel = $('ac-provider');
+      if (sel) { sel.value = card.dataset.provider; sel.dispatchEvent(new Event('change')); }
+      gotoActab('register');
+    });
+  });
+}
+
+// 공급자 카드 (공급자 현황 탭)
+function renderProviderCards(registeredMap) {
+  const el = $('ac-provider-cards'); if (!el) return;
+  const CORE = ['openai','anthropic','google','deepseek','meta','xai','alibaba','moonshot','mistral'];
+  el.innerHTML = CORE.map(p => {
+    const meta   = PROVIDER_META[p] || {};
+    const reg    = registeredMap[p];
+    const models = MODEL_LIST.filter(m => m.provider === p);
+    const flagship = models.find(m => m.tier === 'flagship') || models[0];
+    return `<div class="adm-card" style="border-color:${reg ? meta.color+'44' : 'rgba(255,255,255,.07)'};margin:0">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:36px;height:36px;border-radius:10px;background:${meta.color}22;
+          display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${meta.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;color:#e2e8f0;font-size:13px">${meta.label}</div>
+          <div style="font-size:10px;color:#6b7280">${models.length}개 모델</div>
+        </div>
+        <span class="badge ${reg ? 'bs-active' : 'bs-draft'}">${reg ? '✅ 키 등록됨' : '⬜ 미등록'}</span>
+      </div>
+
+      <!-- 모델 목록 -->
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px">
+        ${models.map(m => {
+          const t = TIER_BADGE[m.tier] || TIER_BADGE.standard;
+          return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;
+            background:rgba(255,255,255,.02);border-radius:6px;
+            opacity:${m.avail ? 1 : 0.4}">
+            <span style="font-size:9px;padding:1px 5px;border-radius:4px;
+              background:${t.bg};color:${t.color};flex-shrink:0;white-space:nowrap">${t.label}</span>
+            <span style="font-family:monospace;font-size:10px;color:#c4b5fd;flex:1;min-width:0;
+              white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${m.id}">${m.id}</span>
+            ${m.bench ? `<span style="font-size:9px;color:#6b7280">${m.bench}</span>` : ''}
+            <span style="font-size:9px;color:${m.cost < 0.001 ? '#34d399' : m.cost < 0.01 ? '#fbbf24' : '#f87171'}"
+              title="비용/1k tokens">$${m.cost < 0.001 ? (m.cost*1000).toFixed(2)+'m' : m.cost.toFixed(3)}</span>
+            ${!m.avail ? '<span style="font-size:9px;color:#4b5563">미지원</span>' : ''}
+          </div>`;
+        }).join('')}
+      </div>
+
+      <!-- 등록된 키 정보 -->
+      ${reg ? `<div style="background:rgba(0,0,0,.3);border-radius:6px;padding:7px 10px;margin-bottom:10px">
+        <div style="font-size:9px;color:#6b7280;margin-bottom:3px">등록된 API 키</div>
+        <div style="font-family:monospace;font-size:10px;color:#a78bfa">${reg.keyMasked}</div>
+        ${reg.memo ? `<div style="font-size:9px;color:#6b7280;margin-top:2px">📝 ${reg.memo}</div>` : ''}
+      </div>` : `<div style="font-size:10px;color:#4b5563;margin-bottom:10px">
+        환경변수: <code style="color:#6b7280;font-size:9px">${meta.envKey||'—'}</code>
+      </div>`}
+
+      <!-- 액션 버튼 -->
+      <div style="display:flex;gap:6px">
+        ${reg
+          ? `<button class="btn btn-g btn-sm" data-provider="${p}" data-action="test-provider">🔬 테스트</button>
+             <button class="btn btn-d btn-sm" data-provider="${p}" data-action="del-provider">🗑️ 삭제</button>`
+          : `<button class="btn btn-s btn-sm" data-provider="${p}" data-actab-action="register-for">➕ 등록</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('[data-action="test-provider"]').forEach(btn => {
+    btn.addEventListener('click', () => testProvider(btn.dataset.provider));
+  });
+  el.querySelectorAll('[data-action="del-provider"]').forEach(btn => {
+    btn.addEventListener('click', () => delProvider(btn.dataset.provider));
+  });
+  el.querySelectorAll('[data-actab-action="register-for"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sel = $('ac-provider');
+      if (sel) { sel.value = btn.dataset.provider; sel.dispatchEvent(new Event('change')); }
+      gotoActab('register');
+    });
+  });
+}
+
+// 모델 미리보기 (공급자 선택 시)
+function updateModelPreview(provider) {
+  const el = $('ac-model-preview-list'); if (!el) return;
+  const models = MODEL_LIST.filter(m => m.provider === provider);
+  if (!models.length) { el.innerHTML = '<span style="color:#4b5563;font-size:10px">해당 없음</span>'; return; }
+  el.innerHTML = models.map(m => {
+    const t = TIER_BADGE[m.tier] || TIER_BADGE.standard;
+    return `<span style="font-size:9px;padding:2px 7px;border-radius:99px;
+      background:${t.bg};color:${t.color};opacity:${m.avail ? 1 : 0.4}"
+      title="${m.specialty}">${m.id}</span>`;
+  }).join('');
+  // 키 힌트
+  const hint = $('ac-key-hint');
+  const meta = PROVIDER_META[provider];
+  if (hint && meta) hint.textContent = '— 형식: ' + (meta.keyHint || '...');
+}
+
+// 전체 모델 테이블 (우선순위 탭)
+function renderAllModelsTable() {
+  const tb = $('all-models-tbody'); if (!tb) return;
+  tb.innerHTML = MODEL_LIST.map(m => {
+    const meta = PROVIDER_META[m.provider] || {};
+    const t = TIER_BADGE[m.tier] || TIER_BADGE.standard;
+    return `<tr>
+      <td><span style="font-size:14px">${meta.icon||''}</span> <span style="font-size:10px;color:#94a3b8">${meta.label||m.provider}</span></td>
+      <td style="font-family:monospace;font-size:10px;color:#c4b5fd">${m.id}</td>
+      <td style="color:#e2e8f0;font-size:11px;font-weight:600">${m.name}</td>
+      <td><span style="font-size:9px;padding:1px 5px;border-radius:4px;background:${t.bg};color:${t.color}">${t.label}</span></td>
+      <td style="text-align:center;color:${m.bench >= 88 ? '#f87171' : m.bench >= 83 ? '#fbbf24' : '#34d399'};font-weight:700;font-size:11px">${m.bench||'—'}</td>
+      <td style="font-size:10px;color:${m.cost < 0.001 ? '#34d399' : m.cost < 0.01 ? '#fbbf24' : '#f87171'}">$${m.cost < 0.001 ? (m.cost*1000).toFixed(2)+'m' : m.cost.toFixed(3)}</td>
+      <td style="font-size:10px;color:#94a3b8">${m.latency >= 3000 ? '🐢 ' : m.latency <= 800 ? '⚡ ' : ''}${m.latency}ms</td>
+      <td style="font-size:10px;color:#6b7280">${m.ctx}</td>
+      <td style="font-size:10px;color:#94a3b8;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.specialty}">${m.specialty}</td>
+      <td><span class="badge ${m.avail ? 'bs-active' : 'bs-failed'}">${m.avail ? '활성' : '미지원'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// 모델 우선순위 드롭다운 채우기 (33개 모델)
+function populateModelPrioritySelects(currentPriority) {
+  const TASKS = {
+    text:     { label:'텍스트 생성',       default:'gpt-5-mini' },
+    analysis: { label:'분석 / 추론',       default:'gpt-5.2' },
+    chat:     { label:'채팅 / 대화',       default:'gpt-5-mini' },
+    code:     { label:'코딩 / 개발',       default:'gpt-5.2-codex' },
+    creative: { label:'창의 글쓰기',       default:'gpt-5.1' },
+    fast:     { label:'고속 처리 (라우팅)', default:'gpt-5-nano' },
+  };
+  Object.entries(TASKS).forEach(([k, info]) => {
+    const sel = $('mp-'+k); if (!sel) return;
+    const cur = currentPriority?.[k] || info.default;
+    // 공급자별 그룹으로 옵션 생성
+    const byProv = {};
+    MODEL_LIST.forEach(m => { if (!byProv[m.provider]) byProv[m.provider] = []; byProv[m.provider].push(m); });
+    sel.innerHTML = '';
+    Object.entries(byProv).forEach(([prov, models]) => {
+      const meta = PROVIDER_META[prov] || {};
+      const grp = document.createElement('optgroup');
+      grp.label = (meta.icon||'') + ' ' + (meta.label||prov);
+      models.filter(m => m.avail).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        const costStr = m.cost < 0.001 ? `$${(m.cost*1000).toFixed(2)}m/1k` : `$${m.cost.toFixed(3)}/1k`;
+        opt.textContent = `${m.name} — ${costStr} · ${m.bench||'?'}점`;
+        if (m.id === cur) opt.selected = true;
+        grp.appendChild(opt);
+      });
+      if (grp.options.length) sel.appendChild(grp);
+    });
+  });
+}
+
+async function loadApiConfig() {
+  try {
+    const r = await api('/api/admin/apiconfig');
+    if (!r.ok) { console.warn('[apiconfig] status', r.status); return; }
+    const d = await r.json();
+    _acProviders = d.providers || [];
+
+    // 등록된 공급자 맵
+    const regMap = {};
+    _acProviders.forEach(p => { regMap[p.provider] = p; });
+
+    // 상태 바 + 카드 렌더
+    renderProviderStatusBar(regMap);
+    renderProviderCards(regMap);
+
+    // 모델 우선순위 드롭다운
+    populateModelPrioritySelects(d.modelPriority || {});
+  } catch(e) { console.error('[apiconfig]', e); }
+}
+
+async function saveApiConfig() {
+  const provider    = $('ac-provider').value;
+  const apiKey      = $('ac-apikey').value.trim();
+  const baseUrl     = $('ac-baseurl')?.value.trim() || '';
+  const memo        = $('ac-memo')?.value.trim() || '';
+  const customName  = $('ac-custom-name')?.value.trim() || '';
+  if (!apiKey) { showAcResult('API 키를 입력하세요.', 'err'); return; }
+  const finalProvider = provider === 'custom' ? (customName || 'custom') : provider;
+  try {
+    const d = await (await api('/api/admin/apiconfig', { method:'POST', body: JSON.stringify({ provider: finalProvider, apiKey, baseUrl, memo }) })).json();
+    if (d.success) {
+      showAcResult('✅ 저장되었습니다.', 'ok');
+      $('ac-apikey').value = ''; if($('ac-memo')) $('ac-memo').value = '';
+      toast(`${PROVIDER_META[finalProvider]?.label || finalProvider} API 키 저장 완료`, 'success');
+      loadApiConfig();
+    } else { showAcResult('❌ ' + (d.error||'저장 실패'), 'err'); }
+  } catch(e) { showAcResult('오류: '+e.message, 'err'); }
+}
+
+async function testProvider(provider) {
+  const meta = PROVIDER_META[provider] || {};
+  toast(`${meta.icon||''} ${meta.label||provider} 연결 테스트 중...`, 'info');
+  try {
+    const d = await (await api(`/api/admin/apiconfig/${provider}/test`, { method:'POST' })).json();
+    if (d.success) {
+      if (d.warning) {
+        // IP block warning (e.g. xAI Cloudflare block)
+        toast(`⚠️ ${meta.label||provider}: ${d.warning}`, 'warn');
+      } else {
+        toast(`✅ ${meta.label||provider} 연결 성공 (${d.latencyMs||'?'}ms)`, 'success');
+      }
+    } else {
+      const errMsg = d.error || '연결 실패';
+      const isAuthErr = errMsg.includes('인증 실패') || errMsg.includes('401') || errMsg.includes('403');
+      toast(`❌ ${meta.label||provider} ${errMsg}`, 'error');
+      if (isAuthErr) {
+        const consoleUrl = {
+          anthropic: 'https://console.anthropic.com',
+          xai: 'https://console.x.ai',
+          deepseek: 'https://platform.deepseek.com',
+          google: 'https://aistudio.google.com',
+          moonshot: 'https://platform.moonshot.cn',
+          mistral: 'https://console.mistral.ai',
+          openai: 'https://platform.openai.com',
+        }[provider] || '';
+        setTimeout(() => alert(
+          `🔑 ${meta.label||provider} API 키 오류\n\n` +
+          errMsg + '\n\n' +
+          `해결 방법:\n1. ${consoleUrl || '해당 제공사 콘솔'} 접속\n2. API Keys 메뉴에서 키 상태 확인\n3. 새 키 생성 후 재등록`
+        ), 300);
+      }
+    }
+  } catch(e) { toast('테스트 오류: '+e.message, 'error'); }
+}
+
+async function testCurrentApiKey() {
+  const provider = $('ac-provider').value;
+  const apiKey   = $('ac-apikey').value.trim();
+  const baseUrl  = $('ac-baseurl') ? $('ac-baseurl').value.trim() : '';
+  if (!apiKey) { showAcResult('API 키를 먼저 입력하세요.', 'err'); return; }
+  showAcResult('🔬 테스트 중...', 'ok');
+  try {
+    const body = { provider, apiKey };
+    if (baseUrl) body.baseUrl = baseUrl;
+    const d = await (await api('/api/admin/apiconfig/test-key', { method:'POST', body: JSON.stringify(body) })).json();
+    if (d.success) {
+      if (d.warning) {
+        showAcResult(`⚠️ 키 형식 확인 완료 (${d.latencyMs||'?'}ms)\n${d.warning}`, 'warn');
+      } else {
+        showAcResult(`✅ 연결 성공 (${d.latencyMs||'?'}ms) — ${d.message||''}`, 'ok');
+      }
+    } else {
+      const errMsg = d.error || '연결 실패';
+      const consoleUrl = {
+        anthropic: 'https://console.anthropic.com',
+        xai: 'https://console.x.ai',
+        deepseek: 'https://platform.deepseek.com',
+        google: 'https://aistudio.google.com',
+        moonshot: 'https://platform.moonshot.cn',
+        mistral: 'https://console.mistral.ai',
+        openai: 'https://platform.openai.com',
+      }[provider] || '';
+      let hint = '';
+      if (errMsg.includes('인증 실패') || errMsg.includes('401') || errMsg.includes('403')) {
+        hint = consoleUrl ? `\n\n💡 해결방법: ${consoleUrl} → API Keys → 새 키 생성 후 재시도` : '';
+      }
+      showAcResult(`❌ ${errMsg}${hint}`, 'err');
+    }
+  } catch(e) { showAcResult('오류: '+e.message, 'err'); }
+}
+
+async function delProvider(provider) {
+  const meta = PROVIDER_META[provider] || {};
+  if (!confirm(`[${meta.label||provider}] API 키를 삭제하시겠습니까?`)) return;
+  try {
+    const d = await (await api(`/api/admin/apiconfig/${provider}`, { method:'DELETE' })).json();
+    if (d.success) { toast('삭제 완료', 'success'); loadApiConfig(); }
+    else toast(d.error, 'error');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function showAcResult(msg, type) {
+  const el = $('ac-result'); if (!el) return;
+  el.textContent = msg;
+  el.style.whiteSpace = 'pre-wrap';
+  if (type === 'ok')   el.className = 'res-msg res-ok';
+  else if (type === 'warn') el.className = 'res-msg res-warn';
+  else                 el.className = 'res-msg res-err';
+  el.style.display = 'block';
+  // Warning stays longer (10s), errors 7s, success 5s
+  const duration = type === 'warn' ? 10000 : type === 'err' ? 7000 : 5000;
+  setTimeout(() => el.style.display='none', duration);
+}
+
+async function saveModelPriority() {
+  const priority = {
+    text:     $('mp-text')?.value,
+    analysis: $('mp-analysis')?.value,
+    chat:     $('mp-chat')?.value,
+    code:     $('mp-code')?.value,
+    creative: $('mp-creative')?.value,
+    fast:     $('mp-fast')?.value,
+  };
+  try {
+    const d = await (await api('/api/admin/apiconfig/model-priority', { method:'PUT', body: JSON.stringify({ priority }) })).json();
+    const el = $('mp-result');
+    if (d.success) {
+      if(el){el.textContent='✅ 우선순위 저장 완료';el.className='res-msg res-ok';el.style.display='block';setTimeout(()=>el.style.display='none',3000);}
+      toast('모델 우선순위 저장 완료', 'success');
+    } else { if(el){el.textContent='❌ '+d.error;el.className='res-msg res-err';el.style.display='block';} }
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// 탭 전환 버튼
+document.querySelectorAll('[data-actab]').forEach(btn => {
+  btn.addEventListener('click', () => gotoActab(btn.dataset.actab));
+});
+
+// 공급자 선택 변경
+document.getElementById('ac-provider')?.addEventListener('change', () => {
+  const v = $('ac-provider').value;
+  const meta = PROVIDER_META[v] || {};
+  const showBase = meta.needsBase || ['azure','custom','openrouter'].includes(v);
+  const showCustomName = v === 'custom';
+  const bfg = $('ac-baseurl-fg'); if(bfg) bfg.style.display = showBase ? 'block' : 'none';
+  const cnfg = $('ac-custom-name-fg'); if(cnfg) cnfg.style.display = showCustomName ? 'block' : 'none';
+  updateModelPreview(v);
+});
+
+document.getElementById('btn-ac-toggle-show')?.addEventListener('click', () => {
+  const inp = $('ac-apikey'); if(!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+
+document.getElementById('btn-ac-save')?.addEventListener('click', saveApiConfig);
+document.getElementById('btn-ac-test')?.addEventListener('click', testCurrentApiKey);
+document.getElementById('btn-refresh-apiconfig')?.addEventListener('click', loadApiConfig);
+document.getElementById('btn-save-model-priority')?.addEventListener('click', saveModelPriority);
+document.getElementById('btn-load-model-priority')?.addEventListener('click', loadApiConfig);
+
+// 초기 모델 미리보기
+updateModelPreview('openai');
+
+// ── ⑦ 모델 화이트리스트 & 우선순위 ─────────────────
+
+const TIER_COLOR = { flagship:'#ef4444', specialized:'#f97316', standard:'#3b82f6', mini:'#22c55e', nano:'#84cc16', economy:'#a855f7', open:'#06b6d4' };
+
+let _whitelistData = {};     // byProvider
+let _priorityData  = {};     // task → modelId
+let _pendingChanges = {};    // modelId → { enabled, budgetUsd }
+let _pendingPriority = {};   // task → modelId
+
+function showModelTab(tab) {
+  document.getElementById('models-tab-whitelist').style.display = tab === 'whitelist' ? '' : 'none';
+  document.getElementById('models-tab-priority').style.display  = tab === 'priority'  ? '' : 'none';
+  document.getElementById('tab-whitelist').style.fontWeight = tab === 'whitelist' ? '700' : '400';
+  document.getElementById('tab-whitelist').style.background  = tab === 'whitelist' ? 'var(--bg2)' : '';
+  document.getElementById('tab-priority').style.fontWeight  = tab === 'priority'  ? '700' : '400';
+  document.getElementById('tab-priority').style.background   = tab === 'priority'  ? 'var(--bg2)' : '';
+}
+
+async function loadModels() {
+  // KPI 초기화
+  ['kpi-models-total','kpi-models-enabled','kpi-providers-count','kpi-cheapest-model'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.textContent = '…';
+  });
+  _pendingChanges = {};
+  _pendingPriority = {};
+  try {
+    const [wlRes, prRes] = await Promise.all([
+      api('/api/admin/models/whitelist'),
+      api('/api/admin/models/priority'),
+    ]);
+    const wlData = await wlRes.json();
+    const prData = await prRes.json();
+
+    _whitelistData = wlData.byProvider || {};
+    _priorityData  = prData.priority   || {};
+
+    // KPI
+    const s = wlData.summary || {};
+    const el1 = document.getElementById('kpi-models-total');    if(el1) el1.textContent = s.total || 0;
+    const el2 = document.getElementById('kpi-models-enabled');  if(el2) el2.textContent = s.enabled || 0;
+    const el3 = document.getElementById('kpi-providers-count'); if(el3) el3.textContent = Object.keys(_whitelistData).length;
+    // 최저 비용 활성 모델
+    let cheapest = null, cheapestCost = Infinity;
+    Object.values(_whitelistData).flat().forEach(m => {
+      if (m.enabled && m.cost < cheapestCost) { cheapestCost = m.cost; cheapest = m; }
+    });
+    const el4 = document.getElementById('kpi-cheapest-model');
+    if(el4) el4.textContent = cheapest ? `${cheapest.modelId} ($${cheapestCost}/1k)` : '없음';
+
+    renderWhitelist();
+    renderPriority(prData.resolved || {});
+  } catch(e) {
+    const b = document.getElementById('models-whitelist-body');
+    if(b) b.innerHTML = `<p style="color:red">오류: ${e.message}</p>`;
+  }
+}
+
+function renderWhitelist() {
+  const body = document.getElementById('models-whitelist-body');
+  if (!body) return;
+  let html = '';
+  const providers = Object.keys(_whitelistData).sort();
+  providers.forEach(prov => {
+    const models = _whitelistData[prov] || [];
+    const meta = PROVIDER_META[prov] || { label: prov, icon: '🤖', color: '#666' };
+    const enabledCount = models.filter(m => m.enabled).length;
+    const isRegistered = models.some(m => m.providerRegistered);
+
+    html += `
+    <div class="wl-provider-block" style="margin-bottom:24px;border:1px solid var(--brd);border-radius:12px;overflow:hidden">
+      <div class="wl-provider-header" style="padding:12px 16px;background:var(--bg2);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--brd)">
+        <span style="font-size:20px">${meta.icon}</span>
+        <div style="flex:1">
+          <strong style="color:${meta.color}">${meta.label}</strong>
+          <span style="font-size:12px;color:var(--tx2);margin-left:8px">${enabledCount}/${models.length}개 활성</span>
+        </div>
+        ${isRegistered
+          ? `<span style="font-size:11px;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:99px">API 키 등록됨</span>`
+          : `<span style="font-size:11px;background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:99px">API 키 미등록</span>`}
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+          <input type="checkbox" ${enabledCount === models.length ? 'checked' : ''} onchange="toggleAllProvider('${prov}', this.checked)" style="width:16px;height:16px">
+          전체선택
+        </label>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1px;background:var(--brd)">`;
+
+    models.forEach(m => {
+      const tierCol = TIER_COLOR[m.tier] || '#888';
+      const pending = _pendingChanges[m.modelId];
+      const isEnabled = pending !== undefined ? pending.enabled : m.enabled;
+      const budget    = (pending?.budgetUsd !== undefined ? pending.budgetUsd : m.budgetUsd);
+      html += `
+        <div style="background:var(--bg1);padding:12px 14px;${!isEnabled ? 'opacity:0.5' : ''}">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <label class="toggle-switch" title="${isEnabled ? '비활성화' : '활성화'}">
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="markModelChange('${m.modelId}','enabled',this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <code style="font-size:12px;font-weight:700;color:var(--acc)">${m.modelId}</code>
+                <span style="font-size:10px;background:${tierCol}22;color:${tierCol};padding:1px 6px;border-radius:99px;font-weight:600">${m.tier}</span>
+                ${!isRegistered ? '<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px">키 미등록</span>' : ''}
+              </div>
+              <div style="font-size:12px;color:var(--tx2);margin-top:3px">${m.specialty || (m.bestFor||[]).slice(0,2).join(', ')}</div>
+              <div style="display:flex;gap:12px;margin-top:5px;font-size:11px;color:var(--tx2)">
+                <span>💰 $${m.cost}/1k</span>
+                <span>⚡ ${m.latency}ms</span>
+                <span>📚 ${m.context || '—'}</span>
+                ${m.benchmark ? `<span>🏆 ${m.benchmark}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:var(--tx2);white-space:nowrap">월 예산 $</span>
+            <input type="number" min="0" step="1" placeholder="무제한"
+              value="${budget !== null && budget !== undefined ? budget : ''}"
+              onchange="markModelChange('${m.modelId}','budget',this.value)"
+              style="width:90px;padding:3px 7px;font-size:12px;border:1px solid var(--brd);border-radius:6px;background:var(--bg2);color:var(--tx1)">
+            <span style="font-size:11px;color:var(--tx3)">비워두면 무제한</span>
+          </div>
+        </div>`;
+    });
+    html += `</div></div>`;
+  });
+
+  if (!html) html = '<p style="color:var(--tx2)">모델 데이터를 불러올 수 없습니다.</p>';
+  body.innerHTML = html;
+}
+
+function markModelChange(modelId, field, value) {
+  if (!_pendingChanges[modelId]) _pendingChanges[modelId] = {};
+  if (field === 'enabled') _pendingChanges[modelId].enabled = value;
+  if (field === 'budget')  _pendingChanges[modelId].budgetUsd = value === '' ? null : parseFloat(value);
+
+  // UI 반영 (opacity)
+  const containers = document.querySelectorAll(`[data-model-id="${modelId}"]`);
+  // 부모 div 찾아서 opacity 토글
+  const allDivs = document.querySelectorAll('#models-whitelist-body > div div');
+  allDivs.forEach(d => {
+    const inp = d.querySelector(`input[onchange*="${modelId}"]`);
+    if (inp) d.style.opacity = _pendingChanges[modelId].enabled === false ? '0.5' : '1';
+  });
+
+  updateSaveBtnState();
+}
+
+function toggleAllProvider(provider, enabled) {
+  const models = _whitelistData[provider] || [];
+  models.forEach(m => {
+    if (!_pendingChanges[m.modelId]) _pendingChanges[m.modelId] = {};
+    _pendingChanges[m.modelId].enabled = enabled;
+  });
+  renderWhitelist();   // 재렌더
+  updateSaveBtnState();
+}
+
+function updateSaveBtnState() {
+  const btn = document.getElementById('btn-save-whitelist');
+  const count = Object.keys(_pendingChanges).length + Object.keys(_pendingPriority).length;
+  if (btn) {
+    btn.textContent = count > 0 ? `💾 변경사항 저장 (${count})` : '💾 변경사항 저장';
+    btn.style.background = count > 0 ? '#ef4444' : '';
+  }
+}
+
+async function saveWhitelist() {
+  if (Object.keys(_pendingChanges).length === 0 && Object.keys(_pendingPriority).length === 0) {
+    toast('변경사항이 없습니다', 'info'); return;
+  }
+  try {
+    // 화이트리스트 저장
+    if (Object.keys(_pendingChanges).length > 0) {
+      const items = Object.entries(_pendingChanges).map(([modelId, ch]) => ({
+        modelId,
+        enabled:   ch.enabled   !== undefined ? ch.enabled   : undefined,
+        budgetUsd: ch.budgetUsd !== undefined ? ch.budgetUsd : undefined,
+      }));
+      const r = await (await api('/api/admin/models/whitelist', {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ items }),
+      })).json();
+      if (!r.success) { toast('저장 실패: ' + r.error, 'error'); return; }
+    }
+    // 우선순위 저장
+    if (Object.keys(_pendingPriority).length > 0) {
+      const r2 = await (await api('/api/admin/models/priority', {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ priority: _pendingPriority }),
+      })).json();
+      if (!r2.success) { toast('우선순위 저장 실패: ' + r2.error, 'error'); return; }
+    }
+    toast('저장 완료', 'success');
+    await loadModels();
+  } catch(e) { toast('오류: ' + e.message, 'error'); }
+}
+
+function renderPriority(resolved) {
+  const TASKS = {
+    text:     { label:'📝 텍스트 생성',   desc:'블로그, 보고서 등 일반 텍스트' },
+    analysis: { label:'🔍 분석 · 추론',   desc:'데이터 분석, 복잡한 논리' },
+    chat:     { label:'💬 채팅 · 대화',   desc:'실시간 대화, Q&A' },
+    code:     { label:'💻 코드 생성',     desc:'프로그래밍, 코드 리뷰' },
+    creative: { label:'🎨 창의적 작업',   desc:'카피라이팅, 스토리텔링' },
+    fast:     { label:'⚡ 초고속 처리',   desc:'분류, 라우팅, 간단한 Yes/No' },
+  };
+
+  const allModels = Object.values(_whitelistData).flat().filter(m => m.enabled);
+  const byProvider = {};
+  allModels.forEach(m => {
+    if (!byProvider[m.provider]) byProvider[m.provider] = [];
+    byProvider[m.provider].push(m);
+  });
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:16px">';
+  Object.entries(TASKS).forEach(([task, info]) => {
+    const res = resolved[task] || {};
+    const current = _pendingPriority[task] || _priorityData[task] || '';
+    const isMatch = res.match !== false;
+    html += `
+    <div style="border:1px solid var(--brd);border-radius:10px;padding:16px;background:var(--bg2)">
+      <div style="margin-bottom:10px">
+        <div style="font-weight:700;font-size:14px">${info.label}</div>
+        <div style="font-size:12px;color:var(--tx2)">${info.desc}</div>
+      </div>
+      <select onchange="markPriorityChange('${task}',this.value)"
+        style="width:100%;padding:8px;border:1px solid var(--brd);border-radius:6px;background:var(--bg1);color:var(--tx1);font-size:13px;margin-bottom:8px">`;
+
+    // 현재 선택값이 disabled면 먼저 표시 (경고 포함)
+    if (current && !allModels.find(m => m.modelId === current)) {
+      html += `<option value="${current}" selected>⚠️ ${current} (비활성화됨)</option>`;
+    }
+
+    Object.entries(byProvider).forEach(([prov, models]) => {
+      const meta = PROVIDER_META[prov] || { label: prov };
+      html += `<optgroup label="${meta.icon || ''} ${meta.label}">`;
+      models.sort((a,b) => a.cost - b.cost).forEach(m => {
+        const sel = current === m.modelId ? 'selected' : '';
+        html += `<option value="${m.modelId}" ${sel}>
+          ${m.modelId} · $${m.cost}/1k · ${m.tier}
+        </option>`;
+      });
+      html += `</optgroup>`;
+    });
+
+    html += `</select>`;
+    if (res.actual) {
+      html += `<div style="font-size:11px;color:var(--tx2);display:flex;gap:8px;align-items:center">
+        <span>${isMatch ? '✅ 직접 사용:' : '🔀 자동 대체:'}</span>
+        <code style="color:${isMatch ? '#22c55e' : '#f59e0b'}">${res.actual}</code>
+        <span>· ${res.provider} · $${res.cost}/1k</span>
+      </div>`;
+    }
+    html += `</div>`;
+  });
+  html += '</div>';
+
+  const body = document.getElementById('models-priority-body');
+  if (body) body.innerHTML = html;
+}
+
+function markPriorityChange(task, modelId) {
+  _pendingPriority[task] = modelId;
+  updateSaveBtnState();
+}
+
+async function savePriorityOnly() {
+  if (Object.keys(_pendingPriority).length === 0) { toast('변경사항 없음', 'info'); return; }
+  try {
+    const r = await (await api('/api/admin/models/priority', {
+      method: 'PUT',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ priority: _pendingPriority }),
+    })).json();
+    if (r.success) { toast('우선순위 저장 완료', 'success'); _pendingPriority = {}; updateSaveBtnState(); await loadModels(); }
+    else toast('저장 실패: ' + r.error, 'error');
+  } catch(e) { toast('오류: ' + e.message, 'error'); }
+}
+
+document.getElementById('btn-refresh-models')?.addEventListener('click', loadModels);
+document.getElementById('btn-save-whitelist')?.addEventListener('click', saveWhitelist);
+document.getElementById('btn-save-priority')?.addEventListener('click', savePriorityOnly);
+document.getElementById('btn-reload-priority')?.addEventListener('click', () => { _pendingPriority={}; updateSaveBtnState(); renderPriority({}); loadModels(); });
+
+// ── ⑧ Pipelines ──────────────────────────────────
+async function loadPipes() {
+  const tb=$('pipes-tbody');
+  if(tb) tb.innerHTML='<tr><td colspan="8" class="td-empty">로딩 중...</td></tr>';
+  try {
+    const d = await (await api('/api/admin/pipelines')).json();
+    const p = d.pipelines||[];
+    if(!p.length){tb.innerHTML='<tr><td colspan="8" class="td-empty">없음</td></tr>';return;}
+    tb.innerHTML=p.map(p=>{
+      const nodes=typeof p.nodes==='string'?JSON.parse(p.nodes||'[]'):(p.nodes||[]);
+      return `<tr>
+        <td style="font-size:9px;color:#4b5563" title="${p.id}">${(p.id||'').slice(0,10)}…</td>
+        <td><strong style="color:#e2e8f0">${p.name||'—'}</strong></td>
+        <td><span class="badge bs-${p.status==='active'?'active':(p.status||'draft')}">${p.status||'draft'}</span></td>
+        <td style="text-align:center;color:#94a3b8">${nodes.length}</td>
+        <td style="text-align:center;color:#94a3b8">${p.runs||0}</td>
+        <td style="font-size:10px;color:#64748b">${fmtDt(p.last_run)||'—'}</td>
+        <td style="font-size:10px;color:#64748b">${fmtDt(p.created_at)}</td>
+        <td><button class="btn btn-d btn-sm" data-pid="${p.id}" data-pname="${(p.name||'').replace(/"/g,'')}" data-action="delpipe">🗑️</button></td>
+      </tr>`;
+    }).join('');
+    tb.querySelectorAll('button[data-action="delpipe"]').forEach(btn => {
+      btn.addEventListener('click', () => delPipe(btn.dataset.pid, btn.dataset.pname));
+    });
+  } catch(e){if(tb)tb.innerHTML=`<tr><td colspan="8" class="td-empty" style="color:#f87171">${e.message}</td></tr>`;}
+}
+async function delPipe(id,name){if(!confirm(`[${name}] 삭제?`))return;await api(`/api/admin/pipelines/${id}`,{method:'DELETE'});loadPipes();}
+$('btn-refresh-pipes').addEventListener('click', loadPipes);
+
+// ── ⑦ Audit ───────────────────────────────────────
+async function loadAudit() {
+  const tb=$('audit-tbody');
+  if(tb) tb.innerHTML='<tr><td colspan="6" class="td-empty">로딩 중...</td></tr>';
+  try {
+    const d = await (await api('/api/admin/audit?limit=200')).json();
+    const l = d.logs||[];
+    if(!l.length){tb.innerHTML='<tr><td colspan="6" class="td-empty">없음</td></tr>';return;}
+    tb.innerHTML=l.map(l=>{
+      let det='—';try{det=JSON.stringify(JSON.parse(l.details||'{}')).slice(0,70);}catch(e){det=l.details||'—';}
+      return `<tr>
+        <td style="font-size:10px;color:#64748b;white-space:nowrap">${fmtDt(l.created_at)}</td>
+        <td style="color:#94a3b8;font-size:10px">${l.user_id?(l.user_id.slice(0,8)+'…'):'(익명)'}</td>
+        <td style="color:#c4b5fd;font-size:10px">${l.action||'—'}</td>
+        <td style="color:#94a3b8;font-size:10px">${l.resource||'—'}</td>
+        <td style="color:#64748b;font-size:10px">${l.ip_address||'—'}</td>
+        <td style="font-size:9px;color:#4b5563;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${det}">${det}</td>
+      </tr>`;
+    }).join('');
+  } catch(e){if(tb)tb.innerHTML=`<tr><td colspan="6" class="td-empty" style="color:#f87171">${e.message}</td></tr>`;}
+}
+$('btn-refresh-audit').addEventListener('click', loadAudit);
+
+// ── ⑧ System ──────────────────────────────────────
+async function loadSys() {
+  try {
+    const d = await (await api('/api/admin/system')).json();
+    const s=d.system||{},m=s.memory||{},o=s.os||{},e=s.env||{};
+    const memEl=$('sys-mem');
+    if(memEl) memEl.innerHTML=[{k:'RSS',v:m.rss},{k:'Heap Used',v:m.heapUsed},{k:'Heap Total',v:m.heapTotal},{k:'External',v:m.external}]
+      .map(x=>`<div class="sys-item"><div class="sys-key">${x.k}</div><div class="sys-val">${x.v||'—'}</div></div>`).join('');
+    const hu=parseInt(m.heapUsed)||0, hf=Math.max(0,(parseInt(m.heapTotal)||0)-hu), he=parseInt(m.external)||0;
+    mkChart('ch-mem','doughnut',['Heap Used','Free','External'],
+      [{data:[hu,hf,he],backgroundColor:['#8b5cf6','#1e293b','#06b6d4'],borderWidth:0}]);
+    const procEl=$('sys-proc');
+    if(procEl){
+      const up=Math.floor((s.uptime||0)/60);
+      procEl.innerHTML=[
+        {k:'Node.js',v:s.nodeVersion},{k:'플랫폼',v:`${s.platform}(${s.arch})`},
+        {k:'업타임',v:up<60?`${up}분`:`${Math.floor(up/60)}h ${up%60}m`},
+        {k:'CPU 코어',v:o.cpuCount},{k:'Load Avg',v:(o.loadAvg||[0,0,0]).map(l=>l.toFixed(2)).join('/')},
+        {k:'총 메모리',v:o.totalMem},{k:'여유 메모리',v:o.freeMem},
+      ].map(x=>`<div class="sys-item"><div class="sys-key">${x.k}</div><div class="sys-val">${x.v||'—'}</div></div>`).join('');
+    }
+    const envEl=$('sys-env');
+    if(envEl) envEl.innerHTML=[
+      {k:'NODE_ENV',v:e.nodeEnv||'—'},{k:'OpenAI',v:e.hasOpenAI?'✅ 연결':'❌ 미설정'},
+      {k:'Anthropic',v:e.hasAnthropic?'✅ 연결':'❌ 미설정'},{k:'DB',v:'✅ SQLite WAL'},
+      {k:'보안',v:'✅ Helmet + RL'},{k:'포트',v:'3000'},
+    ].map(x=>`<div class="sys-item"><div class="sys-key">${x.k}</div><div class="sys-val">${x.v}</div></div>`).join('');
+  } catch(e){console.error('[system]',e);}
+}
+
+// ── ⑨ Broadcast ──────────────────────────────────
+async function sendBroadcast() {
+  const msg=$('bc-msg')?.value?.trim(), type=$('bc-type')?.value||'info';
+  const rEl=$('bc-result');
+  if(!msg){rEl.textContent='메시지를 입력하세요';rEl.className='res-msg res-err';rEl.style.display='block';return;}
+  try {
+    const d=await (await api('/api/admin/broadcast',{method:'POST',body:JSON.stringify({message:msg,type})})).json();
+    if(d.success){
+      rEl.textContent='✅ 공지 발송 완료';rEl.className='res-msg res-ok';rEl.style.display='block';
+      _bcLog.unshift({t:new Date().toLocaleTimeString('ko-KR'),msg,type});
+      renderBcHistory(); $('bc-msg').value='';
+    } else {rEl.textContent='❌ '+d.error;rEl.className='res-msg res-err';rEl.style.display='block';}
+    setTimeout(()=>rEl.style.display='none',4000);
+  } catch(e){rEl.textContent='오류: '+e.message;rEl.className='res-msg res-err';rEl.style.display='block';}
+}
+function renderBcHistory(){
+  const el=$('bc-history'); if(!el) return;
+  el.innerHTML=_bcLog.slice(0,10).map(b=>`<div class="mini-item">
+    <div class="mini-ico">📢</div><div class="mini-info">
+      <div class="mini-name">${b.msg.slice(0,60)}${b.msg.length>60?'…':''}</div>
+      <div class="mini-sub">유형: ${b.type}</div></div>
+    <div class="mini-time">${b.t}</div></div>`).join('')||'—';
+}
+$('btn-broadcast').addEventListener('click', sendBroadcast);
+
+// ── Seed ──────────────────────────────────────────
+async function doSeed(){
+  if(!confirm('시드 데이터를 생성하시겠습니까?\n(비용 20건 + 파이프라인 3개)')) return;
+  const d=await (await api('/api/admin/seed',{method:'POST'})).json();
+  if(d.success){toast('시드 완료! '+((d.created||[]).join(', ')),'success');loadOverview();}
+  else toast(d.error,'error');
+}
+$('btn-seed').addEventListener('click', doSeed);
+
+// ── Auto-login ────────────────────────────────────
+(async()=>{
+  if(!_tok) return;
+  try {
+    const r=await api('/api/admin/stats');
+    if(r.ok){
+      const pr=await api('/api/auth/profile');
+      const pd=await pr.json();
+      _user=pd.user||{username:'admin',role:'admin'};
+      if(_user.role!=='admin'){localStorage.removeItem('adm_tok');_tok='';return;}
+      showAdmin();
+    } else {localStorage.removeItem('adm_tok');_tok='';}
+  } catch(e){localStorage.removeItem('adm_tok');_tok='';}
+})();
+
+// ══════════════════════════════════════════════════════════════
+// 모델 화이트리스트 & 우선순위 관리 (3-Layer 모델 관리 시스템)
+// ══════════════════════════════════════════════════════════════
+
+const TIER_BADGE_NEW = {
+  flagship:   '<span style="background:#7c3aed;color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">Flagship</span>',
+  specialized:'<span style="background:#2563eb;color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">Specialized</span>',
+  standard:   '<span style="background:#0891b2;color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">Standard</span>',
+  mini:       '<span style="background:#059669;color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">Mini</span>',
+  nano:       '<span style="background:#65a30d;color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">Nano</span>',
+  economy:    '<span style="background:#d97706;color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">Economy</span>',
+  open:       '<span style="background:#dc2626;color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">Open</span>',
+};
+
+const PROVIDER_INFO = {
+  openai:    { label:'OpenAI',          icon:'🤖', color:'#10a37f' },
+  anthropic: { label:'Anthropic',       icon:'🧠', color:'#d4a853' },
+  google:    { label:'Google',          icon:'🔵', color:'#4285f4' },
+  deepseek:  { label:'DeepSeek',        icon:'🌊', color:'#0ea5e9' },
+  xai:       { label:'xAI (Grok)',      icon:'✖️', color:'#1a1a1a' },
+  meta:      { label:'Meta (Llama)',    icon:'🦙', color:'#0668e1' },
+  alibaba:   { label:'Alibaba (Qwen)',  icon:'☁️', color:'#ff6900' },
+  moonshot:  { label:'Moonshot (Kimi)', icon:'🌙', color:'#6366f1' },
+  mistral:   { label:'Mistral',         icon:'💫', color:'#ff7000' },
+};
+
+// 변경된 화이트리스트 항목 추적
+const _wlChanges = {};
+let _wlData = null;
+let _prioData = null;
+
+function showModelTab(tab) {
+  document.getElementById('models-tab-whitelist').style.display = tab === 'whitelist' ? '' : 'none';
+  document.getElementById('models-tab-priority').style.display  = tab === 'priority'  ? '' : 'none';
+  const tWL = document.getElementById('tab-whitelist');
+  const tPR = document.getElementById('tab-priority');
+  if (tWL) { tWL.style.background = tab==='whitelist' ? 'var(--bg2)' : ''; tWL.style.fontWeight = tab==='whitelist'?'700':'400'; }
+  if (tPR) { tPR.style.background = tab==='priority'  ? 'var(--bg2)' : ''; tPR.style.fontWeight = tab==='priority' ?'700':'400'; }
+}
+
+async function loadModels() {
+  try {
+    // 화이트리스트 + 통계 + 우선순위 동시 로드
+    const [wlRes, prioRes] = await Promise.all([
+      api('/api/admin/models/whitelist'),
+      api('/api/admin/models/priority'),
+    ]);
+    _wlData   = wlRes;
+    _prioData = prioRes;
+    renderWhitelistKPI(wlRes);
+    renderWhitelistBody(wlRes);
+    renderPriorityBody(wlRes, prioRes);
+  } catch(e) {
+    document.getElementById('models-whitelist-body').innerHTML =
+      `<div style="color:var(--danger);padding:20px">로드 실패: ${e.message}</div>`;
+  }
+}
+
+function renderWhitelistKPI(data) {
+  const s = data.summary || {};
+  const stats = data.stats || {};
+  const provCount = Object.keys(stats).filter(p => (stats[p].enabled||0) > 0).length;
+
+  setText('kpi-models-total',   s.total   || '—');
+  setText('kpi-models-enabled', s.enabled || '—');
+  setText('kpi-providers-count', provCount);
+
+  // 가장 저렴한 활성 모델
+  let cheapest = null, cheapCost = 9999;
+  Object.entries(data.byProvider||{}).forEach(([p, models]) => {
+    models.filter(m=>m.enabled).forEach(m => {
+      if ((m.cost||0) < cheapCost) { cheapCost = m.cost; cheapest = m.modelId; }
+    });
+  });
+  setText('kpi-cheapest-model', cheapest ? `${cheapest} ($${cheapCost}/1k)` : '—');
+}
+
+function renderWhitelistBody(data) {
+  const byProvider = data.byProvider || {};
+  if (!Object.keys(byProvider).length) {
+    document.getElementById('models-whitelist-body').innerHTML = '<p style="color:var(--tx2)">등록된 모델 없음</p>';
+    return;
+  }
+  let html = '';
+  Object.entries(byProvider).forEach(([provider, models]) => {
+    const pi = PROVIDER_INFO[provider] || { label: provider, icon:'🔧', color:'#666' };
+    const enabledCount = models.filter(m=>m.enabled).length;
+    const totalCount   = models.length;
+    const isRegistered = models[0]?.providerRegistered;
+    html += `
+    <div style="margin-bottom:24px;border:1px solid var(--brd);border-radius:12px;overflow:hidden">
+      <div style="background:var(--bg2);padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--brd)">
+        <span style="font-size:22px">${pi.icon}</span>
+        <div style="flex:1">
+          <span style="font-weight:700;font-size:15px">${pi.label}</span>
+          <span style="margin-left:10px;font-size:12px;color:var(--tx2)">${enabledCount}/${totalCount} 모델 활성</span>
+          ${isRegistered
+            ? '<span style="margin-left:8px;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-size:11px">✅ API 등록됨</span>'
+            : '<span style="margin-left:8px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px">⚠️ API 미등록</span>'}
+        </div>
+        <label style="cursor:pointer;font-size:12px;color:var(--tx2)">
+          <input type="checkbox" ${enabledCount===totalCount?'checked':''} onchange="toggleProviderAll('${provider}', this.checked)" style="margin-right:4px">
+          전체 선택
+        </label>
+      </div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--bg2);color:var(--tx2)">
+            <th style="padding:8px 12px;text-align:left">ON/OFF</th>
+            <th style="padding:8px 12px;text-align:left">모델 ID</th>
+            <th style="padding:8px 12px;text-align:left">Tier</th>
+            <th style="padding:8px 12px;text-align:right">비용/1k</th>
+            <th style="padding:8px 12px;text-align:right">벤치마크</th>
+            <th style="padding:8px 12px;text-align:right">응답속도</th>
+            <th style="padding:8px 12px;text-align:left">용도</th>
+            <th style="padding:8px 12px;text-align:right">월예산($)</th>
+          </tr>
+        </thead>
+        <tbody>`;
+    models.forEach(m => {
+      const wlKey = m.modelId;
+      const chk = _wlChanges[wlKey]?.enabled ?? m.enabled;
+      const budgetVal = _wlChanges[wlKey]?.budgetUsd ?? m.budgetUsd;
+      html += `
+          <tr style="border-top:1px solid var(--brd);${!chk?'opacity:0.5':''}">
+            <td style="padding:8px 12px">
+              <label class="toggle-switch" style="position:relative;display:inline-block;width:40px;height:22px">
+                <input type="checkbox" ${chk?'checked':''} data-model="${wlKey}" onchange="onModelToggle('${wlKey}', this.checked)"
+                  style="opacity:0;width:0;height:0;position:absolute">
+                <span style="position:absolute;cursor:pointer;inset:0;background:${chk?'var(--primary)':'#ccc'};border-radius:22px;transition:.2s">
+                  <span style="position:absolute;height:16px;width:16px;left:${chk?'20px':'3px'};bottom:3px;background:#fff;border-radius:50%;transition:.2s"></span>
+                </span>
+              </label>
+            </td>
+            <td style="padding:8px 12px;font-family:monospace;font-weight:600">${m.modelId}</td>
+            <td style="padding:8px 12px">${TIER_BADGE_NEW[m.tier]||m.tier}</td>
+            <td style="padding:8px 12px;text-align:right;color:${m.cost>0.01?'var(--danger)':'var(--success)'}">$${m.cost||0}</td>
+            <td style="padding:8px 12px;text-align:right;font-weight:700">${m.benchmark||'—'}</td>
+            <td style="padding:8px 12px;text-align:right;color:var(--tx2)">${m.latency?m.latency+'ms':'—'}</td>
+            <td style="padding:8px 12px;color:var(--tx2);font-size:12px">${(m.bestFor||[]).slice(0,2).join(', ')}</td>
+            <td style="padding:8px 12px;text-align:right">
+              <input type="number" min="0" step="1" placeholder="무제한"
+                value="${budgetVal!==null&&budgetVal!==undefined?budgetVal:''}"
+                data-budget="${wlKey}"
+                onchange="onBudgetChange('${wlKey}', this.value)"
+                style="width:80px;background:var(--bg2);border:1px solid var(--brd);border-radius:6px;padding:3px 6px;color:var(--tx);font-size:12px;text-align:right">
+            </td>
+          </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+  });
+  document.getElementById('models-whitelist-body').innerHTML = html;
+}
+
+function onModelToggle(modelId, enabled) {
+  if (!_wlChanges[modelId]) _wlChanges[modelId] = {};
+  _wlChanges[modelId].enabled = enabled;
+  // 행 dimming 업데이트
+  const row = document.querySelector(`[data-model="${modelId}"]`)?.closest('tr');
+  if (row) row.style.opacity = enabled ? '1' : '0.5';
+  const span = document.querySelector(`[data-model="${modelId}"]`)?.nextElementSibling;
+  if (span) {
+    span.style.background = enabled ? 'var(--primary)' : '#ccc';
+    const dot = span.querySelector('span');
+    if (dot) dot.style.left = enabled ? '20px' : '3px';
+  }
+}
+
+function onBudgetChange(modelId, value) {
+  if (!_wlChanges[modelId]) _wlChanges[modelId] = {};
+  _wlChanges[modelId].budgetUsd = value === '' ? null : parseFloat(value);
+}
+
+function toggleProviderAll(provider, enabled) {
+  // 해당 공급자의 모든 모델 체크박스 업데이트
+  if (!_wlData) return;
+  const models = _wlData.byProvider[provider] || [];
+  models.forEach(m => {
+    onModelToggle(m.modelId, enabled);
+    const cb = document.querySelector(`[data-model="${m.modelId}"]`);
+    if (cb) cb.checked = enabled;
+  });
+}
+
+async function saveWhitelist() {
+  const items = Object.entries(_wlChanges).map(([modelId, changes]) => ({ modelId, ...changes }));
+  if (!items.length) { toast('변경사항 없음', 'info'); return; }
+  try {
+    const r = await api('/api/admin/models/whitelist', { method:'PUT', body:JSON.stringify({ items }) });
+    if (r.success) {
+      toast(`✅ ${r.updated}개 모델 저장 완료`, 'success');
+      Object.keys(_wlChanges).forEach(k => delete _wlChanges[k]);
+      loadModels();
+    } else { toast(r.error||'저장 실패', 'error'); }
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function renderPriorityBody(wlData, prioData) {
+  const priority = prioData?.priority || {};
+  const resolved = prioData?.resolved || {};
+  const TASKS = [
+    { key:'text',     label:'📝 텍스트 생성',    desc:'블로그·보고서 작성' },
+    { key:'analysis', label:'🔍 분석·추론',       desc:'데이터·전략 분석' },
+    { key:'chat',     label:'💬 대화·상담',       desc:'고객 응답·챗봇' },
+    { key:'code',     label:'💻 코드 생성',       desc:'개발·코드 리뷰' },
+    { key:'creative', label:'🎨 창작·카피',       desc:'마케팅·스토리텔링' },
+    { key:'fast',     label:'⚡ 빠른 라우팅',     desc:'분류·검증·간단 작업' },
+  ];
+
+  // 활성 모델 목록 수집
+  const allModels = [];
+  const byProvider = wlData?.byProvider || {};
+  Object.entries(byProvider).forEach(([prov, models]) => {
+    models.filter(m => m.enabled).forEach(m => allModels.push(m));
+  });
+
+  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">';
+  TASKS.forEach(t => {
+    const pref = priority[t.key] || '';
+    const res  = resolved[t.key] || {};
+    const isMatch = res.match !== false;
+    html += `
+    <div style="border:1px solid var(--brd);border-radius:10px;padding:16px">
+      <div style="font-weight:700;margin-bottom:4px">${t.label}</div>
+      <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">${t.desc}</div>
+      <select data-task="${t.key}" style="width:100%;background:var(--bg2);border:1px solid var(--brd);border-radius:6px;padding:6px 8px;color:var(--tx);font-size:13px">
+        <option value="">-- 모델 선택 --</option>
+        ${allModels.map(m => `<option value="${m.modelId}" ${m.modelId===pref?'selected':''}>${m.modelId} (${m.provider}, $${m.cost||0}/1k)</option>`).join('')}
+      </select>
+      ${!isMatch && res.actual ? `<div style="margin-top:6px;font-size:11px;color:var(--warning)">⚠️ 지정모델 비활성 → 실제: <strong>${res.actual}</strong></div>` : ''}
+      ${res.actual && isMatch ? `<div style="margin-top:6px;font-size:11px;color:var(--success)">✅ 실제 사용: <strong>${res.actual}</strong> ($${res.cost||0}/1k)</div>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('models-priority-body').innerHTML = html;
+}
+
+async function savePriority() {
+  const selects = document.querySelectorAll('#models-tab-priority select[data-task]');
+  const priority = {};
+  selects.forEach(s => { if (s.value) priority[s.dataset.task] = s.value; });
+  if (!Object.keys(priority).length) { toast('변경사항 없음', 'info'); return; }
+  try {
+    const r = await api('/api/admin/models/priority', { method:'PUT', body:JSON.stringify({ priority }) });
+    if (r.success) {
+      toast('✅ 우선순위 저장 완료', 'success');
+      loadModels();
+    } else { toast(r.error||'저장 실패', 'error'); }
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+document.getElementById('btn-refresh-models')?.addEventListener('click', loadModels);
+document.getElementById('btn-save-whitelist')?.addEventListener('click', saveWhitelist);
+document.getElementById('btn-save-priority')?.addEventListener('click', savePriority);
+document.getElementById('btn-reload-priority')?.addEventListener('click', () => { if(_wlData&&_prioData) renderPriorityBody(_wlData,_prioData); });
+
+function setText(id, v) { const el=document.getElementById(id); if(el) el.textContent=v; }
+
+// ── 베타 사용자 관리 ─────────────────────────────────────────────────────────
+
+async function loadBetaSection() {
+  await Promise.all([loadBetaStats(), loadBetaUsers(), loadInviteCodes()]);
+}
+
+async function loadBetaStats() {
+  try {
+    const r = await api('/api/admin/beta/stats').then(r=>r.json());
+    if (!r.success) return;
+    const s = r.summary;
+    setText('bk-total',     s.totalBetaUsers || 0);
+    setText('bk-active',    s.activeUsers || 0);
+    setText('bk-cost',      '$' + (s.totalCostMonth || 0).toFixed(4));
+    setText('bk-reqtoday',  s.totalReqToday || 0);
+    setText('bk-overquota', s.overQuotaUsers || 0);
+  } catch(e) { console.warn('[beta stats]', e); }
+}
+
+async function loadBetaUsers() {
+  try {
+    const r = await api('/api/admin/beta/users').then(r=>r.json());
+    const tbody = document.getElementById('beta-user-tbody');
+    if (!r.success || !tbody) return;
+    if (!r.users.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#6b7280">베타 사용자 없음</td></tr>';
+      return;
+    }
+    tbody.innerHTML = r.users.map(u => `
+      <tr>
+        <td>${u.email || '—'}</td>
+        <td><span class="badge-role">${u.role}</span></td>
+        <td>${u.quota_plan || u.plan || '—'}</td>
+        <td>${u.is_active ? '<span style="color:#4ade80">✅</span>' : '<span style="color:#f87171">❌</span>'}</td>
+        <td>${u.used_today || 0}</td>
+        <td>${u.daily_limit || '—'}</td>
+        <td>$${(u.cost_month || 0).toFixed(4)}</td>
+        <td>${(u.created_at||'').slice(0,10)}</td>
+        <td>
+          <button class="btn btn-s" onclick="changePlan('${u.id}','pro')">→Pro</button>
+          <button class="btn btn-s" style="background:rgba(239,68,68,.15)" onclick="changePlan('${u.id}','beta')">→Beta</button>
+          <button class="btn btn-s" onclick="resetQuota('${u.id}')">리셋</button>
+        </td>
+      </tr>`).join('');
+  } catch(e) { console.warn('[beta users]', e); }
+}
+
+async function loadInviteCodes() {
+  try {
+    const r = await api('/api/admin/beta/invites').then(r=>r.json());
+    const el = document.getElementById('inv-list');
+    if (!el) return;
+    if (!r.invites?.length) {
+      el.innerHTML = '<p style="color:#6b7280;text-align:center;padding:20px">초대 코드 없음</p>';
+      return;
+    }
+    el.innerHTML = r.invites.map(inv => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div>
+          <code style="background:rgba(139,92,246,.15);padding:2px 8px;border-radius:4px;font-size:13px">${inv.code}</code>
+          ${inv.email ? `<span style="color:#94a3b8;font-size:12px;margin-left:8px">${inv.email}</span>` : ''}
+          <span style="font-size:11px;margin-left:8px;color:${inv.used ? '#f87171' : '#4ade80'}">${inv.used ? '사용됨' : '미사용'}</span>
+          ${inv.expires_at ? `<span style="font-size:11px;color:#fbbf24;margin-left:4px">만료: ${inv.expires_at.slice(0,10)}</span>` : ''}
+        </div>
+        ${!inv.used ? `<button class="btn btn-s" style="background:rgba(239,68,68,.15)" onclick="deleteInvite('${inv.code}')">삭제</button>` : ''}
+      </div>`).join('');
+  } catch(e) { console.warn('[invite list]', e); }
+}
+
+async function createInviteCodes() {
+  const email   = document.getElementById('inv-email')?.value?.trim() || '';
+  const role    = document.getElementById('inv-role')?.value || 'beta';
+  const expires = document.getElementById('inv-expires')?.value || null;
+  const count   = parseInt(document.getElementById('inv-count')?.value || '1');
+  const result  = document.getElementById('inv-result');
+
+  try {
+    const r = await api('/api/admin/beta/invites', { method:'POST', body: JSON.stringify({ email: email || null, role, expiresAt: expires, count }) }).then(r=>r.json());
+    if (r.success) {
+      const codes = r.invites.map(i => i.code).join('\n');
+      if (result) result.innerHTML = `<div style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);border-radius:8px;padding:12px;margin-top:8px">
+        <div style="color:#4ade80;font-weight:600;margin-bottom:6px">✅ ${r.created}개 생성 완료</div>
+        <pre style="font-size:12px;color:#a78bfa;word-break:break-all;white-space:pre-wrap">${codes}</pre>
+      </div>`;
+      await loadInviteCodes();
+      await loadBetaStats();
+    } else {
+      if (result) result.innerHTML = `<div style="color:#f87171;margin-top:8px">❌ ${r.error}</div>`;
+    }
+  } catch(e) {
+    if (result) result.innerHTML = `<div style="color:#f87171;margin-top:8px">❌ ${e.message}</div>`;
+  }
+}
+
+async function deleteInvite(code) {
+  if (!confirm(`초대 코드 "${code}" 를 삭제할까요?`)) return;
+  await api(`/api/admin/beta/invites/${code}`, { method:'DELETE' }).then(r=>r.json());
+  await loadInviteCodes();
+}
+
+async function changePlan(userId, plan) {
+  await api(`/api/admin/beta/quota/${userId}`, { method:'PATCH', body: JSON.stringify({ plan }) }).then(r=>r.json());
+  await loadBetaUsers();
+  await loadBetaStats();
+}
+
+async function resetQuota(userId) {
+  await api(`/api/admin/beta/quota/reset/${userId}`, { method:'POST' }).then(r=>r.json());
+  await loadBetaUsers();
+}
+
+// 탭 전환 시 베타 섹션 자동 로드
+const _origShowSection = window._showSection;
+document.querySelectorAll('[data-sec="beta"]').forEach(btn => {
+  btn.addEventListener('click', () => { setTimeout(loadBetaSection, 100); });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,746 @@
+{
+  "cycles": [
+    {
+      "cycleId": "cycle_2026-03-10T12-51-08-085Z",
+      "startedAt": "2026-03-10T12:51:08.097Z",
+      "steps": [
+        {
+          "step": 1,
+          "name": "DB 로드",
+          "casesBefore": 1005
+        },
+        {
+          "step": 2,
+          "name": "분석",
+          "topMissingTech": [
+            [
+              "상품페이지_스크래퍼",
+              7
+            ],
+            [
+              "가격비교_크롤러",
+              7
+            ],
+            [
+              "기업조사_API",
+              7
+            ],
+            [
+              "이탈예측_모델",
+              7
+            ],
+            [
+              "급여계산_모듈",
+              7
+            ]
+          ],
+          "topMissingApis": [
+            [
+              "ImageGen_API",
+              76
+            ],
+            [
+              "Puppeteer",
+              45
+            ],
+            [
+              "Whisper_STT",
+              45
+            ],
+            [
+              "GPT4V_API",
+              34
+            ],
+            [
+              "Email_API",
+              30
+            ]
+          ],
+          "totalUncovered": 434
+        },
+        {
+          "step": 3,
+          "name": "시스템 패치",
+          "rolesAdded": 2,
+          "combosAdded": 2,
+          "taskTypesAdded": 0,
+          "newRoles": [
+            "image_generator",
+            "web_scraper"
+          ],
+          "newCombos": [
+            "image_generator_pipeline",
+            "web_scraper_pipeline"
+          ],
+          "newTaskTypes": [],
+          "patchedAt": "2026-03-10T12:51:08.129Z"
+        },
+        {
+          "step": 4,
+          "name": "케이스 생성",
+          "generated": 50
+        },
+        {
+          "step": 5,
+          "name": "DB 저장",
+          "casesAfter": 1055,
+          "added": 50
+        },
+        {
+          "step": 6,
+          "name": "리포트 저장",
+          "path": "/home/user/webapp/ai-orchestrator/src/testcases/daily_report.json"
+        }
+      ],
+      "success": true,
+      "completedAt": "2026-03-10T12:51:08.178Z",
+      "durationMs": 93,
+      "summary": {
+        "before": 1005,
+        "after": 1055,
+        "added": 50,
+        "patchResult": {
+          "rolesAdded": 2,
+          "combosAdded": 2,
+          "taskTypesAdded": 0,
+          "newRoles": [
+            "image_generator",
+            "web_scraper"
+          ],
+          "newCombos": [
+            "image_generator_pipeline",
+            "web_scraper_pipeline"
+          ],
+          "newTaskTypes": [],
+          "patchedAt": "2026-03-10T12:51:08.129Z"
+        },
+        "topMissingTech": [
+          [
+            "상품페이지_스크래퍼",
+            7
+          ],
+          [
+            "가격비교_크롤러",
+            7
+          ],
+          [
+            "기업조사_API",
+            7
+          ],
+          [
+            "이탈예측_모델",
+            7
+          ],
+          [
+            "급여계산_모듈",
+            7
+          ],
+          [
+            "특허DB_API",
+            7
+          ],
+          [
+            "수식인식_OCR",
+            7
+          ],
+          [
+            "3D렌더링_API",
+            7
+          ],
+          [
+            "캐릭터일관성_AI",
+            7
+          ],
+          [
+            "AR_렌더링",
+            7
+          ]
+        ]
+      }
+    },
+    {
+      "cycleId": "cycle_2026-03-10T12-51-31-793Z",
+      "startedAt": "2026-03-10T12:51:31.794Z",
+      "steps": [
+        {
+          "step": 1,
+          "name": "DB 로드",
+          "casesBefore": 1055
+        },
+        {
+          "step": 2,
+          "name": "분석",
+          "topMissingTech": [
+            [
+              "3D렌더링_API",
+              10
+            ],
+            [
+              "공간인식_AI",
+              10
+            ],
+            [
+              "NER_파이프라인",
+              10
+            ],
+            [
+              "수식인식_OCR",
+              9
+            ],
+            [
+              "상품페이지_스크래퍼",
+              8
+            ]
+          ],
+          "topMissingApis": [
+            [
+              "ImageGen_API",
+              79
+            ],
+            [
+              "Puppeteer",
+              50
+            ],
+            [
+              "Whisper_STT",
+              49
+            ],
+            [
+              "Email_API",
+              42
+            ],
+            [
+              "GPT4V_API",
+              40
+            ]
+          ],
+          "totalUncovered": 471
+        },
+        {
+          "step": 3,
+          "name": "시스템 패치",
+          "rolesAdded": 0,
+          "combosAdded": 0,
+          "taskTypesAdded": 0,
+          "newRoles": [],
+          "newCombos": [],
+          "newTaskTypes": [],
+          "patchedAt": "2026-03-10T12:51:31.828Z"
+        },
+        {
+          "step": 4,
+          "name": "케이스 생성",
+          "generated": 50
+        },
+        {
+          "step": 5,
+          "name": "DB 저장",
+          "casesAfter": 1105,
+          "added": 50
+        },
+        {
+          "step": 6,
+          "name": "리포트 저장",
+          "path": "/home/user/webapp/ai-orchestrator/src/testcases/daily_report.json"
+        }
+      ],
+      "success": true,
+      "completedAt": "2026-03-10T12:51:31.854Z",
+      "durationMs": 61,
+      "summary": {
+        "before": 1055,
+        "after": 1105,
+        "added": 50,
+        "patchResult": {
+          "rolesAdded": 0,
+          "combosAdded": 0,
+          "taskTypesAdded": 0,
+          "newRoles": [],
+          "newCombos": [],
+          "newTaskTypes": [],
+          "patchedAt": "2026-03-10T12:51:31.828Z"
+        },
+        "topMissingTech": [
+          [
+            "3D렌더링_API",
+            10
+          ],
+          [
+            "공간인식_AI",
+            10
+          ],
+          [
+            "NER_파이프라인",
+            10
+          ],
+          [
+            "수식인식_OCR",
+            9
+          ],
+          [
+            "상품페이지_스크래퍼",
+            8
+          ],
+          [
+            "이탈예측_모델",
+            8
+          ],
+          [
+            "가격비교_크롤러",
+            7
+          ],
+          [
+            "기업조사_API",
+            7
+          ],
+          [
+            "급여계산_모듈",
+            7
+          ],
+          [
+            "특허DB_API",
+            7
+          ]
+        ]
+      }
+    },
+    {
+      "cycleId": "cycle_2026-03-10T16-19-20-770Z",
+      "startedAt": "2026-03-10T16:19:20.770Z",
+      "steps": [
+        {
+          "step": 1,
+          "name": "DB 로드",
+          "casesBefore": 1105
+        },
+        {
+          "step": 2,
+          "name": "분석",
+          "topMissingTech": [
+            [
+              "NER_파이프라인",
+              12
+            ],
+            [
+              "3D렌더링_API",
+              11
+            ],
+            [
+              "공간인식_AI",
+              11
+            ],
+            [
+              "수식인식_OCR",
+              9
+            ],
+            [
+              "캐릭터일관성_AI",
+              9
+            ]
+          ],
+          "topMissingApis": [
+            [
+              "ImageGen_API",
+              80
+            ],
+            [
+              "Whisper_STT",
+              55
+            ],
+            [
+              "Puppeteer",
+              51
+            ],
+            [
+              "Email_API",
+              51
+            ],
+            [
+              "GPT4V_API",
+              46
+            ]
+          ],
+          "totalUncovered": 355
+        },
+        {
+          "step": 3,
+          "name": "시스템 패치",
+          "rolesAdded": 0,
+          "combosAdded": 0,
+          "taskTypesAdded": 0,
+          "newRoles": [],
+          "newCombos": [],
+          "newTaskTypes": [],
+          "patchedAt": "2026-03-10T16:19:20.799Z"
+        },
+        {
+          "step": 4,
+          "name": "케이스 생성",
+          "generated": 50
+        },
+        {
+          "step": 5,
+          "name": "DB 저장",
+          "casesAfter": 1155,
+          "added": 50
+        },
+        {
+          "step": 6,
+          "name": "리포트 저장",
+          "path": "/home/user/webapp/ai-orchestrator/src/testcases/daily_report.json"
+        }
+      ],
+      "success": true,
+      "completedAt": "2026-03-10T16:19:20.855Z",
+      "durationMs": 85,
+      "summary": {
+        "before": 1105,
+        "after": 1155,
+        "added": 50,
+        "patchResult": {
+          "rolesAdded": 0,
+          "combosAdded": 0,
+          "taskTypesAdded": 0,
+          "newRoles": [],
+          "newCombos": [],
+          "newTaskTypes": [],
+          "patchedAt": "2026-03-10T16:19:20.799Z"
+        },
+        "topMissingTech": [
+          [
+            "NER_파이프라인",
+            12
+          ],
+          [
+            "3D렌더링_API",
+            11
+          ],
+          [
+            "공간인식_AI",
+            11
+          ],
+          [
+            "수식인식_OCR",
+            9
+          ],
+          [
+            "캐릭터일관성_AI",
+            9
+          ],
+          [
+            "상품페이지_스크래퍼",
+            8
+          ],
+          [
+            "가격비교_크롤러",
+            8
+          ],
+          [
+            "기업조사_API",
+            8
+          ],
+          [
+            "이탈예측_모델",
+            8
+          ],
+          [
+            "급여계산_모듈",
+            7
+          ]
+        ]
+      }
+    },
+    {
+      "cycleId": "cycle_2026-03-11T03-00-27-387Z",
+      "startedAt": "2026-03-11T03:00:27.388Z",
+      "steps": [
+        {
+          "step": 1,
+          "name": "DB 로드",
+          "casesBefore": 1155
+        },
+        {
+          "step": 2,
+          "name": "분석",
+          "topMissingTech": [
+            [
+              "NER_파이프라인",
+              15
+            ],
+            [
+              "수식인식_OCR",
+              12
+            ],
+            [
+              "3D렌더링_API",
+              12
+            ],
+            [
+              "캐릭터일관성_AI",
+              11
+            ],
+            [
+              "공간인식_AI",
+              11
+            ]
+          ],
+          "topMissingApis": [
+            [
+              "ImageGen_API",
+              82
+            ],
+            [
+              "Whisper_STT",
+              61
+            ],
+            [
+              "Email_API",
+              60
+            ],
+            [
+              "Puppeteer",
+              55
+            ],
+            [
+              "GPT4V_API",
+              53
+            ]
+          ],
+          "totalUncovered": 162
+        },
+        {
+          "step": 3,
+          "name": "시스템 패치",
+          "rolesAdded": 0,
+          "combosAdded": 0,
+          "taskTypesAdded": 0,
+          "newRoles": [],
+          "newCombos": [],
+          "newTaskTypes": [],
+          "patchedAt": "2026-03-11T03:00:27.455Z"
+        },
+        {
+          "step": 4,
+          "name": "케이스 생성",
+          "generated": 50
+        },
+        {
+          "step": 5,
+          "name": "DB 저장",
+          "casesAfter": 1205,
+          "added": 50
+        },
+        {
+          "step": 6,
+          "name": "리포트 저장",
+          "path": "/home/user/webapp/ai-orchestrator/src/testcases/daily_report.json"
+        }
+      ],
+      "success": true,
+      "completedAt": "2026-03-11T03:00:27.523Z",
+      "durationMs": 136,
+      "summary": {
+        "before": 1155,
+        "after": 1205,
+        "added": 50,
+        "patchResult": {
+          "rolesAdded": 0,
+          "combosAdded": 0,
+          "taskTypesAdded": 0,
+          "newRoles": [],
+          "newCombos": [],
+          "newTaskTypes": [],
+          "patchedAt": "2026-03-11T03:00:27.455Z"
+        },
+        "topMissingTech": [
+          [
+            "NER_파이프라인",
+            15
+          ],
+          [
+            "수식인식_OCR",
+            12
+          ],
+          [
+            "3D렌더링_API",
+            12
+          ],
+          [
+            "캐릭터일관성_AI",
+            11
+          ],
+          [
+            "공간인식_AI",
+            11
+          ],
+          [
+            "상품페이지_스크래퍼",
+            9
+          ],
+          [
+            "이탈예측_모델",
+            9
+          ],
+          [
+            "크립토_분석_엔진",
+            9
+          ],
+          [
+            "가격비교_크롤러",
+            8
+          ],
+          [
+            "기업조사_API",
+            8
+          ]
+        ]
+      }
+    },
+    {
+      "cycleId": "cycle_2026-03-11T03-20-15-046Z",
+      "startedAt": "2026-03-11T03:20:15.047Z",
+      "steps": [
+        {
+          "step": 1,
+          "name": "DB 로드",
+          "casesBefore": 1205
+        },
+        {
+          "step": 2,
+          "name": "분석",
+          "topMissingTech": [
+            [
+              "NER_파이프라인",
+              17
+            ],
+            [
+              "수식인식_OCR",
+              13
+            ],
+            [
+              "공간인식_AI",
+              13
+            ],
+            [
+              "3D렌더링_API",
+              12
+            ],
+            [
+              "캐릭터일관성_AI",
+              12
+            ]
+          ],
+          "topMissingApis": [
+            [
+              "ImageGen_API",
+              86
+            ],
+            [
+              "Email_API",
+              68
+            ],
+            [
+              "Whisper_STT",
+              65
+            ],
+            [
+              "GPT4V_API",
+              59
+            ],
+            [
+              "Puppeteer",
+              57
+            ]
+          ],
+          "totalUncovered": 197
+        },
+        {
+          "step": 3,
+          "name": "시스템 패치",
+          "rolesAdded": 0,
+          "combosAdded": 0,
+          "taskTypesAdded": 0,
+          "newRoles": [],
+          "newCombos": [],
+          "newTaskTypes": [],
+          "patchedAt": "2026-03-11T03:20:15.094Z"
+        },
+        {
+          "step": 4,
+          "name": "케이스 생성",
+          "generated": 50
+        },
+        {
+          "step": 5,
+          "name": "DB 저장",
+          "casesAfter": 1255,
+          "added": 50
+        },
+        {
+          "step": 6,
+          "name": "리포트 저장",
+          "path": "/home/user/webapp/ai-orchestrator/src/testcases/daily_report.json"
+        }
+      ],
+      "success": true,
+      "completedAt": "2026-03-11T03:20:15.166Z",
+      "durationMs": 120,
+      "summary": {
+        "before": 1205,
+        "after": 1255,
+        "added": 50,
+        "patchResult": {
+          "rolesAdded": 0,
+          "combosAdded": 0,
+          "taskTypesAdded": 0,
+          "newRoles": [],
+          "newCombos": [],
+          "newTaskTypes": [],
+          "patchedAt": "2026-03-11T03:20:15.094Z"
+        },
+        "topMissingTech": [
+          [
+            "NER_파이프라인",
+            17
+          ],
+          [
+            "수식인식_OCR",
+            13
+          ],
+          [
+            "공간인식_AI",
+            13
+          ],
+          [
+            "3D렌더링_API",
+            12
+          ],
+          [
+            "캐릭터일관성_AI",
+            12
+          ],
+          [
+            "의료영상_AI",
+            12
+          ],
+          [
+            "크립토_분석_엔진",
+            12
+          ],
+          [
+            "이탈예측_모델",
+            10
+          ],
+          [
+            "상품페이지_스크래퍼",
+            9
+          ],
+          [
+            "기업조사_API",
+            9
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,1996 @@
+{
+  "meta": {
+    "run_at": "2026-03-10T12:29:41.287Z",
+    "mode": "sample",
+    "total_cases": 60,
+    "server_url": "http://localhost:3000"
+  },
+  "stats": {
+    "total": 60,
+    "passed": 60,
+    "failed": 0,
+    "errors": 0,
+    "by_domain": {
+      "ecommerce": 5,
+      "marketing": 5,
+      "b2b": 5,
+      "it": 5,
+      "legal_hr": 5,
+      "edu_med": 5,
+      "creative": 5,
+      "data_ai": 5,
+      "real_estate": 5,
+      "finance_invest": 5,
+      "healthcare": 5,
+      "government": 5
+    },
+    "by_feasibility": {
+      "api_needed": 25,
+      "external_only": 1,
+      "ready": 34
+    },
+    "by_complexity": {
+      "high": 32,
+      "extreme": 5,
+      "medium": 22,
+      "low": 1
+    },
+    "task_type_detection": {
+      "unknown": 26,
+      "report": 22,
+      "blog": 6,
+      "code": 4,
+      "resume": 1,
+      "email": 1
+    },
+    "avg_response_ms": 227,
+    "coverage": {},
+    "pass_rate": "100%"
+  },
+  "results": [
+    {
+      "case_id": 1,
+      "title": "타오바오 URL → 스크래핑 → OCR번역 → 누끼 → 상세페이지",
+      "domain": "ecommerce",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "researcher",
+        "translator",
+        "designer",
+        "coder"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 273,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "258d9d3f-515a-4a35-a4c4-7bff7ddb5626"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:35.369Z"
+    },
+    {
+      "case_id": 2,
+      "title": "제품 사진 → 3D GLB 변환 → 360도 MP4",
+      "domain": "ecommerce",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 254,
+      "feasibility": "external_only",
+      "complexity": "extreme",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "d0ec8af1-1452-472b-941f-410d0d1a6dbb"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:35.351Z"
+    },
+    {
+      "case_id": 3,
+      "title": "경쟁사 URL → 자정 크롤링 → 최저가 자동수정 → 슬랙 알림",
+      "domain": "ecommerce",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "automation_engineer",
+        "coder",
+        "analyst"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 220,
+      "feasibility": "api_needed",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "c1c0c091-3d8d-49c5-9e54-70bccc7a450c"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:35.318Z"
+    },
+    {
+      "case_id": 4,
+      "title": "리뷰 1만건 → 감성분석 → 불만 TOP3 → 기획전 카피",
+      "domain": "ecommerce",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "data_scientist",
+        "analyst",
+        "copywriter"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 226,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #4] 리뷰 1만건 → 감성분석 → 불만 TOP3 → 기획전 카피\n도메인: 이커머스 & 셀러 오토메이션\n입력: text, excel\n출력: text\n필요 역할: data_scientist, analyst, copywriter\n복잡도: medium",
+            "description": "[테스트케이스 #4] 리뷰 1만건 → 감성분석 → 불만 TOP3 → 기획전 카피\n도메인: 이커머스 & 셀러 오토메이션\n입력: text, excel\n출력: text\n필요 역할: data_scientist, analyst, copywriter\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "7b71824f-f9bd-44af-9322-3fd4942314ee"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:35.324Z"
+    },
+    {
+      "case_id": 5,
+      "title": "이탈고객 DB → 취향추론 → 초개인화 쿠폰 → SMS 발송",
+      "domain": "ecommerce",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "analyst",
+        "copywriter",
+        "automation_engineer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 229,
+      "feasibility": "api_needed",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "11101949-53d0-4b8c-a4ea-3ad10446aa31"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:35.328Z"
+    },
+    {
+      "case_id": 126,
+      "title": "브랜드 키워드 → 검색트렌드 분석 → 콘텐츠 캘린더",
+      "domain": "marketing",
+      "status": "analyzed",
+      "detected_task_type": "blog",
+      "expected_roles": [
+        "researcher",
+        "strategist",
+        "planner"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 219,
+      "feasibility": "api_needed",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "blog",
+          "confidence": 75,
+          "extractedInfo": {
+            "topic": "[테스트케이스 #126] 브랜드 키워드 → 검색트렌드 분석 → 콘텐츠 캘린더\n도메인: 마케팅 & 콘텐츠 에이전시\n입력: text\n출력: excel, text\n필요 역할: researcher, strategist, planner\n복잡도: medium",
+            "description": "[테스트케이스 #126] 브랜드 키워드 → 검색트렌드 분석 → 콘텐츠 캘린더\n도메인: 마케팅 & 콘텐츠 에이전시\n입력: text\n출력: excel, text\n필요 역할: researcher, strategist, planner\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "87652a77-61a2-48c7-a06d-0e2c13a82f92"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:35.790Z"
+    },
+    {
+      "case_id": 127,
+      "title": "경쟁사 SNS 분석 → 성과 TOP10 → 벤치마킹 전략",
+      "domain": "marketing",
+      "status": "analyzed",
+      "detected_task_type": "blog",
+      "expected_roles": [
+        "researcher",
+        "analyst",
+        "strategist"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 201,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "blog",
+          "confidence": 75,
+          "extractedInfo": {
+            "topic": "[테스트케이스 #127] 경쟁사 SNS 분석 → 성과 TOP10 → 벤치마킹 전략\n도메인: 마케팅 & 콘텐츠 에이전시\n입력: url\n출력: text\n필요 역할: researcher, analyst, strategist\n복잡도: high",
+            "description": "[테스트케이스 #127] 경쟁사 SNS 분석 → 성과 TOP10 → 벤치마킹 전략\n도메인: 마케팅 & 콘텐츠 에이전시\n입력: url\n출력: text\n필요 역할: researcher, analyst, strategist\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "28f482eb-b36a-4e32-bf7a-8b472d1d7563"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:35.773Z"
+    },
+    {
+      "case_id": 128,
+      "title": "브랜드명+컬러 → 로고 3종 → 브랜드 가이드라인 PDF",
+      "domain": "marketing",
+      "status": "analyzed",
+      "detected_task_type": "blog",
+      "expected_roles": [
+        "brand_strategist",
+        "illustrator",
+        "designer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 210,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "blog",
+          "confidence": 75,
+          "extractedInfo": {
+            "topic": "[테스트케이스 #128] 브랜드명+컬러 → 로고 3종 → 브랜드 가이드라인 PDF\n도메인: 마케팅 & 콘텐츠 에이전시\n입력: text\n출력: image, pdf\n필요 역할: brand_strategist, illustrator, designer\n복잡도: high",
+            "description": "[테스트케이스 #128] 브랜드명+컬러 → 로고 3종 → 브랜드 가이드라인 PDF\n도메인: 마케팅 & 콘텐츠 에이전시\n입력: text\n출력: image, pdf\n필요 역할: brand_strategist, illustrator, designer\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "460d7c82-8b55-4d6a-a10a-2f527ddcc125"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:35.782Z"
+    },
+    {
+      "case_id": 129,
+      "title": "블로그 주제 → 키워드 최적화 → SEO 블로그 5000자",
+      "domain": "marketing",
+      "status": "analyzed",
+      "detected_task_type": "blog",
+      "expected_roles": [
+        "researcher",
+        "writer",
+        "analyst"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 902,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "blog",
+          "confidence": 75,
+          "extractedInfo": {
+            "topic": "[테스트케이스 #129] 블로그 주제 → 키워드 최적화 → SEO 블로그 5000자\n도메인: 마케팅 & 콘텐츠 에이전시\n입력: text\n출력: text\n필요 역할: researcher, writer, analyst\n복잡도: medium",
+            "description": "[테스트케이스 #129] 블로그 주제 → 키워드 최적화 → SEO 블로그 5000자\n도메인: 마케팅 & 콘텐츠 에이전시\n입력: text\n출력: text\n필요 역할: researcher, writer, analyst\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "25a955cf-82db-4673-92a1-b1e0737a1bc3"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:36.474Z"
+    },
+    {
+      "case_id": 130,
+      "title": "상품/서비스 특성 → 타겟별 카피 10종 → A/B 테스트 설계",
+      "domain": "marketing",
+      "status": "analyzed",
+      "detected_task_type": "blog",
+      "expected_roles": [
+        "copywriter",
+        "analyst",
+        "strategist"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 221,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "blog",
+          "confidence": 75,
+          "extractedInfo": {
+            "topic": "[테스트케이스 #130] 상품/서비스 특성 → 타겟별 카피 10종 → A/B 테스트 설계\n도메인: 마케팅 & 콘텐츠 에이전시\n입력: text\n출력: text\n필요 역할: copywriter, analyst, strategist\n복잡도: medium",
+            "description": "[테스트케이스 #130] 상품/서비스 특성 → 타겟별 카피 10종 → A/B 테스트 설계\n도메인: 마케팅 & 콘텐츠 에이전시\n입력: text\n출력: text\n필요 역할: copywriter, analyst, strategist\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "1b0fb019-302e-4f14-85b7-1f5cea679d4b"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:35.794Z"
+    },
+    {
+      "case_id": 246,
+      "title": "RFP 문서 → 요구사항 분석 → 기술 제안서 초안",
+      "domain": "b2b",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "researcher",
+        "planner",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 222,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #246] RFP 문서 → 요구사항 분석 → 기술 제안서 초안\n도메인: B2B 세일즈 & CRM\n입력: pdf\n출력: text\n필요 역할: researcher, planner, writer\n복잡도: high",
+            "description": "[테스트케이스 #246] RFP 문서 → 요구사항 분석 → 기술 제안서 초안\n도메인: B2B 세일즈 & CRM\n입력: pdf\n출력: text\n필요 역할: researcher, planner, writer\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "383c9500-0daa-4476-8cbf-a39b6deded80"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:36.896Z"
+    },
+    {
+      "case_id": 247,
+      "title": "잠재고객 리스트 → 기업조사 → 초개인화 콜드이메일",
+      "domain": "b2b",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "researcher",
+        "strategist",
+        "copywriter"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 192,
+      "feasibility": "api_needed",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #247] 잠재고객 리스트 → 기업조사 → 초개인화 콜드이메일\n도메인: B2B 세일즈 & CRM\n입력: excel\n출력: email\n필요 역할: researcher, strategist, copywriter\n복잡도: medium",
+            "description": "[테스트케이스 #247] 잠재고객 리스트 → 기업조사 → 초개인화 콜드이메일\n도메인: B2B 세일즈 & CRM\n입력: excel\n출력: email\n필요 역할: researcher, strategist, copywriter\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "098e910a-d95d-4868-b281-9a4f8af5a2e6"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:36.867Z"
+    },
+    {
+      "case_id": 248,
+      "title": "영업 통화 녹음 → STT → 반론극복 패턴 분석",
+      "domain": "b2b",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "analyst",
+        "educator",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 205,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #248] 영업 통화 녹음 → STT → 반론극복 패턴 분석\n도메인: B2B 세일즈 & CRM\n입력: audio\n출력: text, excel\n필요 역할: analyst, educator, writer\n복잡도: high",
+            "description": "[테스트케이스 #248] 영업 통화 녹음 → STT → 반론극복 패턴 분석\n도메인: B2B 세일즈 & CRM\n입력: audio\n출력: text, excel\n필요 역할: analyst, educator, writer\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "700470a2-a627-45f2-8162-19e946ebf68c"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:36.880Z"
+    },
+    {
+      "case_id": 249,
+      "title": "CRM 데이터 → 이탈 위험도 점수화 → 우선순위 알림",
+      "domain": "b2b",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "data_scientist",
+        "analyst",
+        "automation_engineer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 208,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "7ea65e70-4d7d-46ba-9175-19814e553d59"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:36.883Z"
+    },
+    {
+      "case_id": 250,
+      "title": "계약서 초안 → 법적 리스크 검토 → 수정안 제시",
+      "domain": "b2b",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "legal_expert",
+        "analyst",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 223,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "7936a486-e8cf-4d64-8034-79945dbb6ad5"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:36.898Z"
+    },
+    {
+      "case_id": 346,
+      "title": "화면 디자인 캡처 → 비전 분석 → React 컴포넌트 코드",
+      "domain": "it",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "ux_architect",
+        "designer",
+        "coder"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 226,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #346] 화면 디자인 캡처 → 비전 분석 → React 컴포넌트 코드\n도메인: 소프트웨어  & IT 인프라\n입력: image\n출력: code\n필요 역할: ux_architect, designer, coder\n복잡도: high",
+            "description": "[테스트케이스 #346] 화면 디자인 캡처 → 비전 분석 → React 컴포넌트 코드\n도메인: 소프트웨어  & IT 인프라\n입력: image\n출력: code\n필요 역할: ux_architect, designer, coder\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "8acf86d9-f66b-4f20-842d-dc2696e51697"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:37.325Z"
+    },
+    {
+      "case_id": 347,
+      "title": "자연어 요구사항 → ERD 설계 → SQL 스키마 생성",
+      "domain": "it",
+      "status": "analyzed",
+      "detected_task_type": "code",
+      "expected_roles": [
+        "planner",
+        "data_scientist",
+        "coder"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 212,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "code",
+          "confidence": 75,
+          "extractedInfo": {
+            "description": "[테스트케이스 #347] 자연어 요구사항 → ERD 설계 → SQL 스키마 생성\n도메인: 소프트웨어  & IT 인프라\n입력: text\n출력: code, text\n필요 역할: planner, data_scientist, coder\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "558f34ec-024d-40c1-96a9-fc782e79fcdd"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:37.312Z"
+    },
+    {
+      "case_id": 348,
+      "title": "에러 로그 → 원인 분석 → 수정 코드 → PR 생성",
+      "domain": "it",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "reviewer",
+        "coder",
+        "automation_engineer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 286,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #348] 에러 로그 → 원인 분석 → 수정 코드 → PR 생성\n도메인: 소프트웨어  & IT 인프라\n입력: text, code\n출력: code\n필요 역할: reviewer, coder, automation_engineer\n복잡도: high",
+            "description": "[테스트케이스 #348] 에러 로그 → 원인 분석 → 수정 코드 → PR 생성\n도메인: 소프트웨어  & IT 인프라\n입력: text, code\n출력: code\n필요 역할: reviewer, coder, automation_engineer\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "e05d2ac6-efa8-4c79-867d-25cefe58ff57"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:37.386Z"
+    },
+    {
+      "case_id": 349,
+      "title": "API 문서 → E2E 테스트 코드 → CI 파이프라인 설정",
+      "domain": "it",
+      "status": "analyzed",
+      "detected_task_type": "code",
+      "expected_roles": [
+        "coder",
+        "reviewer",
+        "automation_engineer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 203,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "code",
+          "confidence": 75,
+          "extractedInfo": {
+            "description": "[테스트케이스 #349] API 문서 → E2E 테스트 코드 → CI 파이프라인 설정\n도메인: 소프트웨어  & IT 인프라\n입력: text, json\n출력: code\n필요 역할: coder, reviewer, automation_engineer\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "ae438b63-be00-4cfc-bfc7-995bc756a6d9"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:37.303Z"
+    },
+    {
+      "case_id": 350,
+      "title": "레거시 코드 → 분석 → 모던 스택 리팩토링 계획",
+      "domain": "it",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "planner",
+        "reviewer",
+        "coder"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 182,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #350] 레거시 코드 → 분석 → 모던 스택 리팩토링 계획\n도메인: 소프트웨어  & IT 인프라\n입력: code\n출력: text, code\n필요 역할: planner, reviewer, coder\n복잡도: high",
+            "description": "[테스트케이스 #350] 레거시 코드 → 분석 → 모던 스택 리팩토링 계획\n도메인: 소프트웨어  & IT 인프라\n입력: code\n출력: text, code\n필요 역할: planner, reviewer, coder\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "99302ef1-169f-4f37-984a-ab907df44893"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:37.282Z"
+    },
+    {
+      "case_id": 466,
+      "title": "계약서 → 근로기준법 검토 → 독소조항 리포트",
+      "domain": "legal_hr",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "researcher",
+        "legal_expert",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 224,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #466] 계약서 → 근로기준법 검토 → 독소조항 리포트\n도메인: 법률 / 행정 / HR / 재무\n입력: pdf\n출력: text\n필요 역할: researcher, legal_expert, writer\n복잡도: high",
+            "description": "[테스트케이스 #466] 계약서 → 근로기준법 검토 → 독소조항 리포트\n도메인: 법률 / 행정 / HR / 재무\n입력: pdf\n출력: text\n필요 역할: researcher, legal_expert, writer\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "810bce43-6c20-42f8-8ebd-3faa0a0358f6"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:37.810Z"
+    },
+    {
+      "case_id": 467,
+      "title": "이력서 100개 → 직무 적합도 점수화 → TOP10 + 탈락사유",
+      "domain": "legal_hr",
+      "status": "analyzed",
+      "detected_task_type": "resume",
+      "expected_roles": [
+        "researcher",
+        "analyst",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 194,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "resume",
+          "confidence": 75,
+          "extractedInfo": {
+            "position": "[테스트케이스 #467] 이력서 100개 → 직무 적합도 점수화 → TOP10 + 탈락사유\n도메인: 법률 / 행정 / HR / 재무\n입력: pdf, text\n출력: excel, text\n필요 역할: researcher, analyst, writer\n복잡도: medium",
+            "description": "[테스트케이스 #467] 이력서 100개 → 직무 적합도 점수화 → TOP10 + 탈락사유\n도메인: 법률 / 행정 / HR / 재무\n입력: pdf, text\n출력: excel, text\n필요 역할: researcher, analyst, writer\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "1cd554b7-461e-4142-a537-58bf15b930d5"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:37.781Z"
+    },
+    {
+      "case_id": 468,
+      "title": "급여 데이터 → 세금 자동계산 → 급여명세서 PDF 발급",
+      "domain": "legal_hr",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "financial_analyst",
+        "automation_engineer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 234,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "27ba725b-09fd-4ccf-a89d-fc59ce311ef6"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:37.821Z"
+    },
+    {
+      "case_id": 469,
+      "title": "피해사실 서술 → 법적요건 검토 → 내용증명 초안",
+      "domain": "legal_hr",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "legal_expert",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 215,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "3f3b3733-9b0d-40f0-864b-190743105834"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:37.802Z"
+    },
+    {
+      "case_id": 470,
+      "title": "재무제표 → 이상거래 탐지 → 감사 포인트 리포트",
+      "domain": "legal_hr",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "financial_analyst",
+        "data_scientist",
+        "legal_expert"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 211,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #470] 재무제표 → 이상거래 탐지 → 감사 포인트 리포트\n도메인: 법률 / 행정 / HR / 재무\n입력: excel, pdf\n출력: text\n필요 역할: financial_analyst, data_scientist, legal_expert\n복잡도: high",
+            "description": "[테스트케이스 #470] 재무제표 → 이상거래 탐지 → 감사 포인트 리포트\n도메인: 법률 / 행정 / HR / 재무\n입력: excel, pdf\n출력: text\n필요 역할: financial_analyst, data_scientist, legal_expert\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "a68fd492-0eac-41b8-bc16-8518be563e65"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:37.798Z"
+    },
+    {
+      "case_id": 566,
+      "title": "강의 텍스트 → 난이도별 3단계 요약 → 플래시카드",
+      "domain": "edu_med",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "educator",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 234,
+      "feasibility": "ready",
+      "complexity": "low",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "89eae5a3-ed0d-43d1-b050-e4c57f3f7d04"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:38.256Z"
+    },
+    {
+      "case_id": 567,
+      "title": "의료 상담 대화 → SOAP 형식 EMR 차트 자동작성",
+      "domain": "edu_med",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "medical_writer",
+        "researcher"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 182,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "4bd7daf6-a421-421e-af68-c1009ae90372"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:38.204Z"
+    },
+    {
+      "case_id": 568,
+      "title": "기출문제 이미지 → 수식인식 → 유사문제 20개 생성",
+      "domain": "edu_med",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "educator",
+        "coder"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 173,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "23a6b746-8b60-4ec1-8c23-e07a352bcca7"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:38.196Z"
+    },
+    {
+      "case_id": 569,
+      "title": "건강검진 수치 → 쉬운 해설 → 개인 맞춤 건강 가이드",
+      "domain": "edu_med",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "medical_writer",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 209,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "ca62dde1-af91-4a25-b213-a5fbd0399c22"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:38.232Z"
+    },
+    {
+      "case_id": 570,
+      "title": "영자신문 → 수준별 3단계 리라이팅 → 어휘 문제",
+      "domain": "edu_med",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "educator",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 196,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "b4e530b4-f98d-4b82-9da9-3dc56849f19c"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:38.219Z"
+    },
+    {
+      "case_id": 646,
+      "title": "브랜드 컨셉 → UI 디자인 시스템 → Figma 토큰 JSON",
+      "domain": "creative",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "ux_architect",
+        "designer",
+        "brand_strategist"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 199,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "04d50260-d5fa-4d10-adb8-b3aba357ef93"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:38.656Z"
+    },
+    {
+      "case_id": 647,
+      "title": "감성 키워드 → 일러스트 5종 → 굿즈 목업",
+      "domain": "creative",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "illustrator",
+        "designer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 192,
+      "feasibility": "api_needed",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "1d509541-5d64-44e6-a30a-d36b61ea75d5"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:38.649Z"
+    },
+    {
+      "case_id": 648,
+      "title": "제품 카탈로그 → 3D 제품컷 → 360도 회전 HTML",
+      "domain": "creative",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "artist3d",
+        "designer",
+        "coder"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 262,
+      "feasibility": "api_needed",
+      "complexity": "extreme",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "327b607d-540c-4dee-8ba5-9a594e13aa99"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:38.719Z"
+    },
+    {
+      "case_id": 649,
+      "title": "앱 화면 설계 → 사용성 테스트 시나리오 → 프로토타입",
+      "domain": "creative",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "ux_architect",
+        "designer",
+        "coder"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 196,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "1055887d-d53f-4afb-a977-d5bb997a0ef6"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:38.654Z"
+    },
+    {
+      "case_id": 650,
+      "title": "캐릭터 설정 → 감정별 표정 6종 → 애니메이션 GIF",
+      "domain": "creative",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "illustrator",
+        "animator"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 216,
+      "feasibility": "api_needed",
+      "complexity": "extreme",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "b3cfd510-6057-46a1-a5a9-3d49b8f9a42c"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:38.674Z"
+    },
+    {
+      "case_id": 726,
+      "title": "원시 데이터 → 전처리 스크립트 → 분석 대시보드",
+      "domain": "data_ai",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "data_scientist",
+        "coder",
+        "analyst"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 212,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #726] 원시 데이터 → 전처리 스크립트 → 분석 대시보드\n도메인: 데이터 / AI / 자동화\n입력: excel, database\n출력: code, html\n필요 역할: data_scientist, coder, analyst\n복잡도: high",
+            "description": "[테스트케이스 #726] 원시 데이터 → 전처리 스크립트 → 분석 대시보드\n도메인: 데이터 / AI / 자동화\n입력: excel, database\n출력: code, html\n필요 역할: data_scientist, coder, analyst\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "ba7b5da0-2e0a-4eb2-9f45-04309026f864"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:39.132Z"
+    },
+    {
+      "case_id": 727,
+      "title": "비정형 텍스트 → NER → 구조화된 DB 자동저장",
+      "domain": "data_ai",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "data_scientist",
+        "coder",
+        "automation_engineer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 216,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "eb8df8b7-ac23-48ec-b166-ac870473e90a"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:39.136Z"
+    },
+    {
+      "case_id": 728,
+      "title": "Excel 보고서 → 자동 분석 → Slack 알림 + 차트",
+      "domain": "data_ai",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "data_scientist",
+        "automation_engineer",
+        "analyst"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 358,
+      "feasibility": "api_needed",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #728] Excel 보고서 → 자동 분석 → Slack 알림 + 차트\n도메인: 데이터 / AI / 자동화\n입력: excel\n출력: text, image\n필요 역할: data_scientist, automation_engineer, analyst\n복잡도: medium",
+            "description": "[테스트케이스 #728] Excel 보고서 → 자동 분석 → Slack 알림 + 차트\n도메인: 데이터 / AI / 자동화\n입력: excel\n출력: text, image\n필요 역할: data_scientist, automation_engineer, analyst\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "bc99c4ca-ca2d-4200-8029-9741c3f50649"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:39.278Z"
+    },
+    {
+      "case_id": 729,
+      "title": "API 로그 → 이상트래픽 탐지 → 보안 알림",
+      "domain": "data_ai",
+      "status": "analyzed",
+      "detected_task_type": "code",
+      "expected_roles": [
+        "data_scientist",
+        "automation_engineer",
+        "reviewer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 231,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "code",
+          "confidence": 75,
+          "extractedInfo": {
+            "description": "[테스트케이스 #729] API 로그 → 이상트래픽 탐지 → 보안 알림\n도메인: 데이터 / AI / 자동화\n입력: json, text\n출력: text\n필요 역할: data_scientist, automation_engineer, reviewer\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "8a58e9cc-a449-4a17-ac3f-8f1351e912fb"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:39.151Z"
+    },
+    {
+      "case_id": 730,
+      "title": "학습 데이터셋 → 품질 검증 → 레이블링 오류 보고서",
+      "domain": "data_ai",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "data_scientist",
+        "analyst",
+        "validator"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 201,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #730] 학습 데이터셋 → 품질 검증 → 레이블링 오류 보고서\n도메인: 데이터 / AI / 자동화\n입력: json, excel\n출력: text, excel\n필요 역할: data_scientist, analyst, validator\n복잡도: medium",
+            "description": "[테스트케이스 #730] 학습 데이터셋 → 품질 검증 → 레이블링 오류 보고서\n도메인: 데이터 / AI / 자동화\n입력: json, excel\n출력: text, excel\n필요 역할: data_scientist, analyst, validator\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "c648fcc7-65f8-4d3b-9af2-330f23eef74c"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:39.121Z"
+    },
+    {
+      "case_id": 806,
+      "title": "등기부등본 → 근저당/가처분 분석 → 전세사기 위험도",
+      "domain": "real_estate",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "legal_expert",
+        "analyst",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 201,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #806] 등기부등본 → 근저당/가처분 분석 → 전세사기 위험도\n도메인: 부동산 & 건설\n입력: pdf, text\n출력: text\n필요 역할: legal_expert, analyst, writer\n복잡도: medium",
+            "description": "[테스트케이스 #806] 등기부등본 → 근저당/가처분 분석 → 전세사기 위험도\n도메인: 부동산 & 건설\n입력: pdf, text\n출력: text\n필요 역할: legal_expert, analyst, writer\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "03e7d759-3074-49a6-bf70-7d0a19732756"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:39.679Z"
+    },
+    {
+      "case_id": 807,
+      "title": "분양 정보 → 입지분석 → 투자 수익률 시뮬레이션",
+      "domain": "real_estate",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "financial_analyst",
+        "researcher",
+        "analyst"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 198,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #807] 분양 정보 → 입지분석 → 투자 수익률 시뮬레이션\n도메인: 부동산 & 건설\n입력: text, pdf\n출력: text, excel\n필요 역할: financial_analyst, researcher, analyst\n복잡도: high",
+            "description": "[테스트케이스 #807] 분양 정보 → 입지분석 → 투자 수익률 시뮬레이션\n도메인: 부동산 & 건설\n입력: text, pdf\n출력: text, excel\n필요 역할: financial_analyst, researcher, analyst\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "9e566e3b-5e1f-42b1-a349-133aeb3f557b"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:39.677Z"
+    },
+    {
+      "case_id": 808,
+      "title": "건축 도면 → AI 분석 → 인테리어 제안 3종",
+      "domain": "real_estate",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "designer",
+        "analyst",
+        "illustrator"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 196,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #808] 건축 도면 → AI 분석 → 인테리어 제안 3종\n도메인: 부동산 & 건설\n입력: image, pdf\n출력: text, image\n필요 역할: designer, analyst, illustrator\n복잡도: high",
+            "description": "[테스트케이스 #808] 건축 도면 → AI 분석 → 인테리어 제안 3종\n도메인: 부동산 & 건설\n입력: image, pdf\n출력: text, image\n필요 역할: designer, analyst, illustrator\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "3bc02b84-78ec-41a8-a7ca-adcb2939f278"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:39.675Z"
+    },
+    {
+      "case_id": 809,
+      "title": "매물 정보 → 시세 비교 → 적정가 산정 리포트",
+      "domain": "real_estate",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "financial_analyst",
+        "researcher",
+        "analyst"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 188,
+      "feasibility": "api_needed",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #809] 매물 정보 → 시세 비교 → 적정가 산정 리포트\n도메인: 부동산 & 건설\n입력: text, excel\n출력: text\n필요 역할: financial_analyst, researcher, analyst\n복잡도: medium",
+            "description": "[테스트케이스 #809] 매물 정보 → 시세 비교 → 적정가 산정 리포트\n도메인: 부동산 & 건설\n입력: text, excel\n출력: text\n필요 역할: financial_analyst, researcher, analyst\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "fb2c1b0f-779e-4998-a60c-87a01383d963"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:39.667Z"
+    },
+    {
+      "case_id": 810,
+      "title": "상권 데이터 → 유동인구 분석 → 창업 적합도 리포트",
+      "domain": "real_estate",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "researcher",
+        "analyst",
+        "financial_analyst"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 204,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #810] 상권 데이터 → 유동인구 분석 → 창업 적합도 리포트\n도메인: 부동산 & 건설\n입력: database, excel\n출력: text\n필요 역할: researcher, analyst, financial_analyst\n복잡도: high",
+            "description": "[테스트케이스 #810] 상권 데이터 → 유동인구 분석 → 창업 적합도 리포트\n도메인: 부동산 & 건설\n입력: database, excel\n출력: text\n필요 역할: researcher, analyst, financial_analyst\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "c557796a-3638-4445-8bb6-cf03a22d9551"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:39.683Z"
+    },
+    {
+      "case_id": 856,
+      "title": "재무제표 → 주요 지표 분석 → 투자 의사결정 보고서",
+      "domain": "finance_invest",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "financial_analyst",
+        "researcher",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 338,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #856] 재무제표 → 주요 지표 분석 → 투자 의사결정 보고서\n도메인: 금융 & 투자\n입력: pdf, excel\n출력: text\n필요 역할: financial_analyst, researcher, writer\n복잡도: high",
+            "description": "[테스트케이스 #856] 재무제표 → 주요 지표 분석 → 투자 의사결정 보고서\n도메인: 금융 & 투자\n입력: pdf, excel\n출력: text\n필요 역할: financial_analyst, researcher, writer\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "3537e779-f952-4d4f-9de6-1ccc7cee97de"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:40.221Z"
+    },
+    {
+      "case_id": 857,
+      "title": "주식 데이터 → 기술적 분석 → 매매 시그널 알림",
+      "domain": "finance_invest",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "data_scientist",
+        "financial_analyst",
+        "analyst"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 173,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #857] 주식 데이터 → 기술적 분석 → 매매 시그널 알림\n도메인: 금융 & 투자\n입력: database, excel\n출력: text\n필요 역할: data_scientist, financial_analyst, analyst\n복잡도: high",
+            "description": "[테스트케이스 #857] 주식 데이터 → 기술적 분석 → 매매 시그널 알림\n도메인: 금융 & 투자\n입력: database, excel\n출력: text\n필요 역할: data_scientist, financial_analyst, analyst\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "10c62fef-6faf-4889-8e10-7d18be6b306b"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:40.057Z"
+    },
+    {
+      "case_id": 858,
+      "title": "펀드 포트폴리오 → 리스크 분산 → 리밸런싱 제안",
+      "domain": "finance_invest",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "financial_analyst",
+        "analyst",
+        "data_scientist"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 195,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "b80cfbed-5eb3-47f4-beb2-89a237087ab3"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:40.079Z"
+    },
+    {
+      "case_id": 859,
+      "title": "암호화폐 시장 뉴스 → 감성분석 → 단기 변동성 예측",
+      "domain": "finance_invest",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "data_scientist",
+        "analyst",
+        "researcher"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 197,
+      "feasibility": "api_needed",
+      "complexity": "extreme",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #859] 암호화폐 시장 뉴스 → 감성분석 → 단기 변동성 예측\n도메인: 금융 & 투자\n입력: text, url\n출력: text\n필요 역할: data_scientist, analyst, researcher\n복잡도: extreme",
+            "description": "[테스트케이스 #859] 암호화폐 시장 뉴스 → 감성분석 → 단기 변동성 예측\n도메인: 금융 & 투자\n입력: text, url\n출력: text\n필요 역할: data_scientist, analyst, researcher\n복잡도: extreme"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "e48813e0-db8c-4232-8ac1-8baee7c94531"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:40.081Z"
+    },
+    {
+      "case_id": 860,
+      "title": "개인 지출 내역 → 예산 최적화 → 저축 플랜 설계",
+      "domain": "finance_invest",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "financial_analyst",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 212,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "3eb8abe4-2319-41d5-b7a5-93d7affdb95c"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:40.096Z"
+    },
+    {
+      "case_id": 906,
+      "title": "임상시험 프로토콜 → IRB 제출용 → 동의서 초안",
+      "domain": "healthcare",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "medical_writer",
+        "legal_expert",
+        "researcher"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 220,
+      "feasibility": "ready",
+      "complexity": "extreme",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "48d25756-25a4-4877-9fcf-6c9236c25ffa"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:40.641Z"
+    },
+    {
+      "case_id": 907,
+      "title": "처방전 이미지 → OCR → 상호작용 점검 → 복약 안내",
+      "domain": "healthcare",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "medical_writer",
+        "researcher"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 228,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "8e27b3a2-83aa-4f9c-bd03-1f2a44362f46"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:40.650Z"
+    },
+    {
+      "case_id": 908,
+      "title": "환자 설문 데이터 → 증상 패턴 분석 → 예방 가이드",
+      "domain": "healthcare",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "medical_writer",
+        "data_scientist",
+        "writer"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 197,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #908] 환자 설문 데이터 → 증상 패턴 분석 → 예방 가이드\n도메인: 헬스케어 & 바이오\n입력: excel, text\n출력: text\n필요 역할: medical_writer, data_scientist, writer\n복잡도: high",
+            "description": "[테스트케이스 #908] 환자 설문 데이터 → 증상 패턴 분석 → 예방 가이드\n도메인: 헬스케어 & 바이오\n입력: excel, text\n출력: text\n필요 역할: medical_writer, data_scientist, writer\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "1100bd34-211a-4893-8cbb-a8d57f027510"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:40.619Z"
+    },
+    {
+      "case_id": 909,
+      "title": "의학 논문 → 비전문가 설명 → 블로그 포스팅",
+      "domain": "healthcare",
+      "status": "analyzed",
+      "detected_task_type": "blog",
+      "expected_roles": [
+        "medical_writer",
+        "writer",
+        "researcher"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 214,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "blog",
+          "confidence": 75,
+          "extractedInfo": {
+            "topic": "[테스트케이스 #909] 의학 논문 → 비전문가 설명 → 블로그 포스팅\n도메인: 헬스케어 & 바이오\n입력: pdf\n출력: text\n필요 역할: medical_writer, writer, researcher\n복잡도: medium",
+            "description": "[테스트케이스 #909] 의학 논문 → 비전문가 설명 → 블로그 포스팅\n도메인: 헬스케어 & 바이오\n입력: pdf\n출력: text\n필요 역할: medical_writer, writer, researcher\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "3b3bf8b1-aa62-44eb-91cb-196edc0db803"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:40.636Z"
+    },
+    {
+      "case_id": 910,
+      "title": "건강검진 추이 데이터 → 위험군 분류 → 관리 프로그램",
+      "domain": "healthcare",
+      "status": "analyzed",
+      "detected_task_type": "code",
+      "expected_roles": [
+        "medical_writer",
+        "data_scientist",
+        "educator"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 188,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "code",
+          "confidence": 75,
+          "extractedInfo": {
+            "description": "[테스트케이스 #910] 건강검진 추이 데이터 → 위험군 분류 → 관리 프로그램\n도메인: 헬스케어 & 바이오\n입력: excel, database\n출력: text\n필요 역할: medical_writer, data_scientist, educator\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "187c72d2-5fc7-4278-967e-7165479b5f10"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:40.610Z"
+    },
+    {
+      "case_id": 956,
+      "title": "민원 접수 텍스트 → 자동 분류 → 담당부서 배정",
+      "domain": "government",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "automation_engineer",
+        "analyst",
+        "router"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 230,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "1cfbd122-4b53-45f2-be09-0b2e4f979de9"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:41.081Z"
+    },
+    {
+      "case_id": 957,
+      "title": "법령 텍스트 → 일반인 해설 → 다국어 안내문",
+      "domain": "government",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "legal_expert",
+        "writer",
+        "translator"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 187,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "51c5c7eb-6050-4979-99c6-49409bd2c4bc"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:41.039Z"
+    },
+    {
+      "case_id": 958,
+      "title": "예산 집행 데이터 → 감사 분석 → 이상지출 탐지",
+      "domain": "government",
+      "status": "analyzed",
+      "detected_task_type": "report",
+      "expected_roles": [
+        "financial_analyst",
+        "data_scientist",
+        "legal_expert"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 184,
+      "feasibility": "ready",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "report",
+          "confidence": 75,
+          "extractedInfo": {
+            "subject": "[테스트케이스 #958] 예산 집행 데이터 → 감사 분석 → 이상지출 탐지\n도메인: 공공 & 정부 서비스\n입력: excel, database\n출력: text\n필요 역할: financial_analyst, data_scientist, legal_expert\n복잡도: high",
+            "description": "[테스트케이스 #958] 예산 집행 데이터 → 감사 분석 → 이상지출 탐지\n도메인: 공공 & 정부 서비스\n입력: excel, database\n출력: text\n필요 역할: financial_analyst, data_scientist, legal_expert\n복잡도: high"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "ee55cccf-98b6-431f-b560-b73ffcef4b8d"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:41.036Z"
+    },
+    {
+      "case_id": 959,
+      "title": "공공데이터 → 시각화 대시보드 → 시민 정보 포털",
+      "domain": "government",
+      "status": "analyzed",
+      "detected_task_type": "unknown",
+      "expected_roles": [
+        "data_scientist",
+        "designer",
+        "coder"
+      ],
+      "actual_roles": [],
+      "confidence": 0,
+      "response_time_ms": 231,
+      "feasibility": "api_needed",
+      "complexity": "high",
+      "server_response": {
+        "analysis": {
+          "taskType": "unknown",
+          "confidence": 0,
+          "extractedInfo": {},
+          "inferredInfo": {},
+          "needsQuestion": true,
+          "question": "어떤 결과물이 필요하신가요? 조금 더 자세히 말씀해 주세요.",
+          "reasoning": "분류 불가"
+        },
+        "session": "7be20688-9a04-45ef-bc70-36e6eb9e5fbe"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:41.083Z"
+    },
+    {
+      "case_id": 960,
+      "title": "민원 답변 초안 → 법령 근거 확인 → 공문 형식 완성",
+      "domain": "government",
+      "status": "analyzed",
+      "detected_task_type": "email",
+      "expected_roles": [
+        "legal_expert",
+        "writer",
+        "validator"
+      ],
+      "actual_roles": [],
+      "confidence": 75,
+      "response_time_ms": 182,
+      "feasibility": "ready",
+      "complexity": "medium",
+      "server_response": {
+        "analysis": {
+          "taskType": "email",
+          "confidence": 75,
+          "extractedInfo": {
+            "purpose": "[테스트케이스 #960] 민원 답변 초안 → 법령 근거 확인 → 공문 형식 완성\n도메인: 공공 & 정부 서비스\n입력: text\n출력: text\n필요 역할: legal_expert, writer, validator\n복잡도: medium",
+            "description": "[테스트케이스 #960] 민원 답변 초안 → 법령 근거 확인 → 공문 형식 완성\n도메인: 공공 & 정부 서비스\n입력: text\n출력: text\n필요 역할: legal_expert, writer, validator\n복잡도: medium"
+          },
+          "inferredInfo": {},
+          "needsQuestion": false,
+          "question": null,
+          "reasoning": "규칙 기반 분석 (API 폴백)"
+        },
+        "session": "9ee845fb-4e84-4c61-bf86-f4da88ca79d1"
+      },
+      "test_passed": true,
+      "timestamp": "2026-03-10T12:29:41.034Z"
+    }
+  ]
+}

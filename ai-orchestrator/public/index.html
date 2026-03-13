@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 오케스트레이터 – 최적 모델 조합 자동 선택</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- 헤더 -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">AI<span class="logo-accent">Orchestra</span></span>
+        <span class="logo-version">v5</span>
+      </div>
+      <div class="header-center">
+        <button class="header-tab-btn active" id="tab-chat-btn" onclick="switchMainTab('chat')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          AI 채팅
+        </button>
+        <button class="header-tab-btn" id="tab-models-btn" onclick="switchMainTab('models')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+          모델 레지스트리
+        </button>
+        <button class="header-tab-btn" id="tab-combo-btn" onclick="switchMainTab('combo')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+          조합 최적화
+        </button>
+        <button class="header-tab-btn" id="tab-queue-btn" onclick="switchMainTab('queue')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+          작업 큐
+        </button>
+        <button class="header-tab-btn" id="tab-builder-btn" onclick="switchMainTab('builder')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+          빌더
+        </button>
+        <button class="header-tab-btn" id="tab-dashboard-btn" onclick="switchMainTab('dashboard')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          대시보드
+        </button>
+        <button class="header-tab-btn admin-tab-btn hidden" id="tab-admin-btn" onclick="switchMainTab('admin')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/></svg>
+          어드민
+        </button>
+      </div>
+      <div class="header-right">
+        <div class="header-badge-row">
+          <span class="hbadge hbadge-new">27 파이프라인</span>
+          <span class="hbadge hbadge-live">LIVE</span>
+        </div>
+        <div id="user-info-bar" class="user-info-bar hidden">
+          <span id="user-display-name" class="user-name-badge">👤 게스트</span>
+          <button class="btn-logout-mini" onclick="logoutUser()">로그아웃</button>
+        </div>
+        <button id="login-btn-header" class="btn-login-header" onclick="switchMainTab('auth')">🔑 로그인</button>
+        <div id="api-status" class="api-status">
+          <span class="status-dot"></span>
+          <span class="status-text">연결 중...</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 탭 1: AI 채팅 -->
+  <main class="main-layout" id="main-chat">
+    <!-- 사이드바 -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">⚡ 빠른 시작</h3>
+        <div class="quick-actions">
+          <!-- 기존 -->
+          <button class="quick-btn" data-prompt="AI 시장 분석 PPT 만들어줘">📊 PPT 제작</button>
+          <button class="quick-btn" data-prompt="카페 홈페이지 만들어줘">🌐 홈페이지</button>
+          <button class="quick-btn" data-prompt="마케팅 전략 블로그 글 써줘">📝 블로그</button>
+          <button class="quick-btn" data-prompt="AI 에이전트 시장 분석 리포트">📈 분석 리포트</button>
+          <button class="quick-btn" data-prompt="로그인 기능 Python 코드 만들어줘">💻 코드 개발</button>
+          <button class="quick-btn" data-prompt="협력 제안 이메일 써줘">✉️ 이메일</button>
+          <button class="quick-btn" data-prompt="개발자 자기소개서 써줘">📄 자기소개서</button>
+          <!-- 크리에이티브 비주얼 -->
+          <button class="quick-btn quick-btn--creative" data-prompt="우주 테마 SVG 일러스트 만들어줘">🖌️ 일러스트</button>
+          <button class="quick-btn quick-btn--creative" data-prompt="로딩 스피너 CSS 애니메이션 만들어줘">🎬 애니메이션</button>
+          <button class="quick-btn quick-btn--creative" data-prompt="Three.js 회전하는 3D 지구본 만들어줘">🧊 3D 비주얼</button>
+          <button class="quick-btn quick-btn--creative" data-prompt="핀테크 앱 UX/UI 디자인 시스템 만들어줘">🗂️ UX/UI 설계</button>
+          <button class="quick-btn quick-btn--creative" data-prompt="제품 리뷰 유튜브 영상 스크립트 만들어줘">🎥 영상 스크립트</button>
+          <!-- 오디오 & 음악 -->
+          <button class="quick-btn quick-btn--audio" data-prompt="K-pop 발라드 작곡 가이드와 가사 만들어줘">🎵 음악/작곡</button>
+          <button class="quick-btn quick-btn--audio" data-prompt="AI 트렌드 팟캐스트 스크립트 만들어줘">🎙️ 팟캐스트</button>
+          <!-- 게임 & 인터랙티브 -->
+          <button class="quick-btn quick-btn--game" data-prompt="Canvas 기반 벽돌깨기 게임 만들어줘">🎮 게임 개발</button>
+          <button class="quick-btn quick-btn--game" data-prompt="WebXR VR 우주 탐험 경험 설계해줘">🥽 AR/VR</button>
+          <!-- 전문직 도메인 -->
+          <button class="quick-btn quick-btn--pro" data-prompt="프리랜서 계약서 초안 만들어줘">⚖️ 법률 문서</button>
+          <button class="quick-btn quick-btn--pro" data-prompt="당뇨병 환자 식이요법 안내문 만들어줘">🏥 의료 콘텐츠</button>
+          <button class="quick-btn quick-btn--pro" data-prompt="삼성전자 재무 분석 보고서 만들어줘">💹 재무 분석</button>
+          <button class="quick-btn quick-btn--pro" data-prompt="Python 입문 강의 커리큘럼 만들어줘">🎓 교육 커리큘럼</button>
+          <!-- 마케팅 & 브랜딩 -->
+          <button class="quick-btn quick-btn--marketing" data-prompt="친환경 스타트업 마케팅 캠페인 전략 만들어줘">📣 마케팅 전략</button>
+          <button class="quick-btn quick-btn--marketing" data-prompt="커피 브랜드 아이덴티티 만들어줘">💎 브랜드 아이덴티티</button>
+          <button class="quick-btn quick-btn--marketing" data-prompt="SaaS 제품 광고 카피 A/B/C 세트 만들어줘">✨ 광고 카피</button>
+          <button class="quick-btn quick-btn--marketing" data-prompt="뷰티 브랜드 인스타그램 콘텐츠 패키지 만들어줘">📱 SNS 콘텐츠</button>
+          <!-- 데이터 & 자동화 -->
+          <button class="quick-btn quick-btn--data" data-prompt="매출 데이터 분석 및 시각화 코드 만들어줘">📊 데이터 분석</button>
+          <button class="quick-btn quick-btn--data" data-prompt="이메일 자동 분류 Python 스크립트 만들어줘">🤖 업무 자동화</button>
+          <button class="quick-btn quick-btn--data" data-prompt="쇼핑몰 REST API 설계 문서 만들어줘">🔌 API 설계</button>
+          <!-- 스토리텔링 -->
+          <button class="quick-btn quick-btn--story" data-prompt="SF 단편소설 써줘">📖 소설 창작</button>
+          <button class="quick-btn quick-btn--story" data-prompt="좀비 아포칼립스 영화 시나리오 써줘">🎭 시나리오</button>
+          <button class="quick-btn quick-btn--story" data-prompt="영어 기술 문서를 한국어로 번역해줘">🌐 전문 번역</button>
+
+          <!-- 신규: 데이터 수집 & 자동화 특화 -->
+          <button class="quick-btn quick-btn--tech" data-prompt="쿠팡 상품 리뷰 크롤링 및 감성분석 스크립트 만들어줘">🕷️ 웹 스크래핑</button>
+          <button class="quick-btn quick-btn--tech" data-prompt="PDF 계약서에서 독소조항 추출하고 법적 리스크 분석해줘">📑 PDF 분석</button>
+          <button class="quick-btn quick-btn--tech" data-prompt="음성 회의 녹음을 텍스트로 변환하고 핵심 요약해줘">🎤 음성 인식 STT</button>
+
+          <!-- 신규: 보안 & DB -->
+          <button class="quick-btn quick-btn--tech" data-prompt="Python 웹 애플리케이션 OWASP Top 10 보안 취약점 분석 및 패치해줘">🔒 보안 분석</button>
+          <button class="quick-btn quick-btn--tech" data-prompt="쇼핑몰 MySQL DB ERD 설계 및 최적화 쿼리 만들어줘">🗄️ DB 설계</button>
+          <button class="quick-btn quick-btn--tech" data-prompt="AWS 인프라 모니터링 알림 자동화 파이프라인 구축해줘">⚡ 실시간 모니터링</button>
+
+          <!-- 신규: 전문 분야 -->
+          <button class="quick-btn quick-btn--specialist" data-prompt="근로계약서 근로기준법 위반 조항 검토해줘">⚖️ 컴플라이언스</button>
+          <button class="quick-btn quick-btn--specialist" data-prompt="이커머스 이탈 고객 ML 예측 모델 설계해줘">🤖 ML 파이프라인</button>
+          <button class="quick-btn quick-btn--specialist" data-prompt="유튜브 강의 영상 하이라이트 추출 및 자막 생성해줘">🎬 AI 영상 편집</button>
+          <button class="quick-btn quick-btn--phase2" data-prompt="GLB 3D 상품 모델을 360도 회전 MP4 영상으로 렌더링해줘">🧊 3D 렌더링</button>
+          <button class="quick-btn quick-btn--phase2" data-prompt="계약서 텍스트에서 기관명, 인물, 금액, 날짜 개체명 추출해줘">🏷️ NER 분석</button>
+          <button class="quick-btn quick-btn--phase2" data-prompt="최근 90일 미접속 B2B 고객 이탈 가능성 예측하고 리텐션 전략 짜줘">📉 이탈 예측</button>
+          <button class="quick-btn quick-btn--phase2" data-prompt="아파트 평면도 분석해서 면적, 방 구성, AR 가구 배치 추천해줘">🗺️ 공간 AI</button>
+          <button class="quick-btn quick-btn--phase2" data-prompt="수학 시험지 이미지에서 수식 인식해서 LaTeX로 변환하고 풀이해줘">🔢 수식 OCR</button>
+
+          <!-- Phase 3 심화 도메인 버튼 -->
+          <button class="quick-btn quick-btn--phase3" data-prompt="강남구 아파트 실거래가 조회하고 투자 수익률 시뮬레이션 해줘">🏠 부동산 AI</button>
+          <button class="quick-btn quick-btn--phase3" data-prompt="삼성전자 주식 기술적 분석하고 매매 시그널 알려줘">📈 주식 분석</button>
+          <button class="quick-btn quick-btn--phase3" data-prompt="아스피린과 와파린 병용 처방 약물 상호작용 점검해줘">🏥 의료 AI</button>
+          <button class="quick-btn quick-btn--phase3" data-prompt="서울시 공공데이터로 인구통계 대시보드 만들어줘">🏛️ 공공 AI</button>
+        </div>
+      </div>
+
+      <!-- Phase 1 + 2 파이프라인 패널 -->
+      <div class="sidebar-section pipeline-status-panel">
+        <h3 class="sidebar-title">⚡ Phase 1+2 파이프라인 <span id="pipeline-live-badge" class="badge-live">로딩중...</span></h3>
+        <div style="font-size:11px;color:#888;margin-bottom:6px" id="pipeline-total-badge">총 0건 커버</div>
+
+        <!-- Phase 1 -->
+        <div class="phase-label">Phase 1 — 핵심 API (379건)</div>
+        <div id="pipeline-cards" class="pipeline-cards">
+          <div class="pipeline-card" data-pipeline="imageGen">
+            <span class="pipeline-icon">🎨</span>
+            <div class="pipeline-info">
+              <b>이미지 생성</b><span class="pipeline-cases">80건</span>
+              <button class="pipeline-test-btn" data-pipeline="imageGen" data-payload='{"subject":"빨간 운동화","style":"product"}'>테스트</button>
+            </div>
+          </div>
+          <div class="pipeline-card" data-pipeline="stt">
+            <span class="pipeline-icon">🎙️</span>
+            <div class="pipeline-info">
+              <b>STT 음성인식</b><span class="pipeline-cases">55건</span>
+              <button class="pipeline-test-btn" data-pipeline="stt" data-payload='{"filename":"sample.mp3","language":"ko"}'>테스트</button>
+            </div>
+          </div>
+          <div class="pipeline-card" data-pipeline="crawler">
+            <span class="pipeline-icon">🕷️</span>
+            <div class="pipeline-info">
+              <b>웹 크롤러</b><span class="pipeline-cases">51건</span>
+              <button class="pipeline-test-btn" data-pipeline="crawler" data-payload='{"url":"https://www.coupang.com/vp/products/1","strategy":"product_page"}'>테스트</button>
+            </div>
+          </div>
+          <div class="pipeline-card" data-pipeline="email">
+            <span class="pipeline-icon">📧</span>
+            <div class="pipeline-info">
+              <b>이메일 자동화</b><span class="pipeline-cases">51건</span>
+              <button class="pipeline-test-btn" data-pipeline="email" data-payload='{"templateKey":"marketing_promo","vars":{"brand":"GenShop","discount":"30","name":"고객님","brandColor":"#0066cc","offerDescription":"봄 특가","expiryDate":"2026-04-30","ctaUrl":"https://shop.com","ctaText":"지금 쇼핑","unsubscribeUrl":"https://shop.com/unsub"}}'>테스트</button>
+            </div>
+          </div>
+          <div class="pipeline-card" data-pipeline="vision">
+            <span class="pipeline-icon">👁️</span>
+            <div class="pipeline-info">
+              <b>GPT-4V 비전</b><span class="pipeline-cases">46건</span>
+              <button class="pipeline-test-btn" data-pipeline="vision" data-payload='{"image":"https://via.placeholder.com/400","mode":"product_analysis"}'>테스트</button>
+            </div>
+          </div>
+          <div class="pipeline-card" data-pipeline="notification">
+            <span class="pipeline-icon">🔔</span>
+            <div class="pipeline-info">
+              <b>SMS/Slack/GitHub</b><span class="pipeline-cases">96건</span>
+              <button class="pipeline-test-btn" data-pipeline="notification" data-payload='{"channel":"slack","slackTemplate":"alert","slackOpts":{"title":"테스트 알림","message":"Phase 1 파이프라인 작동 확인","emoji":"✅"}}'>테스트</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 2 -->
+        <div class="phase-label phase-label--2">Phase 2 — 전문 모듈 (47건)</div>
+        <div id="pipeline-cards-p2" class="pipeline-cards">
+          <div class="pipeline-card pipeline-card--phase2" data-pipeline="threeD">
+            <span class="pipeline-icon">🧊</span>
+            <div class="pipeline-info">
+              <b>3D 렌더링</b><span class="pipeline-cases">10건</span>
+              <button class="pipeline-test-btn" data-pipeline="threeD" data-payload='{"domain":"ecommerce","fileType":"glb","description":"상품 3D뷰어"}'>테스트</button>
+            </div>
+          </div>
+          <div class="pipeline-card pipeline-card--phase2" data-pipeline="ner">
+            <span class="pipeline-icon">🏷️</span>
+            <div class="pipeline-info">
+              <b>NER 분석</b><span class="pipeline-cases">10건</span>
+              <button class="pipeline-test-btn" data-pipeline="ner" data-payload='{"text":"삼성전자 이재용 회장이 2026년 500억원을 AI 연구에 투자 발표","domain":"finance_invest"}'>테스트</button>
+            </div>
+          </div>
+          <div class="pipeline-card pipeline-card--phase2" data-pipeline="churnPrediction">
+            <span class="pipeline-icon">📉</span>
+            <div class="pipeline-info">
+              <b>이탈 예측 ML</b><span class="pipeline-cases">8건</span>
+              <button class="pipeline-test-btn" data-pipeline="churnPrediction" data-payload='{"customerData":{"id":"c001","recency":120,"frequency":1,"monetary":50000},"domain":"ecommerce"}'>테스트</button>
+            </div>
+          </div>
+          <div class="pipeline-card pipeline-card--phase2" data-pipeline="spatialAI">
+            <span class="pipeline-icon">🗺️</span>
+            <div class="pipeline-info">
+              <b>공간인식 AI</b><span class="pipeline-cases">10건</span>
+              <button class="pipeline-test-btn" data-pipeline="spatialAI" data-payload='{"mode":"floor_plan","domain":"real_estate","floorPlanOpts":{"scale":0.012,"unit":"pyeong"}}'>테스트</button>
+            </div>
+          </div>
+          <div class="pipeline-card pipeline-card--phase2" data-pipeline="formulaOCR">
+            <span class="pipeline-icon">🔢</span>
+            <div class="pipeline-info">
+              <b>수식 인식 OCR</b><span class="pipeline-cases">9건</span>
+              <button class="pipeline-test-btn" data-pipeline="formulaOCR" data-payload='{"context":"복리 금융 수식","domain":"finance_invest","computeParams":{"compound_interest":{"P":1000000,"r":0.05,"n":12,"t":10}}}'>테스트</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 3 심화 도메인 패널 -->
+        <div class="phase-label phase-label--3">Phase 3 — 심화 도메인 (113건)</div>
+        <div id="domain-cards" class="pipeline-cards">
+
+          <div class="pipeline-card pipeline-card--phase3" data-domain="real_estate">
+            <span class="pipeline-icon">🏠</span>
+            <div class="pipeline-info">
+              <b>부동산/공간 AI</b><span class="pipeline-cases">40건</span>
+              <small class="pipeline-desc">GIS · 실거래가 · 상권 · 투자ROI · 인테리어</small>
+              <button class="domain-test-btn" data-domain="real_estate" data-action="invest"
+                data-payload='{"purchasePrice":900000000,"loanAmount":450000000}'>테스트</button>
+            </div>
+          </div>
+
+          <div class="pipeline-card pipeline-card--phase3" data-domain="finance">
+            <span class="pipeline-icon">📈</span>
+            <div class="pipeline-info">
+              <b>금융/투자 AI</b><span class="pipeline-cases">28건</span>
+              <small class="pipeline-desc">기술적 분석 · 옵션 · 암호화폐 · 포트폴리오</small>
+              <button class="domain-test-btn" data-domain="finance" data-action="option"
+                data-payload='{"S":100,"K":105,"T":0.5,"r":0.05,"sigma":0.2}'>테스트</button>
+            </div>
+          </div>
+
+          <div class="pipeline-card pipeline-card--phase3" data-domain="healthcare">
+            <span class="pipeline-icon">🏥</span>
+            <div class="pipeline-info">
+              <b>헬스케어 AI</b><span class="pipeline-cases">27건</span>
+              <small class="pipeline-desc">처방전 OCR · 약물상호작용 · 임상결정 · PHR</small>
+              <button class="domain-test-btn" data-domain="healthcare" data-action="prescription"
+                data-payload='{"drugs":["aspirin","warfarin"]}'>테스트</button>
+            </div>
+          </div>
+
+          <div class="pipeline-card pipeline-card--phase3" data-domain="government">
+            <span class="pipeline-icon">🏛️</span>
+            <div class="pipeline-info">
+              <b>정부/공공 AI</b><span class="pipeline-cases">18건</span>
+              <small class="pipeline-desc">공공데이터 · 재난경보 · 다국어 · 행정챗봇</small>
+              <button class="domain-test-btn" data-domain="government" data-action="disaster"
+                data-payload='{"type":"지진","level":3,"region":"서울"}'>테스트</button>
+            </div>
+          </div>
+
+        </div>
+
+        <div id="domain-test-result" class="pipeline-test-result hidden"></div>
+        <div id="pipeline-test-result" class="pipeline-test-result hidden"></div>
+
+        <!-- Phase 4 파이프라인 패널 -->
+        <div class="phase-label phase-label--4">Phase 4 — 신규 도메인 (260건)</div>
+        <div id="pipeline-cards-p4" class="pipeline-cards">
+
+          <!-- B4: Marketing -->
+          <div class="pipeline-card pipeline-card--phase4">
+            <span class="pipeline-icon">📣</span>
+            <div class="pipeline-info">
+              <b>마케팅 자동화</b><span class="pipeline-cases">78건</span>
+              <small class="pipeline-desc">SNS 스케줄러 · 보도자료 · 음성TTS · 인플루언서</small>
+              <button class="p4-test-btn" data-endpoint="/api/pipelines/marketing/sns-schedule"
+                data-payload='{"brand":"올리브영","platform":"instagram","posts":3,"tone":"friendly"}'>테스트</button>
+            </div>
+          </div>
+
+          <!-- B5: B2B/LegalHR -->
+          <div class="pipeline-card pipeline-card--phase4">
+            <span class="pipeline-icon">🏢</span>
+            <div class="pipeline-info">
+              <b>B2B/기업·HR</b><span class="pipeline-cases">44건</span>
+              <small class="pipeline-desc">기업조사 · 급여계산(4대보험) · 특허검색 · 이탈예측</small>
+              <button class="p4-test-btn" data-endpoint="/api/pipelines/b2b/payroll"
+                data-payload='{"employees":[{"id":"E1","name":"이사원","grade":"senior","yearsOfService":5,"dependents":1}]}'>테스트</button>
+            </div>
+          </div>
+
+          <!-- B1: Creative -->
+          <div class="pipeline-card pipeline-card--phase4">
+            <span class="pipeline-icon">🎨</span>
+            <div class="pipeline-info">
+              <b>크리에이티브 AI</b><span class="pipeline-cases">60건</span>
+              <small class="pipeline-desc">캐릭터일관성 · 영상스토리보드 · AI작곡 · AR씬</small>
+              <button class="p4-test-btn" data-endpoint="/api/pipelines/creative/character"
+                data-payload='{"name":"하늘이","style":"webtoon_korea","description":"웹툰 주인공"}'>테스트</button>
+            </div>
+          </div>
+
+          <!-- B2: Data-AI -->
+          <div class="pipeline-card pipeline-card--phase4">
+            <span class="pipeline-icon">🤖</span>
+            <div class="pipeline-info">
+              <b>Data-AI/자동화</b><span class="pipeline-cases">36건</span>
+              <small class="pipeline-desc">이상탐지ML · 시계열예측 · RPA플랫폼 · IoT스트림</small>
+              <button class="p4-test-btn" data-endpoint="/api/pipelines/data-ai/anomaly"
+                data-payload='{"data":[1,2,3,100,4,5,2],"algorithm":"isolation_forest","domain":"sales"}'>테스트</button>
+            </div>
+          </div>
+
+          <!-- B3: eCommerce -->
+          <div class="pipeline-card pipeline-card--phase4">
+            <span class="pipeline-icon">🛒</span>
+            <div class="pipeline-info">
+              <b>이커머스 AI</b><span class="pipeline-cases">52건</span>
+              <small class="pipeline-desc">개인화추천 · 쇼핑광고최적화 · 가격비교크롤러</small>
+              <button class="p4-test-btn" data-endpoint="/api/pipelines/ecommerce/recommend"
+                data-payload='{"userId":"U001","algorithm":"collaborative"}'>테스트</button>
+            </div>
+          </div>
+
+          <!-- B6: EduMed -->
+          <div class="pipeline-card pipeline-card--phase4">
+            <span class="pipeline-icon">🎓</span>
+            <div class="pipeline-info">
+              <b>교육·의료 AI</b><span class="pipeline-cases">29건</span>
+              <small class="pipeline-desc">수식분석 · 팩트체크 · 개인화학습 · 의료영상</small>
+              <button class="p4-test-btn" data-endpoint="/api/pipelines/edu-med/fact-check"
+                data-payload='{"claim":"AI는 2030년까지 모든 화이트칼라 직업을 대체할 것이라는 연구 발표가 있다","domain":"general"}'>테스트</button>
+            </div>
+          </div>
+
+        </div>
+        <div id="p4-test-result" class="pipeline-test-result hidden"></div>
+
+        <!-- ━━━ Phase 5 파이프라인 패널 ━━━ -->
+        <div class="phase-label phase-label--5">Phase 5 — 도메인 심화 (147건 추가)</div>
+        <div class="pipeline-grid">
+          <div class="pipeline-card pipeline-card--phase5">
+            <span class="pipeline-icon">🔐</span>
+            <b>IT/보안 AI</b><span class="pipeline-cases">42건</span>
+            <small class="pipeline-desc">보안스캐너 · 코드리뷰 · CI/CD · 모니터링 · 클라우드비용</small>
+            <button class="p5-test-btn" data-endpoint="/api/it/security-scan"
+              data-payload='{"target":"https://myapp.example.com","scanType":"web"}'>테스트</button>
+          </div>
+          <div class="pipeline-card pipeline-card--phase5">
+            <span class="pipeline-icon">🏠</span>
+            <b>부동산 AI</b><span class="pipeline-cases">36건</span>
+            <small class="pipeline-desc">실거래가 · 매물검색 · 상권분석 · GIS입지 · 투자분석</small>
+            <button class="p5-test-btn" data-endpoint="/api/real-estate/commercial-area"
+              data-payload='{"location":"홍대입구역","businessType":"카페","radius":500}'>테스트</button>
+          </div>
+          <div class="pipeline-card pipeline-card--phase5">
+            <span class="pipeline-icon">📈</span>
+            <b>금융/투자 AI</b><span class="pipeline-cases">28건</span>
+            <small class="pipeline-desc">주식분석 · 포트폴리오 · 크립토 · 옵션프라이싱 · 신용평가</small>
+            <button class="p5-test-btn" data-endpoint="/api/finance/crypto"
+              data-payload='{"symbol":"BTC"}'>테스트</button>
+          </div>
+          <div class="pipeline-card pipeline-card--phase5">
+            <span class="pipeline-icon">🏥</span>
+            <b>헬스케어 AI</b><span class="pipeline-cases">23건</span>
+            <small class="pipeline-desc">약물DB · 의학DB · 임상결정지원 · PHR · 처방전OCR</small>
+            <button class="p5-test-btn" data-endpoint="/api/healthcare/drug-interaction"
+              data-payload='{"drugs":["aspirin","warfarin"]}'>테스트</button>
+          </div>
+          <div class="pipeline-card pipeline-card--phase5">
+            <span class="pipeline-icon">🏛️</span>
+            <b>정부/공공 AI</b><span class="pipeline-cases">18건</span>
+            <small class="pipeline-desc">긴급알림 · 공공데이터API · 다국어번역 · 행정챗봇</small>
+            <button class="p5-test-btn" data-endpoint="/api/government/chatbot"
+              data-payload='{"query":"여권 발급 방법","channel":"web"}'>테스트</button>
+          </div>
+        </div>
+        <div id="p5-test-result" class="pipeline-test-result hidden"></div>
+
+        <!-- ━━━ Phase 6 파이프라인 패널 ━━━ -->
+        <div class="phase-label phase-label--6">Phase 6 — 워크플로우 엔진 · 실시간 메트릭 (134건 완성)</div>
+        <div class="phase6-grid">
+          <!-- Workflow Engine -->
+          <div class="pipeline-card pipeline-card--phase6">
+            <div class="pipeline-icon">⚙️</div>
+            <div class="pipeline-info">
+              <div class="pipeline-name">워크플로우 엔진</div>
+              <div class="pipeline-desc">멀티스텝 체이닝, Webhook 처리, 데이터 분석 자동화</div>
+              <div class="pipeline-cases">템플릿 5종 · 다채널 액션</div>
+            </div>
+            <button class="p6-test-btn" data-endpoint="/api/workflow/templates"
+              data-payload='{}' data-method="GET">템플릿 조회</button>
+          </div>
+          <!-- Realtime Metrics -->
+          <div class="pipeline-card pipeline-card--phase6">
+            <div class="pipeline-icon">📡</div>
+            <div class="pipeline-info">
+              <div class="pipeline-name">실시간 메트릭</div>
+              <div class="pipeline-desc">WebSocket 라이브 대시보드, 알람, 자동 테스트 러너</div>
+              <div class="pipeline-cases">Ring Buffer · 이벤트 스트림</div>
+            </div>
+            <button class="p6-test-btn" data-endpoint="/api/metrics/dashboard"
+              data-payload='{}' data-method="GET">메트릭 조회</button>
+          </div>
+          <!-- Workflow Run -->
+          <div class="pipeline-card pipeline-card--phase6">
+            <div class="pipeline-icon">🔁</div>
+            <div class="pipeline-info">
+              <div class="pipeline-name">워크플로우 실행</div>
+              <div class="pipeline-desc">webhookEventFlow 템플릿 즉시 실행</div>
+              <div class="pipeline-cases">webhook → 분기 → 다채널 알림</div>
+            </div>
+            <button class="p6-test-btn" data-endpoint="/api/workflow/run"
+              data-payload='{"template":"webhookEventFlow","context":{"event":{"type":"user_signup","userId":"u001"}}}'>실행</button>
+          </div>
+          <!-- Auto Test Runner -->
+          <div class="pipeline-card pipeline-card--phase6">
+            <div class="pipeline-icon">🤖</div>
+            <div class="pipeline-info">
+              <div class="pipeline-name">자동 테스트 러너</div>
+              <div class="pipeline-desc">전체 파이프라인 배치 테스트 · CI 통합</div>
+              <div class="pipeline-cases">19개 파이프라인 · 커버리지 100%</div>
+            </div>
+            <button class="p6-test-btn" data-endpoint="/api/autotest/status"
+              data-payload='{}' data-method="GET">상태 조회</button>
+          </div>
+        </div>
+        <div id="p6-test-result" class="pipeline-test-result hidden"></div>
+
+        <!-- 📊 커버리지 대시보드 -->
+        <div class="phase-label phase-label--coverage">📊 커버리지 현황 — 전체 달성!</div>
+        <div id="coverage-dashboard" class="coverage-dashboard">
+          <div class="coverage-summary">
+            <div class="cov-stat">
+              <span id="cov-total" class="cov-num">—</span>
+              <span class="cov-label">전체</span>
+            </div>
+            <div class="cov-stat">
+              <span id="cov-covered" class="cov-num cov-green">—</span>
+              <span class="cov-label">커버됨</span>
+            </div>
+            <div class="cov-stat">
+              <span id="cov-rate" class="cov-num">—</span>
+              <span class="cov-label">커버리지</span>
+            </div>
+          </div>
+          <div class="cov-bar-wrap">
+            <div id="cov-bar" class="cov-bar" style="width:0%"></div>
+          </div>
+          <div class="cov-phases">
+            <span class="cov-phase p1">P1: 379건</span>
+            <span class="cov-phase p2">P2: 47건</span>
+            <span class="cov-phase p3">P3: 113건</span>
+            <span class="cov-phase p4">P4: 260건</span>
+            <span class="cov-phase p5">P5: 147건</span>
+            <span class="cov-phase p6">P6: 134건+</span>
+          </div>
+
+          <!-- 도메인별 필터 -->
+          <div class="domain-filter" id="domain-filter">
+            <span class="domain-filter-label">도메인 필터:</span>
+            <button class="domain-btn active" data-domain="all">전체</button>
+            <button class="domain-btn" data-domain="marketing">마케팅</button>
+            <button class="domain-btn" data-domain="ecommerce">이커머스</button>
+            <button class="domain-btn" data-domain="b2b">B2B</button>
+            <button class="domain-btn" data-domain="creative">크리에이티브</button>
+            <button class="domain-btn" data-domain="data_ai">Data-AI</button>
+            <button class="domain-btn" data-domain="finance">금융</button>
+            <button class="domain-btn" data-domain="healthcare">헬스케어</button>
+            <button class="domain-btn" data-domain="it">IT/보안</button>
+            <button class="domain-btn" data-domain="government">정부</button>
+          </div>
+
+          <div id="domain-coverage-list" class="domain-coverage-list hidden"></div>
+
+          <button id="refresh-coverage-btn" class="coverage-refresh-btn">🔄 새로고침</button>
+        </div>
+
+        <!-- 🔴 실시간 대시보드 패널 -->
+        <div class="phase-label phase-label--realtime">🔴 실시간 메트릭 대시보드</div>
+        <div id="realtime-dashboard" class="realtime-dashboard">
+          <div class="rt-status-row">
+            <div class="rt-stat">
+              <div class="rt-stat-label">WebSocket</div>
+              <div id="rt-ws-status" class="rt-stat-value rt-disconnected">연결 중...</div>
+            </div>
+            <div class="rt-stat">
+              <div class="rt-stat-label">활성 파이프라인</div>
+              <div id="rt-active-pipes" class="rt-stat-value">—</div>
+            </div>
+            <div class="rt-stat">
+              <div class="rt-stat-label">초당 처리</div>
+              <div id="rt-rps" class="rt-stat-value">—</div>
+            </div>
+            <div class="rt-stat">
+              <div class="rt-stat-label">오류율</div>
+              <div id="rt-error-rate" class="rt-stat-value">—</div>
+            </div>
+            <div class="rt-stat">
+              <div class="rt-stat-label">평균 응답시간</div>
+              <div id="rt-avg-rt" class="rt-stat-value">—</div>
+            </div>
+          </div>
+          <div class="rt-events-wrap">
+            <div class="rt-events-title">📋 이벤트 피드 <span id="rt-event-count" class="rt-badge">0</span></div>
+            <div id="rt-events-feed" class="rt-events-feed">
+              <div class="rt-event-placeholder">실시간 이벤트가 여기에 표시됩니다...</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end pipeline-panel -->
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">📊 이번 작업</h3>
+        <div id="task-pipeline" class="task-pipeline hidden"><!-- 동적 --></div>
+        <div id="no-task" class="no-task">아직 작업이 없습니다.<br>메시지를 입력해보세요!</div>
+      </div>
+
+      <!-- 메모리 섹션 -->
+      <div class="sidebar-section">
+        <div class="memory-header">
+          <h3 class="sidebar-title">🧠 AI 기억</h3>
+          <button id="clear-memory-btn" class="memory-clear-btn" title="대화 기억 초기화">↺</button>
+        </div>
+        <div id="memory-summary" class="memory-summary hidden">
+          <div class="memory-stat">
+            <span class="memory-stat-num" id="mem-total">0</span>
+            <span class="memory-stat-label">총 작업</span>
+          </div>
+          <div class="memory-stat">
+            <span class="memory-stat-num" id="mem-score">-</span>
+            <span class="memory-stat-label">평균 품질</span>
+          </div>
+        </div>
+        <div id="memory-episodes" class="memory-episodes">
+          <div class="no-task">기억이 없습니다.<br>작업이 완료되면<br>여기에 저장됩니다.</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 채팅 영역 -->
+    <section class="chat-section">
+      <div id="welcome-screen" class="welcome-screen">
+        <div class="welcome-content">
+          <div class="welcome-icon">⚡</div>
+          <h1 class="welcome-title">AI 오케스트레이터 v5</h1>
+          <p class="welcome-subtitle">말 한마디로 <strong>최고의 결과물</strong>을 만들어드립니다</p>
+          <div class="welcome-features">
+            <div class="feature-item"><span class="feature-icon">🏆</span><span>33개 최신 AI 모델 자동 조합</span></div>
+            <div class="feature-item"><span class="feature-icon">⚡</span><span>병렬 실행 · 피드백 루프</span></div>
+            <div class="feature-item"><span class="feature-icon">🧠</span><span>ComboOptimizer 자동 선택</span></div>
+            <div class="feature-item"><span class="feature-icon">✅</span><span>CriticAI 품질 검증</span></div>
+          </div>
+          <p class="welcome-hint">💡 예시: "카페 홈페이지 만들어줘" 또는 "AI 시장 분석 PPT"</p>
+        </div>
+      </div>
+      <div id="messages" class="messages"></div>
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea id="message-input" class="message-input"
+            placeholder="무엇을 만들어드릴까요? 자유롭게 말씀해주세요..."
+            rows="1" maxlength="2000"></textarea>
+          <button id="send-btn" class="send-btn" title="전송 (Enter)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-footer">
+          <span class="input-hint">Enter로 전송, Shift+Enter로 줄바꿈</span>
+          <span id="char-count" class="char-count">0/2000</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 결과 패널 -->
+    <aside class="result-panel" id="result-panel">
+      <div class="result-panel-header">
+        <h3 id="result-title">결과물</h3>
+        <div class="result-actions">
+          <button id="copy-btn" class="icon-btn" title="복사">📋</button>
+          <button id="download-btn" class="icon-btn" title="다운로드">⬇️</button>
+          <button id="preview-btn" class="icon-btn" title="미리보기">👁️</button>
+          <button id="close-result-btn" class="icon-btn" title="닫기">✕</button>
+        </div>
+      </div>
+      <div id="quality-bar" class="quality-bar hidden">
+        <span class="quality-label">품질 점수</span>
+        <div class="quality-track">
+          <div id="quality-fill" class="quality-fill"></div>
+        </div>
+        <span id="quality-score" class="quality-score">-</span>
+      </div>
+      <div id="result-content" class="result-content">
+        <div class="empty-result"><p>결과물이 여기에 표시됩니다</p></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 탭 2: 모델 레지스트리 (artificialanalysis.ai 스타일) -->
+  <main class="registry-page hidden" id="main-models">
+    <div class="registry-container">
+
+      <!-- 히어로 섹션 -->
+      <div class="registry-hero-v2">
+        <div class="registry-hero-text">
+          <div class="registry-hero-eyebrow">
+            <span class="eyebrow-badge">March 2026</span>
+            <span class="eyebrow-dot">•</span>
+            <span>Artificial Analysis Intelligence Index 기반</span>
+          </div>
+          <h1>AI 모델 인텔리전스 레지스트리</h1>
+          <p>33개 최신 AI 모델의 벤치마크·능력치·비용을 한눈에 비교</p>
+        </div>
+        <div class="registry-hero-stats" id="registry-stats">
+          <div class="rstat-v2">
+            <span class="rstat-num" id="rstat-total">33</span>
+            <span class="rstat-label">총 모델</span>
+          </div>
+          <div class="rstat-v2">
+            <span class="rstat-num" id="rstat-providers">9</span>
+            <span class="rstat-label">공급사</span>
+          </div>
+          <div class="rstat-v2">
+            <span class="rstat-num">16</span>
+            <span class="rstat-label">분야 1위</span>
+          </div>
+          <div class="rstat-v2">
+            <span class="rstat-num">18</span>
+            <span class="rstat-label">검증 레시피</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- S-Tier 인텔리전스 리더 섹션 -->
+      <section class="registry-section">
+        <div class="section-header-row">
+          <h2 class="registry-section-title">
+            <span class="section-badge s-tier">S-TIER</span>
+            인텔리전스 지수 TOP 5 (2026년 3월)
+          </h2>
+          <span class="section-note">출처: Artificial Analysis Intelligence Index v4.0</span>
+        </div>
+        <div class="intelligence-leaderboard" id="intelligence-leaderboard">
+          <!-- JS로 채워짐 -->
+        </div>
+      </section>
+
+      <!-- 분야별 최고 모델 섹션 (새 디자인) -->
+      <section class="registry-section">
+        <div class="section-header-row">
+          <h2 class="registry-section-title">
+            <span class="section-badge gold">🏆</span>
+            분야별 최고 모델 (March 2026)
+          </h2>
+        </div>
+        <div class="domain-grid-v2" id="best-in-class-grid">
+          <!-- JS로 채워짐 -->
+        </div>
+      </section>
+
+      <!-- 전체 모델 목록 (새 카드 디자인) -->
+      <section class="registry-section">
+        <div class="registry-filter-row">
+          <h2 class="registry-section-title">📋 전체 모델 목록</h2>
+          <div class="filter-group-v2">
+            <button class="filter-btn-v2 active" data-tier="all">전체 <span class="filter-count" id="fc-all">33</span></button>
+            <button class="filter-btn-v2" data-tier="flagship">Flagship</button>
+            <button class="filter-btn-v2" data-tier="specialized">Specialized</button>
+            <button class="filter-btn-v2" data-tier="standard">Standard</button>
+            <button class="filter-btn-v2" data-tier="mini">Mini</button>
+            <button class="filter-btn-v2" data-tier="economy">Economy</button>
+            <button class="filter-btn-v2" data-tier="open">Open</button>
+          </div>
+          <div class="search-sort-row">
+            <input type="text" class="model-search-input" id="model-search" placeholder="🔍 모델 검색..." oninput="filterModels()">
+            <select id="model-sort" onchange="sortModels()">
+              <option value="tier">티어순</option>
+              <option value="intelligence">지능 지수순</option>
+              <option value="reasoning">추론력순</option>
+              <option value="coding">코딩력순</option>
+              <option value="speed">속도순</option>
+              <option value="cost">비용순</option>
+            </select>
+          </div>
+        </div>
+        <div class="model-registry-grid-v2" id="model-registry-grid">
+          <div class="loading-spinner">⚡ 모델 정보 로딩 중...</div>
+        </div>
+      </section>
+
+      <!-- Flagship 능력치 비교 -->
+      <section class="registry-section">
+        <h2 class="registry-section-title">📊 Flagship 모델 능력치 비교</h2>
+        <div class="radar-compare-section" id="radar-compare">
+          <!-- JS로 채워짐 -->
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- 탭 3: 조합 최적화 페이지 -->
+  <main class="combo-page hidden" id="main-combo">
+    <div class="combo-container">
+      <div class="combo-hero">
+        <h1>🏆 AI 조합 최적화 엔진</h1>
+        <p>ComboOptimizer가 작업 유형·전략·복잡도에 맞는 최적 모델 조합을 자동 선택합니다</p>
+      </div>
+
+      <!-- 조합 추천 섹션 -->
+      <section class="combo-optimizer-section">
+        <div class="combo-optimizer-panel">
+          <h3>🔍 최적 조합 찾기</h3>
+          <div class="combo-selector-row">
+            <div class="selector-group">
+              <label>작업 유형</label>
+              <select id="page-task-type">
+                <option value="ppt">📊 PPT / 프레젠테이션</option>
+                <option value="website">🌐 홈페이지 / 웹사이트</option>
+                <option value="blog">📝 블로그 / 콘텐츠</option>
+                <option value="report">📈 분석 리포트</option>
+                <option value="code">💻 코드 / 앱 개발</option>
+                <option value="email">✉️ 이메일 / 문서</option>
+                <option value="resume">📄 자기소개서</option>
+              </select>
+            </div>
+            <div class="selector-group">
+              <label>전략</label>
+              <select id="page-strategy">
+                <option value="quality">🎯 품질 최우선</option>
+                <option value="speed">⚡ 속도 최우선</option>
+                <option value="economy">💰 비용 절약</option>
+              </select>
+            </div>
+            <div class="selector-group">
+              <label>복잡도</label>
+              <select id="page-complexity">
+                <option value="medium">보통</option>
+                <option value="high">높음</option>
+                <option value="enterprise">엔터프라이즈</option>
+                <option value="low">낮음</option>
+              </select>
+            </div>
+            <button class="combo-find-btn" onclick="pageLoadComboRecommend()">🚀 최적 조합 분석</button>
+          </div>
+          <div id="page-combo-result" class="page-combo-result">
+            <div class="combo-hint">위에서 조건을 선택하고 "최적 조합 분석"을 클릭하세요</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 전체 조합 랭킹 -->
+      <section class="combo-all-section">
+        <div class="combo-all-header">
+          <h3>📊 전체 조합 랭킹</h3>
+          <div class="combo-all-filter">
+            <select id="combo-all-task" onchange="loadAllCombos()">
+              <option value="ppt">📊 PPT</option>
+              <option value="website">🌐 홈페이지</option>
+              <option value="blog">📝 블로그</option>
+              <option value="report">📈 리포트</option>
+              <option value="code">💻 코드</option>
+              <option value="email">✉️ 이메일</option>
+              <option value="resume">📄 자소서</option>
+            </select>
+          </div>
+        </div>
+        <div id="combo-all-grid" class="combo-all-grid">
+          <div class="loading-spinner">🔄 조합 데이터 로딩 중...</div>
+        </div>
+      </section>
+
+      <!-- 파이프라인 메커니즘 설명 -->
+      <section class="pipeline-explain-section">
+        <h3>⚙️ 핵심 메커니즘</h3>
+        <div class="mechanism-grid">
+          <div class="mechanism-card">
+            <div class="mech-icon">⚡</div>
+            <h4>병렬 실행</h4>
+            <p>독립적인 스텝(리서치·디자인 등)을 동시에 실행하여 처리 시간을 최대 50% 단축합니다.</p>
+            <div class="mech-example">copy + design → parallel group</div>
+          </div>
+          <div class="mechanism-card">
+            <div class="mech-icon">🔄</div>
+            <h4>피드백 루프</h4>
+            <p>CriticAI가 각 스텝 결과를 72점 기준으로 평가하고, 미달 시 자동으로 재실행합니다.</p>
+            <div class="mech-example">score &lt; 72 → re-execute (max 2x)</div>
+          </div>
+          <div class="mechanism-card">
+            <div class="mech-icon">🗺️</div>
+            <h4>동적 라우팅</h4>
+            <p>ComboOptimizer가 5단계 알고리즘으로 실시간 최적 모델 조합을 선택합니다.</p>
+            <div class="mech-example">filter → score → winRate → benchmark → select</div>
+          </div>
+          <div class="mechanism-card">
+            <div class="mech-icon">📚</div>
+            <h4>자동 학습</h4>
+            <p>ModelBenchmark가 실행 결과를 EMA로 누적하고, 5회 이상 시 승률을 자동 보정합니다.</p>
+            <div class="mech-example">EMA α=0.3 · 5회+ → auto-adjust</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════
+       탭: 인증 (로그인 / 회원가입)
+  ══════════════════════════════════════════════════════ -->
+  <main class="main-layout main-full" id="main-auth" style="display:none">
+    <div class="p7-page-wrap">
+      <div class="p7-auth-container">
+        <!-- 로그인 카드 -->
+        <div class="p7-auth-card" id="auth-login-card">
+          <div class="p7-auth-logo">⚡ AI<span style="color:#6ee7b7">Orchestra</span></div>
+          <h2 class="p7-auth-title">로그인</h2>
+          <div class="p7-auth-form" id="login-form">
+            <input type="text" id="login-username" class="p7-input" placeholder="사용자명 또는 이메일">
+            <input type="password" id="login-password" class="p7-input" placeholder="비밀번호">
+            <button class="p7-btn-primary p7-btn-full" onclick="doLogin()">🔑 로그인</button>
+            <div id="login-result" class="p7-auth-msg"></div>
+          </div>
+          <div class="p7-auth-switch">계정이 없으신가요? <a href="#" onclick="toggleAuthMode('register')">회원가입</a></div>
+          <div class="p7-auth-divider">또는</div>
+          <button class="p7-btn-ghost p7-btn-full" onclick="continueAsGuest()">👤 게스트로 계속하기</button>
+        </div>
+
+        <!-- 회원가입 카드 -->
+        <div class="p7-auth-card hidden" id="auth-register-card">
+          <div class="p7-auth-logo">⚡ AI<span style="color:#6ee7b7">Orchestra</span></div>
+          <h2 class="p7-auth-title">회원가입</h2>
+          <div class="p7-auth-form">
+            <input type="text" id="reg-username" class="p7-input" placeholder="사용자명 (영문/숫자)">
+            <input type="email" id="reg-email" class="p7-input" placeholder="이메일 주소">
+            <input type="password" id="reg-password" class="p7-input" placeholder="비밀번호 (8자 이상)">
+            <select id="reg-role" class="p7-input">
+              <option value="user">일반 사용자</option>
+              <option value="admin">관리자</option>
+            </select>
+            <button class="p7-btn-primary p7-btn-full" onclick="doRegister()">✅ 계정 만들기</button>
+            <div id="register-result" class="p7-auth-msg"></div>
+          </div>
+          <div class="p7-auth-switch">이미 계정이 있나요? <a href="#" onclick="toggleAuthMode('login')">로그인</a></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════
+       탭: 작업 큐 모니터
+  ══════════════════════════════════════════════════════ -->
+  <main class="main-layout main-full" id="main-queue" style="display:none">
+    <div class="p7-page-wrap">
+      <div class="p7-page-header">
+        <h2 class="p7-page-title">⚙️ 작업 큐 모니터</h2>
+        <div class="p7-page-actions">
+          <button class="p7-btn-secondary" onclick="refreshQueue()">🔄 새로고침</button>
+          <button class="p7-btn-primary" onclick="showAddJobModal()">+ 작업 추가</button>
+        </div>
+      </div>
+
+      <!-- 통계 카드 -->
+      <div class="p7-stat-grid" id="queue-stats-grid">
+        <div class="p7-stat-card p7-stat-blue">
+          <div class="p7-stat-value" id="qs-pending">-</div>
+          <div class="p7-stat-label">대기 중</div>
+        </div>
+        <div class="p7-stat-card p7-stat-yellow">
+          <div class="p7-stat-value" id="qs-running">-</div>
+          <div class="p7-stat-label">실행 중</div>
+        </div>
+        <div class="p7-stat-card p7-stat-green">
+          <div class="p7-stat-value" id="qs-completed">-</div>
+          <div class="p7-stat-label">완료</div>
+        </div>
+        <div class="p7-stat-card p7-stat-red">
+          <div class="p7-stat-value" id="qs-failed">-</div>
+          <div class="p7-stat-label">실패</div>
+        </div>
+        <div class="p7-stat-card p7-stat-purple">
+          <div class="p7-stat-value" id="qs-total">-</div>
+          <div class="p7-stat-label">전체 처리량</div>
+        </div>
+      </div>
+
+      <!-- 실행 중인 작업 진행률 -->
+      <div class="p7-section-card">
+        <h3 class="p7-section-title">🔄 실행 중인 작업</h3>
+        <div id="running-jobs-list" class="p7-jobs-list">
+          <div class="p7-empty-state">실행 중인 작업이 없습니다</div>
+        </div>
+      </div>
+
+      <!-- 작업 목록 테이블 -->
+      <div class="p7-section-card">
+        <div class="p7-section-header">
+          <h3 class="p7-section-title">📋 전체 작업 목록</h3>
+          <div class="p7-filter-row">
+            <select id="queue-filter-status" class="p7-select-sm" onchange="refreshQueue()">
+              <option value="">전체 상태</option>
+              <option value="pending">대기</option>
+              <option value="running">실행중</option>
+              <option value="completed">완료</option>
+              <option value="failed">실패</option>
+            </select>
+            <select id="queue-filter-type" class="p7-select-sm" onchange="refreshQueue()">
+              <option value="">전체 유형</option>
+              <option value="ai-task">AI 작업</option>
+              <option value="batch-test">배치 테스트</option>
+              <option value="report-gen">리포트 생성</option>
+            </select>
+          </div>
+        </div>
+        <div class="p7-table-wrap">
+          <table class="p7-table">
+            <thead>
+              <tr><th>ID</th><th>유형</th><th>상태</th><th>진행률</th><th>시작 시간</th><th>소요 시간</th><th>작업</th></tr>
+            </thead>
+            <tbody id="jobs-table-body">
+              <tr><td colspan="7" class="p7-td-empty">데이터 로딩 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 작업 추가 인라인 폼 -->
+      <div class="p7-section-card" id="add-job-panel" style="display:none">
+        <h3 class="p7-section-title">➕ 새 작업 추가</h3>
+        <div class="p7-form-row">
+          <div class="p7-form-group">
+            <label>작업 유형</label>
+            <select id="new-job-type" class="p7-input">
+              <option value="ai-task">AI 작업</option>
+              <option value="batch-test">배치 테스트</option>
+              <option value="report-gen">리포트 생성</option>
+            </select>
+          </div>
+          <div class="p7-form-group">
+            <label>파이프라인</label>
+            <select id="new-job-pipeline" class="p7-input">
+              <option value="marketingPipeline">마케팅</option>
+              <option value="itSecurityPipeline">IT 보안</option>
+              <option value="financeInvestPipeline">금융 투자</option>
+              <option value="healthcarePipeline">헬스케어</option>
+              <option value="ecommercePipeline">이커머스</option>
+              <option value="b2bPipeline">B2B</option>
+            </select>
+          </div>
+          <div class="p7-form-group">
+            <label>우선순위</label>
+            <select id="new-job-priority" class="p7-input">
+              <option value="normal">일반</option>
+              <option value="high">높음</option>
+              <option value="low">낮음</option>
+            </select>
+          </div>
+        </div>
+        <div class="p7-form-group">
+          <label>파라미터 (JSON)</label>
+          <textarea id="new-job-params" class="p7-input p7-textarea" rows="3">{"action":"analyze","data":"sample"}</textarea>
+        </div>
+        <div class="p7-btn-row">
+          <button class="p7-btn-primary" onclick="submitNewJob()">✅ 작업 제출</button>
+          <button class="p7-btn-ghost" onclick="hideAddJobModal()">취소</button>
+        </div>
+        <div id="add-job-result" class="p7-auth-msg"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════
+       탭: 노코드 파이프라인 빌더
+  ══════════════════════════════════════════════════════ -->
+  <main class="main-layout main-full" id="main-builder" style="display:none">
+    <div class="p7-page-wrap">
+      <div class="p7-page-header">
+        <h2 class="p7-page-title">🔧 노코드 파이프라인 빌더</h2>
+        <div class="p7-page-actions">
+          <button class="p7-btn-secondary" onclick="loadBuilderTemplates()">📋 템플릿 불러오기</button>
+          <button class="p7-btn-primary" onclick="saveBuilderPipeline()">💾 저장</button>
+        </div>
+      </div>
+
+      <div class="p7-builder-layout">
+        <!-- 왼쪽: 노드 팔레트 -->
+        <div class="p7-node-palette">
+          <h3 class="p7-palette-title">🧩 노드 팔레트</h3>
+          <div class="p7-palette-section">
+            <div class="p7-palette-label">입력</div>
+            <div class="p7-palette-node" draggable="true" data-type="input" data-label="텍스트 입력" onclick="addNode('input','텍스트 입력','📝')">📝 텍스트 입력</div>
+            <div class="p7-palette-node" draggable="true" data-type="input" data-label="파일 업로드" onclick="addNode('file','파일 업로드','📁')">📁 파일 업로드</div>
+            <div class="p7-palette-node" draggable="true" data-type="input" data-label="API 트리거" onclick="addNode('trigger','API 트리거','⚡')">⚡ API 트리거</div>
+          </div>
+          <div class="p7-palette-section">
+            <div class="p7-palette-label">AI 처리</div>
+            <div class="p7-palette-node p7-node-ai" onclick="addNode('ai-llm','LLM 분석','🤖')">🤖 LLM 분석</div>
+            <div class="p7-palette-node p7-node-ai" onclick="addNode('ai-vision','이미지 분석','👁️')">👁️ 이미지 분석</div>
+            <div class="p7-palette-node p7-node-ai" onclick="addNode('ai-classify','분류','🏷️')">🏷️ 분류/태깅</div>
+            <div class="p7-palette-node p7-node-ai" onclick="addNode('ai-generate','콘텐츠 생성','✨')">✨ 콘텐츠 생성</div>
+          </div>
+          <div class="p7-palette-section">
+            <div class="p7-palette-label">비즈니스 로직</div>
+            <div class="p7-palette-node p7-node-logic" onclick="addNode('filter','필터','🔍')">🔍 필터/조건</div>
+            <div class="p7-palette-node p7-node-logic" onclick="addNode('transform','변환','🔄')">🔄 데이터 변환</div>
+            <div class="p7-palette-node p7-node-logic" onclick="addNode('loop','반복','🔁')">🔁 반복 실행</div>
+          </div>
+          <div class="p7-palette-section">
+            <div class="p7-palette-label">출력/연동</div>
+            <div class="p7-palette-node p7-node-output" onclick="addNode('slack','Slack 알림','💬')">💬 Slack 알림</div>
+            <div class="p7-palette-node p7-node-output" onclick="addNode('email','이메일 발송','✉️')">✉️ 이메일 발송</div>
+            <div class="p7-palette-node p7-node-output" onclick="addNode('sheets','Google Sheets','📊')">📊 Google Sheets</div>
+            <div class="p7-palette-node p7-node-output" onclick="addNode('webhook','Webhook','🔗')">🔗 Webhook 전송</div>
+            <div class="p7-palette-node p7-node-output" onclick="addNode('save','DB 저장','💾')">💾 DB 저장</div>
+          </div>
+        </div>
+
+        <!-- 가운데: 캔버스 -->
+        <div class="p7-builder-canvas-wrap">
+          <div class="p7-canvas-toolbar">
+            <input type="text" id="builder-pipeline-name" class="p7-input p7-input-sm" placeholder="파이프라인 이름" value="새 파이프라인">
+            <button class="p7-btn-icon" title="전체 삭제" onclick="clearCanvas()">🗑️</button>
+            <button class="p7-btn-icon" title="실행" onclick="runBuilderPipeline()">▶️</button>
+            <span class="p7-canvas-node-count">노드: <span id="canvas-node-count">0</span>개</span>
+          </div>
+          <div id="builder-canvas" class="p7-builder-canvas">
+            <div class="p7-canvas-placeholder" id="canvas-placeholder">
+              <div class="p7-canvas-ph-icon">🧩</div>
+              <p>왼쪽 팔레트에서 노드를 클릭해서 추가하세요</p>
+              <p style="font-size:12px;color:#666">또는 템플릿을 불러오세요</p>
+            </div>
+          </div>
+          <div id="builder-run-result" class="p7-builder-result" style="display:none"></div>
+        </div>
+
+        <!-- 오른쪽: 속성 패널 -->
+        <div class="p7-node-properties">
+          <h3 class="p7-palette-title">⚙️ 노드 속성</h3>
+          <div id="node-props-panel" class="p7-props-empty">
+            <div class="p7-palette-label">노드를 선택하면<br>속성이 표시됩니다</div>
+          </div>
+          <div class="p7-palette-section" style="margin-top:16px">
+            <div class="p7-palette-label">저장된 파이프라인</div>
+            <div id="saved-pipelines-list" class="p7-saved-list">
+              <div class="p7-empty-state" style="font-size:12px">없음</div>
+            </div>
+          </div>
+          <!-- 템플릿 목록 -->
+          <div class="p7-palette-section">
+            <div class="p7-palette-label">빠른 템플릿</div>
+            <div id="builder-templates-list" class="p7-templates-list">로딩 중...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════
+       탭: 통합 대시보드 (비용·버전·스케줄러·통합)
+  ══════════════════════════════════════════════════════ -->
+  <main class="main-layout main-full" id="main-dashboard" style="display:none">
+    <div class="p7-page-wrap">
+      <div class="p7-page-header">
+        <h2 class="p7-page-title">📊 통합 관리 대시보드</h2>
+        <div class="p7-page-actions">
+          <button class="p7-btn-secondary" onclick="refreshDashboard()">🔄 전체 새로고침</button>
+        </div>
+      </div>
+
+      <!-- 상단 탭 -->
+      <div class="p7-sub-tabs">
+        <button class="p7-sub-tab active" onclick="switchDashTab('cost')" id="dtab-cost">💰 비용 트래킹</button>
+        <button class="p7-sub-tab" onclick="switchDashTab('versions')" id="dtab-versions">🔖 버전/AB테스트</button>
+        <button class="p7-sub-tab" onclick="switchDashTab('scheduler')" id="dtab-scheduler">⏰ 스케줄러</button>
+        <button class="p7-sub-tab" onclick="switchDashTab('integrations')" id="dtab-integrations">🔌 외부 연동</button>
+        <button class="p7-sub-tab" onclick="switchDashTab('system')" id="dtab-system">🖥️ 시스템 상태</button>
+      </div>
+
+      <!-- 비용 트래킹 패널 (Chart.js 시각화) -->
+      <div id="dash-cost" class="p7-dash-panel">
+        <div class="p7-stat-grid">
+          <div class="p7-stat-card p7-stat-green">
+            <div class="p7-stat-value" id="cost-today-total">$0.00</div>
+            <div class="p7-stat-label">오늘 총 비용</div>
+          </div>
+          <div class="p7-stat-card p7-stat-blue">
+            <div class="p7-stat-value" id="cost-today-tokens">0</div>
+            <div class="p7-stat-label">오늘 토큰 사용량</div>
+          </div>
+          <div class="p7-stat-card p7-stat-purple">
+            <div class="p7-stat-value" id="cost-today-calls">0</div>
+            <div class="p7-stat-label">오늘 API 호출 수</div>
+          </div>
+          <div class="p7-stat-card p7-stat-yellow">
+            <div class="p7-stat-value" id="cost-month-total">$0.00</div>
+            <div class="p7-stat-label">이번 달 누적</div>
+          </div>
+        </div>
+
+        <!-- 차트 행 1: 일별 비용 라인 + 파이프라인 파이 -->
+        <div class="p7-two-col">
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">📅 일별 비용 추이 (30일)</h3>
+            <div class="chart-container" style="position:relative;height:220px;">
+              <canvas id="chart-daily-cost"></canvas>
+            </div>
+          </div>
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">🥧 파이프라인별 비용 분포</h3>
+            <div class="chart-container" style="position:relative;height:220px;">
+              <canvas id="chart-pipeline-pie"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 차트 행 2: 모델 바 + 월별 라인 -->
+        <div class="p7-two-col">
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">🤖 모델별 사용 비용</h3>
+            <div class="chart-container" style="position:relative;height:220px;">
+              <canvas id="chart-model-bar"></canvas>
+            </div>
+          </div>
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">📈 월별 누적 비용</h3>
+            <div class="chart-container" style="position:relative;height:220px;">
+              <canvas id="chart-monthly-cost"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 레거시 텍스트 바 (폴백) -->
+        <div class="p7-two-col hidden" id="cost-legacy-bars">
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">📈 파이프라인별 비용</h3>
+            <div id="cost-by-pipeline" class="p7-cost-bars">로딩 중...</div>
+          </div>
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">🤖 모델별 사용량</h3>
+            <div id="cost-by-model" class="p7-cost-bars">로딩 중...</div>
+          </div>
+        </div>
+
+        <div class="p7-section-card">
+          <div class="p7-section-header">
+            <h3 class="p7-section-title">📋 사용 기록</h3>
+            <button class="p7-btn-secondary p7-btn-sm" onclick="loadCostReport()">📥 리포트 다운로드</button>
+          </div>
+          <div class="p7-table-wrap">
+            <table class="p7-table">
+              <thead><tr><th>시간</th><th>파이프라인</th><th>모델</th><th>토큰</th><th>비용</th><th>사용자</th></tr></thead>
+              <tbody id="cost-records-table">
+                <tr><td colspan="6" class="p7-td-empty">데이터 없음</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 버전/AB테스트 패널 -->
+      <div id="dash-versions" class="p7-dash-panel hidden">
+        <div class="p7-two-col">
+          <div class="p7-section-card">
+            <div class="p7-section-header">
+              <h3 class="p7-section-title">🔖 파이프라인 버전</h3>
+              <button class="p7-btn-primary p7-btn-sm" onclick="showCreateVersionModal()">+ 새 버전</button>
+            </div>
+            <div class="p7-form-row" style="margin-bottom:12px">
+              <select id="version-pipeline-select" class="p7-input p7-input-sm" onchange="loadVersions()">
+                <option value="marketingPipeline">마케팅 파이프라인</option>
+                <option value="itSecurityPipeline">IT 보안</option>
+                <option value="financeInvestPipeline">금융 투자</option>
+                <option value="healthcarePipeline">헬스케어</option>
+                <option value="ecommercePipeline">이커머스</option>
+              </select>
+            </div>
+            <div id="versions-list" class="p7-versions-list">로딩 중...</div>
+          </div>
+
+          <div class="p7-section-card">
+            <div class="p7-section-header">
+              <h3 class="p7-section-title">🧪 A/B 테스트</h3>
+              <button class="p7-btn-primary p7-btn-sm" onclick="showCreateABTestModal()">+ 새 A/B 테스트</button>
+            </div>
+            <div id="ab-tests-list" class="p7-ab-list">로딩 중...</div>
+          </div>
+        </div>
+
+        <!-- 새 버전 생성 폼 -->
+        <div class="p7-section-card hidden" id="create-version-form">
+          <h3 class="p7-section-title">새 버전 등록</h3>
+          <div class="p7-form-row">
+            <div class="p7-form-group"><label>버전</label><input type="text" id="new-version-num" class="p7-input" placeholder="v2.0.0"></div>
+            <div class="p7-form-group"><label>설명</label><input type="text" id="new-version-desc" class="p7-input" placeholder="변경 내용 요약"></div>
+          </div>
+          <div class="p7-btn-row">
+            <button class="p7-btn-primary" onclick="createVersion()">저장</button>
+            <button class="p7-btn-ghost" onclick="document.getElementById('create-version-form').classList.add('hidden')">취소</button>
+          </div>
+        </div>
+
+        <!-- A/B 테스트 생성 폼 -->
+        <div class="p7-section-card hidden" id="create-ab-form">
+          <h3 class="p7-section-title">A/B 테스트 생성</h3>
+          <div class="p7-form-row">
+            <div class="p7-form-group"><label>파이프라인</label>
+              <select id="ab-pipeline" class="p7-input">
+                <option value="marketingPipeline">마케팅</option>
+                <option value="itSecurityPipeline">IT 보안</option>
+                <option value="financeInvestPipeline">금융</option>
+              </select>
+            </div>
+            <div class="p7-form-group"><label>버전 A</label><input type="text" id="ab-version-a" class="p7-input" placeholder="v1.0.0"></div>
+            <div class="p7-form-group"><label>버전 B</label><input type="text" id="ab-version-b" class="p7-input" placeholder="v2.0.0"></div>
+          </div>
+          <div class="p7-form-row">
+            <div class="p7-form-group"><label>트래픽 분배 (%)</label><input type="number" id="ab-split" class="p7-input" value="50" min="1" max="99"></div>
+            <div class="p7-form-group"><label>지표</label>
+              <select id="ab-metric" class="p7-input">
+                <option value="accuracy">정확도</option>
+                <option value="latency">응답속도</option>
+                <option value="cost">비용</option>
+                <option value="userSatisfaction">사용자 만족도</option>
+              </select>
+            </div>
+          </div>
+          <div class="p7-btn-row">
+            <button class="p7-btn-primary" onclick="createABTest()">테스트 시작</button>
+            <button class="p7-btn-ghost" onclick="document.getElementById('create-ab-form').classList.add('hidden')">취소</button>
+          </div>
+          <div id="ab-create-result" class="p7-auth-msg"></div>
+        </div>
+      </div>
+
+      <!-- 스케줄러 패널 -->
+      <div id="dash-scheduler" class="p7-dash-panel hidden">
+        <div class="p7-section-card">
+          <div class="p7-section-header">
+            <h3 class="p7-section-title">⏰ 스케줄 작업 목록</h3>
+            <button class="p7-btn-primary p7-btn-sm" onclick="showAddScheduleModal()">+ 스케줄 추가</button>
+          </div>
+          <div id="scheduler-jobs-list" class="p7-scheduler-list">로딩 중...</div>
+        </div>
+
+        <!-- 스케줄 추가 폼 -->
+        <div class="p7-section-card hidden" id="add-schedule-form">
+          <h3 class="p7-section-title">새 스케줄 추가</h3>
+          <div class="p7-form-row">
+            <div class="p7-form-group"><label>작업 이름</label><input type="text" id="sched-name" class="p7-input" placeholder="일일 리포트 생성"></div>
+            <div class="p7-form-group"><label>Cron 표현식</label><input type="text" id="sched-cron" class="p7-input" placeholder="0 9 * * *"></div>
+            <div class="p7-form-group"><label>파이프라인</label>
+              <select id="sched-pipeline" class="p7-input">
+                <option value="marketingPipeline">마케팅</option>
+                <option value="itSecurityPipeline">IT 보안</option>
+                <option value="financeInvestPipeline">금융</option>
+                <option value="healthcarePipeline">헬스케어</option>
+              </select>
+            </div>
+          </div>
+          <div class="p7-btn-row">
+            <button class="p7-btn-primary" onclick="createScheduleJob()">저장</button>
+            <button class="p7-btn-ghost" onclick="document.getElementById('add-schedule-form').classList.add('hidden')">취소</button>
+          </div>
+          <div id="sched-create-result" class="p7-auth-msg"></div>
+        </div>
+
+        <!-- 즉시 실행 로그 -->
+        <div class="p7-section-card">
+          <h3 class="p7-section-title">📋 실행 로그</h3>
+          <div id="scheduler-logs" class="p7-log-panel">로딩 중...</div>
+        </div>
+      </div>
+
+      <!-- 외부 연동 패널 -->
+      <div id="dash-integrations" class="p7-dash-panel hidden">
+        <div class="p7-integrations-grid" id="integrations-status-grid">로딩 중...</div>
+
+        <div class="p7-two-col">
+          <!-- Slack -->
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">💬 Slack 테스트</h3>
+            <div class="p7-form-group"><label>채널</label><input type="text" id="slack-channel" class="p7-input" value="#general" placeholder="#채널명"></div>
+            <div class="p7-form-group"><label>메시지</label><textarea id="slack-message" class="p7-input p7-textarea" rows="3" placeholder="테스트 메시지를 입력하세요">AI 오케스트레이터 테스트 알림 🚀</textarea></div>
+            <button class="p7-btn-primary" onclick="sendSlackTest()">📤 Slack 전송</button>
+            <div id="slack-result" class="p7-auth-msg" style="margin-top:8px"></div>
+          </div>
+
+          <!-- Google Sheets -->
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">📊 Google Sheets 테스트</h3>
+            <div class="p7-form-group"><label>시트 ID</label><input type="text" id="sheets-id" class="p7-input" value="test-sheet-001" placeholder="스프레드시트 ID"></div>
+            <div class="p7-form-group"><label>시트명</label><input type="text" id="sheets-name" class="p7-input" value="Sheet1"></div>
+            <div class="p7-form-group"><label>데이터 (JSON 배열)</label><input type="text" id="sheets-data" class="p7-input" value='["테스트", "2024-01-01", 1234]'></div>
+            <button class="p7-btn-primary" onclick="appendSheetsTest()">📤 행 추가</button>
+            <div id="sheets-result" class="p7-auth-msg" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <!-- 파일 업로드 -->
+        <div class="p7-section-card">
+          <h3 class="p7-section-title">☁️ 파일 업로드 (S3 스토리지)</h3>
+          <div class="p7-form-row">
+            <div class="p7-form-group">
+              <label>파일 선택</label>
+              <input type="file" id="upload-file" class="p7-input" accept="*/*">
+            </div>
+            <div class="p7-form-group">
+              <label>버킷</label>
+              <input type="text" id="upload-bucket" class="p7-input" value="ai-orchestrator-files">
+            </div>
+          </div>
+          <button class="p7-btn-primary" onclick="uploadFileTest()">📤 업로드</button>
+          <div id="upload-result" class="p7-auth-msg" style="margin-top:8px"></div>
+          <div class="p7-section-title" style="margin-top:16px;font-size:13px">저장된 파일</div>
+          <div id="stored-files-list" class="p7-files-list">로딩 중...</div>
+        </div>
+      </div>
+
+      <!-- 시스템 상태 패널 -->
+      <div id="dash-system" class="p7-dash-panel hidden">
+        <div class="p7-stat-grid">
+          <div class="p7-stat-card p7-stat-blue">
+            <div class="p7-stat-value" id="sys-pipelines">27</div>
+            <div class="p7-stat-label">총 파이프라인</div>
+          </div>
+          <div class="p7-stat-card p7-stat-green">
+            <div class="p7-stat-value" id="sys-coverage">100%</div>
+            <div class="p7-stat-label">테스트 커버리지</div>
+          </div>
+          <div class="p7-stat-card p7-stat-purple">
+            <div class="p7-stat-value" id="sys-endpoints">200+</div>
+            <div class="p7-stat-label">API 엔드포인트</div>
+          </div>
+          <div class="p7-stat-card p7-stat-yellow">
+            <div class="p7-stat-value" id="sys-uptime">-</div>
+            <div class="p7-stat-label">서버 업타임</div>
+          </div>
+        </div>
+
+        <div class="p7-two-col">
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">🤖 AI 프로바이더 상태</h3>
+            <div id="ai-provider-status" class="p7-provider-list">로딩 중...</div>
+          </div>
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">📦 Phase 7 시스템 상태</h3>
+            <div id="phase7-system-status" class="p7-provider-list">로딩 중...</div>
+          </div>
+        </div>
+
+        <div class="p7-section-card">
+          <h3 class="p7-section-title">📊 도메인별 커버리지</h3>
+          <div id="system-coverage-bars" class="p7-coverage-grid">로딩 중...</div>
+        </div>
+
+        <!-- 파이프라인 성능 차트 -->
+        <div class="p7-two-col">
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">📊 도메인별 파이프라인 수</h3>
+            <div class="chart-container" style="position:relative;height:220px;">
+              <canvas id="chart-domain-pipes"></canvas>
+            </div>
+          </div>
+          <div class="p7-section-card">
+            <h3 class="p7-section-title">🧪 도메인별 테스트 케이스</h3>
+            <div class="chart-container" style="position:relative;height:220px;">
+              <canvas id="chart-domain-tests"></canvas>
+            </div>
+          </div>
+        </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════
+       탭 8: 어드민 패널
+       ══════════════════════════════════════════════════════════ -->
+  <main class="admin-page hidden" id="main-admin" style="display:none">
+    <div class="admin-wrap">
+
+      <!-- 어드민 사이드 네비 -->
+      <nav class="admin-nav">
+        <div class="admin-nav-logo">
+          <span>🛡️</span><span>Admin Panel</span>
+        </div>
+        <button class="admin-nav-btn active" id="anav-overview"   onclick="adminNav('overview')">📊 전체 현황</button>
+        <button class="admin-nav-btn"         id="anav-users"      onclick="adminNav('users')">👥 사용자 관리</button>
+        <button class="admin-nav-btn"         id="anav-jobs"       onclick="adminNav('jobs')">⚙️ 잡 관리</button>
+        <button class="admin-nav-btn"         id="anav-costs"      onclick="adminNav('costs')">💰 비용 분석</button>
+        <button class="admin-nav-btn"         id="anav-pipelines"  onclick="adminNav('pipelines')">🧩 파이프라인</button>
+        <button class="admin-nav-btn"         id="anav-audit"      onclick="adminNav('audit')">📋 감사 로그</button>
+        <button class="admin-nav-btn"         id="anav-system"     onclick="adminNav('system')">🖥️ 시스템</button>
+        <button class="admin-nav-btn"         id="anav-broadcast"  onclick="adminNav('broadcast')">📢 공지 발송</button>
+        <div class="admin-nav-divider"></div>
+        <button class="admin-nav-btn admin-nav-danger" onclick="adminSeed()">🌱 시드 데이터</button>
+      </nav>
+
+      <!-- 어드민 컨텐츠 -->
+      <div class="admin-content">
+
+        <!-- ① 전체 현황 -->
+        <section class="admin-section active" id="asec-overview">
+          <h2 class="admin-section-title">📊 전체 현황</h2>
+          <div class="admin-kpi-grid" id="admin-kpi-grid">
+            <div class="admin-kpi-card admin-kpi-blue">
+              <div class="admin-kpi-icon">👥</div>
+              <div class="admin-kpi-val" id="kpi-users">—</div>
+              <div class="admin-kpi-label">총 사용자</div>
+            </div>
+            <div class="admin-kpi-card admin-kpi-green">
+              <div class="admin-kpi-icon">⚙️</div>
+              <div class="admin-kpi-val" id="kpi-jobs">—</div>
+              <div class="admin-kpi-label">총 작업</div>
+            </div>
+            <div class="admin-kpi-card admin-kpi-purple">
+              <div class="admin-kpi-icon">💰</div>
+              <div class="admin-kpi-val" id="kpi-cost">—</div>
+              <div class="admin-kpi-label">총 비용 (USD)</div>
+            </div>
+            <div class="admin-kpi-card admin-kpi-amber">
+              <div class="admin-kpi-icon">🔢</div>
+              <div class="admin-kpi-val" id="kpi-tokens">—</div>
+              <div class="admin-kpi-label">총 토큰</div>
+            </div>
+            <div class="admin-kpi-card admin-kpi-cyan">
+              <div class="admin-kpi-icon">🧩</div>
+              <div class="admin-kpi-val" id="kpi-pipelines">—</div>
+              <div class="admin-kpi-label">빌더 파이프라인</div>
+            </div>
+            <div class="admin-kpi-card admin-kpi-rose">
+              <div class="admin-kpi-icon">📋</div>
+              <div class="admin-kpi-val" id="kpi-audit">—</div>
+              <div class="admin-kpi-label">감사 로그</div>
+            </div>
+          </div>
+
+          <!-- 잡 상태 + 최근 활동 -->
+          <div class="admin-two-col">
+            <div class="admin-card">
+              <h3 class="admin-card-title">⚙️ 잡 상태 현황</h3>
+              <div class="admin-job-status-grid" id="admin-job-status">로딩 중...</div>
+              <div style="position:relative;height:180px;margin-top:12px">
+                <canvas id="chart-admin-jobs"></canvas>
+              </div>
+            </div>
+            <div class="admin-card">
+              <h3 class="admin-card-title">📈 오늘 시간별 비용</h3>
+              <div style="position:relative;height:220px">
+                <canvas id="chart-admin-hourly"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- 최근 사용자 + 최근 잡 -->
+          <div class="admin-two-col">
+            <div class="admin-card">
+              <h3 class="admin-card-title">👥 최근 가입 사용자</h3>
+              <div id="admin-recent-users" class="admin-mini-list">로딩 중...</div>
+            </div>
+            <div class="admin-card">
+              <h3 class="admin-card-title">⚙️ 최근 작업</h3>
+              <div id="admin-recent-jobs" class="admin-mini-list">로딩 중...</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ② 사용자 관리 -->
+        <section class="admin-section hidden" id="asec-users">
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">👥 사용자 관리</h2>
+            <div class="admin-search-row">
+              <input type="text" id="admin-user-search" class="admin-input" placeholder="이름/이메일 검색..." oninput="adminSearchUsers()">
+              <button class="admin-btn admin-btn-primary" onclick="adminLoadUsers()">🔄 새로고침</button>
+            </div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr><th>ID</th><th>사용자명</th><th>이메일</th><th>역할</th><th>마지막 로그인</th><th>가입일</th><th>액션</th></tr>
+              </thead>
+              <tbody id="admin-users-tbody">
+                <tr><td colspan="7" class="admin-td-empty">로딩 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ③ 잡 관리 -->
+        <section class="admin-section hidden" id="asec-jobs">
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">⚙️ 잡 관리</h2>
+            <div style="display:flex;gap:8px">
+              <button class="admin-btn admin-btn-warning" onclick="adminClearJobs('completed')">🗑️ 완료 잡 삭제</button>
+              <button class="admin-btn admin-btn-danger"  onclick="adminClearJobs('failed')">⚠️ 실패 잡 삭제</button>
+              <button class="admin-btn admin-btn-primary" onclick="adminLoadJobs()">🔄 새로고침</button>
+            </div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr><th>ID</th><th>큐</th><th>파이프라인</th><th>상태</th><th>진행률</th><th>생성시각</th><th>액션</th></tr>
+              </thead>
+              <tbody id="admin-jobs-tbody">
+                <tr><td colspan="7" class="admin-td-empty">로딩 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ④ 비용 분석 -->
+        <section class="admin-section hidden" id="asec-costs">
+          <h2 class="admin-section-title">💰 비용 분석</h2>
+          <div class="admin-kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+            <div class="admin-kpi-card admin-kpi-blue"><div class="admin-kpi-icon">💲</div><div class="admin-kpi-val" id="ac-total">—</div><div class="admin-kpi-label">총 비용(USD)</div></div>
+            <div class="admin-kpi-card admin-kpi-green"><div class="admin-kpi-icon">📞</div><div class="admin-kpi-val" id="ac-calls">—</div><div class="admin-kpi-label">API 호출</div></div>
+            <div class="admin-kpi-card admin-kpi-purple"><div class="admin-kpi-icon">📥</div><div class="admin-kpi-val" id="ac-inputs">—</div><div class="admin-kpi-label">입력 토큰</div></div>
+            <div class="admin-kpi-card admin-kpi-amber"><div class="admin-kpi-icon">📤</div><div class="admin-kpi-val" id="ac-outputs">—</div><div class="admin-kpi-label">출력 토큰</div></div>
+          </div>
+          <div class="admin-two-col">
+            <div class="admin-card"><h3 class="admin-card-title">📅 일별 비용 (30일)</h3><div style="position:relative;height:200px"><canvas id="chart-admin-daily"></canvas></div></div>
+            <div class="admin-card"><h3 class="admin-card-title">🤖 모델별 비용</h3><div style="position:relative;height:200px"><canvas id="chart-admin-models"></canvas></div></div>
+          </div>
+          <div class="admin-card">
+            <h3 class="admin-card-title">🧩 파이프라인별 비용 상위 10</h3>
+            <div style="position:relative;height:220px"><canvas id="chart-admin-pipecost"></canvas></div>
+          </div>
+        </section>
+
+        <!-- ⑤ 파이프라인 관리 -->
+        <section class="admin-section hidden" id="asec-pipelines">
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">🧩 빌더 파이프라인 관리</h2>
+            <button class="admin-btn admin-btn-primary" onclick="adminLoadPipelines()">🔄 새로고침</button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>ID</th><th>이름</th><th>상태</th><th>노드</th><th>실행 횟수</th><th>마지막 실행</th><th>생성일</th><th>액션</th></tr></thead>
+              <tbody id="admin-pipelines-tbody"><tr><td colspan="8" class="admin-td-empty">로딩 중...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ⑥ 감사 로그 -->
+        <section class="admin-section hidden" id="asec-audit">
+          <div class="admin-section-header">
+            <h2 class="admin-section-title">📋 감사 로그</h2>
+            <button class="admin-btn admin-btn-primary" onclick="adminLoadAudit()">🔄 새로고침</button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead><tr><th>시각</th><th>사용자</th><th>액션</th><th>리소스</th><th>IP</th><th>상세</th></tr></thead>
+              <tbody id="admin-audit-tbody"><tr><td colspan="6" class="admin-td-empty">로딩 중...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ⑦ 시스템 -->
+        <section class="admin-section hidden" id="asec-system">
+          <h2 class="admin-section-title">🖥️ 시스템 정보</h2>
+          <div class="admin-two-col">
+            <div class="admin-card">
+              <h3 class="admin-card-title">🧠 메모리 사용량</h3>
+              <div id="admin-sys-memory" class="admin-sys-grid">로딩 중...</div>
+              <div style="position:relative;height:160px;margin-top:12px">
+                <canvas id="chart-admin-memory"></canvas>
+              </div>
+            </div>
+            <div class="admin-card">
+              <h3 class="admin-card-title">⚙️ 프로세스 정보</h3>
+              <div id="admin-sys-process" class="admin-sys-grid">로딩 중...</div>
+            </div>
+          </div>
+          <div class="admin-card">
+            <h3 class="admin-card-title">🌐 환경 정보</h3>
+            <div id="admin-sys-env" class="admin-sys-grid">로딩 중...</div>
+          </div>
+        </section>
+
+        <!-- ⑧ 공지 발송 -->
+        <section class="admin-section hidden" id="asec-broadcast">
+          <h2 class="admin-section-title">📢 전체 공지 발송</h2>
+          <div class="admin-card" style="max-width:600px">
+            <div class="admin-form-group">
+              <label class="admin-label">공지 유형</label>
+              <select id="broadcast-type" class="admin-input">
+                <option value="info">ℹ️ 정보</option>
+                <option value="warning">⚠️ 경고</option>
+                <option value="success">✅ 성공</option>
+                <option value="error">🚨 긴급</option>
+              </select>
+            </div>
+            <div class="admin-form-group">
+              <label class="admin-label">메시지 내용</label>
+              <textarea id="broadcast-msg" class="admin-input admin-textarea" rows="4" placeholder="전체 사용자에게 전달할 메시지를 입력하세요..."></textarea>
+            </div>
+            <button class="admin-btn admin-btn-primary admin-btn-lg" onclick="adminSendBroadcast()">📢 전체 발송</button>
+            <div id="broadcast-result" class="admin-result-msg hidden"></div>
+          </div>
+          <div class="admin-card" style="margin-top:16px">
+            <h3 class="admin-card-title">📜 발송 이력</h3>
+            <div id="broadcast-history" class="admin-mini-list">—</div>
+          </div>
+        </section>
+
+      </div><!-- /admin-content -->
+    </div><!-- /admin-wrap -->
+  </main>
+
+  <!-- 미리보기 모달 -->
+  <div id="preview-modal" class="modal hidden">
+    <div class="modal-overlay" id="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">미리보기</h3>
+        <button id="close-modal-btn" class="icon-btn">✕</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- 진행상황 오버레이 -->
+  <div id="progress-overlay" class="progress-overlay hidden">
+    <div class="progress-card">
+      <div class="progress-animation">
+        <div class="orb orb1"></div>
+        <div class="orb orb2"></div>
+        <div class="orb orb3"></div>
+      </div>
+      <div id="progress-status" class="progress-status">처리 중...</div>
+      <div class="progress-track">
+        <div id="progress-fill" class="progress-fill" style="width:0%"></div>
+      </div>
+      <div id="progress-percent" class="progress-percent">0%</div>
+      <div id="progress-steps" class="progress-steps"></div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

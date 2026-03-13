@@ -1,0 +1,70 @@
+{
+  "ppt": {
+    "ppt_balanced": {
+      "comboKey": "ppt_balanced",
+      "taskType": "ppt",
+      "executions": 2,
+      "totalScore": 179,
+      "avgScore": 88.60000000000001,
+      "avgLatencyMs": 4120,
+      "avgTokenUsed": 0,
+      "avgFeedbackRounds": 0,
+      "satisfactions": 0,
+      "winRate": 0.8860000000000001,
+      "recentScores": [
+        88,
+        91
+      ],
+      "history": [
+        {
+          "ts": 1773137550114,
+          "score": 88,
+          "latencyMs": 4200,
+          "tokenUsed": 0,
+          "feedbackRounds": 0,
+          "userSatisfied": null,
+          "sessionId": ""
+        },
+        {
+          "ts": 1773137550115,
+          "score": 91,
+          "latencyMs": 3800,
+          "tokenUsed": 0,
+          "feedbackRounds": 0,
+          "userSatisfied": null,
+          "sessionId": ""
+        }
+      ],
+      "modelMap": {},
+      "lastUpdated": "2026-03-10T10:12:30.115Z"
+    },
+    "ppt_deep": {
+      "comboKey": "ppt_deep",
+      "taskType": "ppt",
+      "executions": 1,
+      "totalScore": 94,
+      "avgScore": 94,
+      "avgLatencyMs": 6100,
+      "avgTokenUsed": 0,
+      "avgFeedbackRounds": 1,
+      "satisfactions": 0,
+      "winRate": 0.94,
+      "recentScores": [
+        94
+      ],
+      "history": [
+        {
+          "ts": 1773137550115,
+          "score": 94,
+          "latencyMs": 6100,
+          "tokenUsed": 0,
+          "feedbackRounds": 1,
+          "userSatisfied": null,
+          "sessionId": ""
+        }
+      ],
+      "modelMap": {},
+      "lastUpdated": "2026-03-10T10:12:30.115Z"
+    }
+  }
+}
