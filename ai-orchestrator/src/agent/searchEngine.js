@@ -400,6 +400,135 @@ async function search(query, options = {}) {
   return null;
 }
 
+// ── 고품질 멀티쿼리 검색 ────────────────────────────────────────────────────
+/**
+ * deepSearch — 멀티쿼리 + 전체 결과 병합 고품질 검색
+ *
+ * 개선점:
+ *   1. 쿼리 자동 다각화 (원본 + 영어 + 세부질문 2개)
+ *   2. Brave + Tavily 결과 전부 수집 (빠른 1개만 아님)
+ *   3. URL 기준 중복 제거
+ *   4. 최종 10~15개 결과 반환
+ *
+ * @param {string} query       — 검색어
+ * @param {object} [options]
+ * @param {number} [options.maxResults=10]   — 최종 결과 수
+ * @param {boolean} [options.multiQuery=true] — 멀티쿼리 사용 여부
+ */
+async function deepSearch(query, options = {}) {
+  if (!query || typeof query !== 'string') return null;
+
+  const maxResults  = options.maxResults  || 10;
+  const useMulti    = options.multiQuery  !== false;
+  const startTime   = Date.now();
+
+  console.log(`[SearchEngine:Deep] 시작 — "${query.slice(0, 60)}" multiQuery=${useMulti}`);
+
+  // ── 1. 쿼리 다각화 ────────────────────────────────────────────────────────
+  const queries = [query];
+
+  if (useMulti) {
+    // 영어 쿼리 (한국어 쿼리면 영어로도 검색)
+    const hasKorean = /[가-힣]/.test(query);
+    if (hasKorean) {
+      // 간단한 영어 변환 힌트 (도메인 키워드 병렬 검색)
+      queries.push(`${query} analysis report 2024 2025`);
+    }
+    // 세부 질문 쿼리
+    queries.push(`${query} 최신 동향 트렌드`);
+    queries.push(`${query} 시장 현황 분석`);
+  }
+
+  // ── 2. 멀티쿼리 × 멀티프로바이더 병렬 실행 ────────────────────────────────
+  const allTasks = [];
+
+  for (const q of queries) {
+    // Brave: 빠르고 신선한 결과
+    if (process.env.BRAVE_SEARCH_API_KEY) {
+      allTasks.push(
+        _searchBrave(q, 5)
+          .then(r => r ? { ...r, query: q } : null)
+          .catch(() => null)
+      );
+    }
+    // Tavily: AI 요약 포함
+    if (process.env.TAVILY_API_KEY) {
+      allTasks.push(
+        _searchTavily(q, 5)
+          .then(r => r ? { ...r, query: q } : null)
+          .catch(() => null)
+      );
+    }
+    // SerpAPI: Google 결과 (쿼리 1개만)
+    if (process.env.SERPAPI_API_KEY && q === query) {
+      allTasks.push(
+        _searchSerpApi(q, 5)
+          .then(r => r ? { ...r, query: q } : null)
+          .catch(() => null)
+      );
+    }
+  }
+
+  // 전체 타임아웃 8초
+  const results = await Promise.race([
+    Promise.allSettled(allTasks),
+    new Promise(resolve => setTimeout(() => resolve([]), 8000)),
+  ]);
+
+  // ── 3. 결과 수집 + 중복 제거 ──────────────────────────────────────────────
+  const rawParts  = [];
+  const seenUrls  = new Set();
+  let   providers = new Set();
+
+  for (const r of results) {
+    const res = r?.value || (r?.status === 'fulfilled' ? r.value : null);
+    if (!res?.text) continue;
+
+    providers.add(res.provider);
+
+    // URL 기준 중복 제거
+    const lines = res.text.split('\n');
+    const dedupedLines = [];
+    for (const line of lines) {
+      const urlMatch = line.match(/🔗\s*(https?:\/\/[^\s]+)/);
+      if (urlMatch) {
+        const url = urlMatch[1];
+        if (seenUrls.has(url)) continue;
+        seenUrls.add(url);
+      }
+      dedupedLines.push(line);
+    }
+    if (dedupedLines.length > 0) {
+      rawParts.push(`--- [${res.provider}/${res.query?.slice(0,30)}] ---\n${dedupedLines.join('\n')}`);
+    }
+  }
+
+  if (rawParts.length === 0) {
+    // fallback: 기존 단일 검색
+    console.warn('[SearchEngine:Deep] 결과 없음 → 기본 search() 폴백');
+    return search(query, { maxResults: 5 });
+  }
+
+  const elapsed = Date.now() - startTime;
+  const combined = rawParts.join('\n\n');
+  const providerList = [...providers].join('+');
+
+  console.log(`[SearchEngine:Deep] ✅ ${seenUrls.size}개 URL, ${providerList} 사용 (${elapsed}ms)`);
+
+  // KPI 기록
+  _stats.totalSearches++;
+  _stats.successCount++;
+  _stats.totalLatencyMs += elapsed;
+  _stats.lastSearchAt = new Date().toISOString();
+  for (const p of providers) {
+    _stats.providerCounts[p] = (_stats.providerCounts[p] || 0) + 1;
+  }
+  _stats.lastUsedProvider = providerList;
+  _saveStats();
+
+  return `[심층 검색: "${query}"] (${providerList}, ${seenUrls.size}건)\n\n${combined}`;
+}
+
 // ── 활성 공급자 감지 ──────────────────────────────────────────────────────
 function getActiveProviders() {
   const providers = [];
@@ -474,6 +603,7 @@ function setKeys({ braveKey, serpapiKey, serperKey, tavilyKey } = {}) {
 
 module.exports = {
   search,
+  deepSearch,
   getKPI,
   getActiveProviders,
   testProviders,

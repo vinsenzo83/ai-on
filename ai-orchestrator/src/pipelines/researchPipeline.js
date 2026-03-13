@@ -68,14 +68,20 @@ async function crawlUrl(url) {
   }
 }
 
-// ── 웹검색 (기존 searchEngine 활용) ──────────────────────────
-async function webSearch(query, maxResults = 5) {
+// ── 웹검색 (deepSearch 우선, 폴백 search) ───────────────────
+async function webSearch(query, maxResults = 10) {
   try {
-    const results = await searchEngine.search(query, maxResults);
-    return results || '';
+    // deepSearch: 멀티쿼리 + 전체 결과 병합 고품질 검색
+    const result = await searchEngine.deepSearch(query, { maxResults, multiQuery: true });
+    return result || '';
   } catch (e) {
-    console.warn('[researchPipeline] 웹검색 실패:', e.message);
-    return '';
+    console.warn('[researchPipeline] deepSearch 실패, 기본 검색 폴백:', e.message);
+    try {
+      return await searchEngine.search(query, { maxResults: 5 }) || '';
+    } catch (e2) {
+      console.warn('[researchPipeline] 웹검색 실패:', e2.message);
+      return '';
+    }
   }
 }
 
@@ -96,7 +102,7 @@ async function structureResearch({ topic, crawlData, searchData, outputType = 'p
     contextParts.push(`=== 웹사이트 크롤 데이터 (${crawlData.url}) ===\n${crawlData.content.slice(0, 4000)}`);
   }
   if (searchData) {
-    contextParts.push(`=== 웹검색 결과 ===\n${String(searchData).slice(0, 3000)}`);
+    contextParts.push(`=== 웹검색 결과 ===\n${String(searchData).slice(0, 6000)}`);
   }
 
   const context = contextParts.join('\n\n') || `주제: ${topic}`;
@@ -136,7 +142,7 @@ sections는 8~10개로 구성하세요.`,
       },
     ],
     temperature: 0.4,
-    max_tokens:  4000,
+    max_tokens:  6000,
     response_format: { type: 'json_object' },
   });
 
