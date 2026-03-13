@@ -1,6 +1,38 @@
 // ============================================================
 // parallelExecutor.js — Phase 4: Parallel Tool Execution
 // ============================================================
+'use strict';
+
+const fs   = require('fs');
+const path = require('path');
+
+// ── KPI 영속화 경로 ─────────────────────────────────────────
+const _KPI_FILE = path.resolve(__dirname, '../../data/parallel_stats.json');
+
+function _loadKpi() {
+  try {
+    if (fs.existsSync(_KPI_FILE)) {
+      return Object.assign({
+        parallelGroupsTotal: 0, parallelTasksTotal: 0,
+        parallelSuccessTotal: 0, parallelFailureTotal: 0,
+        groupSizesSum: 0, sequentialTasksTotal: 0, timeSavedEstimateMs: 0,
+      }, JSON.parse(fs.readFileSync(_KPI_FILE, 'utf8')));
+    }
+  } catch (_) {}
+  return {
+    parallelGroupsTotal: 0, parallelTasksTotal: 0,
+    parallelSuccessTotal: 0, parallelFailureTotal: 0,
+    groupSizesSum: 0, sequentialTasksTotal: 0, timeSavedEstimateMs: 0,
+  };
+}
+
+function _saveKpi(kpi) {
+  try {
+    const dir = path.dirname(_KPI_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(_KPI_FILE, JSON.stringify(kpi), 'utf8');
+  } catch (_) {}
+}
 //
 // 역할:
 //   1. groupParallelizableTasks(tasks)
@@ -26,8 +58,6 @@
 //
 // ============================================================
 
-'use strict';
-
 // ─────────────────────────────────────────────────────────────
 // § 설정
 // ─────────────────────────────────────────────────────────────
@@ -36,24 +66,20 @@ const PARALLEL_CONFIG = {
   MAX_PARALLEL_TOOLS:    3,
 
   // 병렬 실행 가능한 태스크 타입 Set
-  PARALLELIZABLE_TYPES:  new Set(['SEARCH', 'EXTRACT', 'TOOL', 'DATA_FETCH']),
+  // TASK_TYPES 값이 소문자(search, extract, tool, data_fetch)이므로 소문자로 통일
+  PARALLELIZABLE_TYPES:  new Set(['search', 'SEARCH', 'extract', 'EXTRACT', 'tool', 'TOOL', 'data_fetch', 'DATA_FETCH']),
 
   // 순차 실행만 허용 (이전 결과 의존성 높음)
-  SEQUENTIAL_ONLY_TYPES: new Set(['WRITE', 'SYNTHESIZE', 'PLAN', 'CODE', 'REVIEW']),
+  SEQUENTIAL_ONLY_TYPES: new Set(['write', 'WRITE', 'synthesize', 'SYNTHESIZE', 'plan', 'PLAN', 'code', 'CODE', 'review', 'REVIEW']),
 };
 
 // ─────────────────────────────────────────────────────────────
-// § KPI 누적기
+// § KPI 누적기 (영속화: data/parallel_stats.json)
 // ─────────────────────────────────────────────────────────────
-const _kpi = {
-  parallelGroupsTotal:      0,
-  parallelTasksTotal:       0,
-  parallelSuccessTotal:     0,
-  parallelFailureTotal:     0,
-  groupSizesSum:            0,
-  sequentialTasksTotal:     0,
-  timeSavedEstimateMs:      0, // 병렬화로 절약된 추정 시간
-};
+const _kpi = _loadKpi();
+
+// 1분마다 자동 저장 (재시작 시 손실 최소화)
+setInterval(() => _saveKpi(_kpi), 60 * 1000).unref();
 
 // ─────────────────────────────────────────────────────────────
 // § 1. 태스크 그룹화 → 실행 웨이브 배열
@@ -248,6 +274,9 @@ async function runParallelGroup(taskGroup, execFn, options = {}) {
   // 절약 시간 추정: 순차 실행 시간 - 병렬 실행 시간
   const seqEstimate = allResults.reduce((sum, r) => sum + (r.ms || 0), 0);
   _kpi.timeSavedEstimateMs += Math.max(0, seqEstimate - groupMs);
+
+  // 즉시 저장 (재시작 시 손실 방지)
+  _saveKpi(_kpi);
 
   console.log(`[ParallelExecutor] 그룹 ${groupId}: ${allResults.length}개 실행 → 성공 ${successCount} / 실패 ${failureCount} (${groupMs}ms)`);
 

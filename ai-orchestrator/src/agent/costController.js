@@ -10,6 +10,34 @@
 
 'use strict';
 
+const fs   = require('fs');
+const path = require('path');
+
+// ── KPI 영속화 경로 ─────────────────────────────────────────
+const _KPI_FILE = path.resolve(__dirname, '../../data/budget_stats.json');
+
+function _loadKpiAccum() {
+  const defaults = {
+    totalTasks: 0, totalLLMCalls: 0, totalToolCalls: 0,
+    totalTokens: 0, totalExecutionMs: 0, budgetStopCount: 0,
+    partialResultCount: 0, stopReasons: {},
+  };
+  try {
+    if (fs.existsSync(_KPI_FILE)) {
+      return Object.assign(defaults, JSON.parse(fs.readFileSync(_KPI_FILE, 'utf8')));
+    }
+  } catch (_) {}
+  return defaults;
+}
+
+function _saveKpiAccum() {
+  try {
+    const dir = path.dirname(_KPI_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(_KPI_FILE, JSON.stringify(_kpiAccum), 'utf8');
+  } catch (_) {}
+}
+
 // ─────────────────────────────────────────────────────────────
 // § complexity별 기본 예산 설정
 // ─────────────────────────────────────────────────────────────
@@ -41,18 +69,12 @@ const BUDGET_DEFAULTS = {
 const DEFAULT_COMPLEXITY = 'normal';
 
 // ─────────────────────────────────────────────────────────────
-// § 전역 KPI 집계 (인-메모리, 서버 재시작 시 초기화)
+// § 전역 KPI 집계 (영속화: data/budget_stats.json)
 // ─────────────────────────────────────────────────────────────
-const _kpiAccum = {
-  totalTasks:           0,
-  totalLLMCalls:        0,
-  totalToolCalls:       0,
-  totalTokens:          0,
-  totalExecutionMs:     0,
-  budgetStopCount:      0,    // budget 초과로 중단된 횟수
-  partialResultCount:   0,    // partial result 반환 횟수
-  stopReasons:          {},   // reason → count
-};
+const _kpiAccum = _loadKpiAccum();
+
+// 5분마다 자동 저장
+setInterval(_saveKpiAccum, 5 * 60 * 1000).unref();
 
 // ─────────────────────────────────────────────────────────────
 // § 공개 API

@@ -152,7 +152,10 @@ class AgentPlanner {
 
   // ── LLM 기반 동적 계획 ─────────────────────────────────────
   async _llmPlan(message, taskType, strategy, context) {
-    const sysPrompt = `당신은 AI 에이전트 플래너입니다.
+    // [FIX #15] 현재 날짜 주입 → 날짜 환각 방지
+    const now = new Date();
+    const koDate = now.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+    const sysPrompt = `당신은 AI 에이전트 플래너입니다. 오늘 날짜: ${koDate}
 사용자 요청을 분석하여 실행 가능한 태스크 목록을 JSON으로 반환하세요.
 
 사용 가능한 태스크 타입:

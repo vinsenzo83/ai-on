@@ -96,17 +96,17 @@ const LATENCY_WINDOW = 20;
 
 // 초기 기본값 (과거 데이터 기반)
 const PROVIDER_DEFAULT_TIMEOUT = {
-  openai:    20_000,
-  anthropic: 25_000,
-  google:    15_000,
-  mistral:   20_000,
-  moonshot:  25_000,
-  deepseek:  12_000, // 낮춤 (실패율 35%, 빠른 포기)
-  xai:        5_000, // P2: xAI 최대 5초 후 즉시 폴백 (429/403 대비)
-  groq:      10_000,
-  meta:      20_000,
-  alibaba:   20_000,
-  default:   20_000,
+  openai:     8_000, // [FIX] 20s→8s: CB 누적 방지, 빠른 폴백
+  anthropic: 20_000,
+  google:     6_000, // [FIX] 15s→6s: CB OPEN 반복 핵심 원인, 빠른 포기
+  mistral:   10_000,
+  moonshot:  15_000,
+  deepseek:   8_000,
+  xai:        5_000,
+  groq:       8_000,
+  meta:      15_000,
+  alibaba:   15_000,
+  default:   10_000,
 };
 
 function _recordLatency(provider, ms) {
@@ -227,8 +227,9 @@ const PROVIDER_BASE_URL = {
   meta:       'https://api.together.xyz/v1',
 };
 
-// 폴백 우선순위 체인 (프로바이더 다운 시 순서대로 시도)
-const FALLBACK_CHAIN = ['openai', 'google', 'mistral', 'anthropic', 'moonshot', 'deepseek']; // P1: google/mistral 상위 배치
+// [FIX] 폴백 우선순위 체인 — google 제거(CB OPEN 반복), openai 제일 뒤(CB 누적)
+// 순서: mistral → anthropic → moonshot → deepseek → openai (google 완전 제거)
+const FALLBACK_CHAIN = ['mistral', 'anthropic', 'moonshot', 'deepseek', 'openai'];
 
 // ── 런타임 클라이언트 캐시 ─────────────────────────────────────
 const _clients = {};
@@ -395,10 +396,11 @@ const TASK_PROVIDER_PRIORITY = {
   summarization:   ['moonshot', 'deepseek', 'openai'],
 
   // ── 실제 taskType 키 (intentAnalyzer 반환값과 일치) ─────────
-  unknown:    ['google', 'anthropic', 'openai'],       // 일반 질문: Gemini 우선
-  text:       ['google', 'anthropic', 'openai'],       // 텍스트: Gemini 우선
-  chat:       ['google', 'anthropic', 'openai'],       // 채팅: Gemini 우선
-  fast:       ['google', 'openai', 'anthropic'],       // 빠른 응답: Gemini 우선
+  // [FIX] unknown/text/chat/fast: google 제거 → CB OPEN 연쇄 장애 방지
+  unknown:    ['openai', 'anthropic', 'mistral'],      // 일반 질문: OpenAI 우선
+  text:       ['openai', 'anthropic', 'mistral'],      // 텍스트: OpenAI 우선
+  chat:       ['openai', 'anthropic', 'mistral'],      // 채팅: OpenAI 우선
+  fast:       ['openai', 'mistral', 'anthropic'],      // 빠른 응답: OpenAI 우선
 
   summarize:  ['moonshot', 'deepseek', 'google'],      // 요약: Moonshot 우선
   summarise:  ['moonshot', 'deepseek', 'google'],
@@ -551,7 +553,8 @@ async function callLLM({
   if (_isCBOpen(provider)) {
     console.warn(`[CB] ${provider} 차단됨 → 즉시 폴백`);
     const fbProvider = _pickFallbackProvider([provider]);
-    if (!fbProvider || _fallbackDepth > 0) {
+    // [FIX] fallbackDepth 제한 3으로 확대 (기존 >0 이면 throw → 연쇄 폴백 불가)
+    if (!fbProvider || _fallbackDepth >= 3) {
       const err = new AIError(`${provider} 회로차단 중, 대체 프로바이더 없음`, { code: 'CB_OPEN', provider, model: resolvedModel });
       _logToDB({ ...logBase, usedModel: resolvedModel, provider, success: false, errorCode: 'CB_OPEN', latencyMs: 0 });
       throw err;

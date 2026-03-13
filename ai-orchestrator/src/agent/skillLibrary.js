@@ -24,17 +24,18 @@ const { TASK_TYPES } = require('./agentPlanner');
 // ─────────────────────────────────────────────────────────────
 const SKILLS = {
 
-  // ── 리서치 스킬: 검색 → 추출 → 분석 → 요약 ─────────────────
+  // ── 리서치 스킬: [병렬검색 × 2] → 분석 → 요약 ─────────────
+  // search1, search2 는 dependsOn:[] → 동시 실행 (parallelExecutor)
   RESEARCH: {
     id:          'research',
     name:        '리서치',
-    description: '웹 검색으로 최신 정보를 수집하고 분석·요약합니다',
+    description: '웹 검색 2개를 병렬로 수집하고 분석·요약합니다',
     tools:       ['web_search'],
     taskFlow:    [
-      { id: 'search',    type: TASK_TYPES.SEARCH,    tool: 'web_search', name: '정보 검색',    dependsOn: [] },
-      { id: 'extract',   type: TASK_TYPES.EXTRACT,   tool: null,         name: '핵심 추출',    dependsOn: ['search'] },
-      { id: 'analyze',   type: TASK_TYPES.ANALYZE,   tool: null,         name: '분석',         dependsOn: ['extract'] },
-      { id: 'summarize', type: TASK_TYPES.SUMMARIZE,  tool: null,         name: '최종 요약',    dependsOn: ['analyze'] },
+      { id: 'search1',   type: TASK_TYPES.SEARCH,    tool: 'web_search', name: '정보 검색 #1',  dependsOn: [] },
+      { id: 'search2',   type: TASK_TYPES.SEARCH,    tool: 'web_search', name: '정보 검색 #2',  dependsOn: [] },
+      { id: 'analyze',   type: TASK_TYPES.ANALYZE,   tool: null,         name: '분석',           dependsOn: ['search1', 'search2'] },
+      { id: 'summarize', type: TASK_TYPES.SUMMARIZE,  tool: null,         name: '최종 요약',      dependsOn: ['analyze'] },
     ],
     triggers:    /최신|뉴스|검색|찾아|알아봐|조사|research|search/i,
     priority:    1,
@@ -115,21 +116,24 @@ const SKILLS = {
     priority:    6,
   },
 
-  // ── 심층 분석 스킬: 검색 + 분석 + 리뷰 ─────────────────────
+  // ── 심층 분석 스킬: [병렬검색 × 3] → 분석 → 작성 → 검토+완성 ──
+  // search1/2/3 → dependsOn:[] → 3개 동시 실행
+  // review+synthesize 는 write 완료 후 실행 (review도 write에만 의존)
   DEEP_ANALYSIS: {
     id:          'deep_analysis',
     name:        '심층 분석',
-    description: '웹 검색 + 다각도 분석 + 자기교정으로 심층 리포트를 생성합니다',
+    description: '웹 검색 3개 병렬 + 다각도 분석 + 자기교정으로 심층 리포트를 생성합니다',
     tools:       ['web_search'],
     taskFlow:    [
-      { id: 'search',     type: TASK_TYPES.SEARCH,     tool: 'web_search', name: '자료 검색',   dependsOn: [] },
-      { id: 'analyze',    type: TASK_TYPES.ANALYZE,    tool: null,         name: '심층 분석',   dependsOn: ['search'] },
-      { id: 'write',      type: TASK_TYPES.WRITE,      tool: null,         name: '리포트 작성', dependsOn: ['analyze'] },
-      { id: 'review',     type: TASK_TYPES.REVIEW,     tool: null,         name: '품질 검토',   dependsOn: ['write'] },
-      { id: 'synthesize', type: TASK_TYPES.SYNTHESIZE, tool: null,         name: '최종 완성',   dependsOn: ['write', 'review'] },
+      { id: 'search1',    type: TASK_TYPES.SEARCH,     tool: 'web_search', name: '자료 검색 #1', dependsOn: [] },
+      { id: 'search2',    type: TASK_TYPES.SEARCH,     tool: 'web_search', name: '자료 검색 #2', dependsOn: [] },
+      { id: 'search3',    type: TASK_TYPES.SEARCH,     tool: 'web_search', name: '자료 검색 #3', dependsOn: [] },
+      { id: 'analyze',    type: TASK_TYPES.ANALYZE,    tool: null,         name: '심층 분석',    dependsOn: ['search1', 'search2', 'search3'] },
+      { id: 'write',      type: TASK_TYPES.WRITE,      tool: null,         name: '리포트 작성',  dependsOn: ['analyze'] },
+      { id: 'synthesize', type: TASK_TYPES.SYNTHESIZE, tool: null,         name: '최종 완성',    dependsOn: ['write'] },
     ],
     triggers:    /심층|깊이|상세|전문|자세히|분석 리포트|comprehensive|in-depth/i,
-    priority:    1, // 높은 우선순위
+    priority:    1,
   },
 };
 

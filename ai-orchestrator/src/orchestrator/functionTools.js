@@ -238,24 +238,36 @@ async function executeTool(name, args, helpers = {}) {
 }
 
 // ── 4. 툴-사용 전략 결정 ────────────────────────────────────
-// deep/balanced 전략이고 일반 chat/text/unknown 타입이면 tools 활성화
-const TOOL_ENABLED_STRATEGIES  = new Set(['deep', 'balanced']);
+// [FIX] fast 전략도 tool 허용 — chat 모드(=fast) 에서도 날씨/환율/검색 툴 동작해야 함
+// 이전: deep/balanced 만 허용 → 대부분의 대화(chat 모드) 에서 toolCallRate = 0% 유발
+const TOOL_ENABLED_STRATEGIES  = new Set(['deep', 'balanced', 'fast']); // fast 추가
 const TOOL_DISABLED_TASK_TYPES = new Set([
   'ppt', 'ppt_file', 'pdf', 'excel', 'website', 'blog',
   'email', 'resume', 'image', 'vision', 'stt', 'crawl',
   'tts', 'qrcode', 'palette', 'regex', 'summarycard', 'chat2pdf', 'removebg',
 ]);
 
+// [FIX] tool 호출이 특히 유용한 taskType: 이 목록에 포함되면 fast 전략이어도 tool 우선 활성화
+const TOOL_PRIORITY_TASK_TYPES = new Set([
+  'chat', 'text', 'unknown', 'analysis', 'search', 'research',
+  'summarize', 'translate', 'classify',
+]);
+
 /**
  * shouldUseTools — 이 요청에 function-calling을 사용할지 판단
+ * [FIX] fast 전략에서도 TOOL_PRIORITY_TASK_TYPES는 tool 허용
  * @param {string} strategy — fast | balanced | deep
  * @param {string} taskType — intentAnalyzer 반환값
  * @returns {boolean}
  */
 function shouldUseTools(strategy, taskType) {
-  if (!TOOL_ENABLED_STRATEGIES.has(strategy)) return false;
-  if (TOOL_DISABLED_TASK_TYPES.has(taskType))  return false;
-  return true;
+  // 명시적 비활성화 타입은 항상 false
+  if (TOOL_DISABLED_TASK_TYPES.has(taskType)) return false;
+  // deep/balanced 는 모든 타입 허용
+  if (TOOL_ENABLED_STRATEGIES.has(strategy)) return true;
+  // fast 전략: 툴 우선 타입(chat, text, analysis 등)은 예외 허용
+  if (strategy === 'fast' && TOOL_PRIORITY_TASK_TYPES.has(taskType)) return true;
+  return false;
 }
 
 // ── 5. STEP 9: Tool Priority Rules ───────────────────────────
@@ -265,6 +277,7 @@ function shouldUseTools(strategy, taskType) {
 /**
  * TOOL_PRIORITY_RULES — 질문 키워드 → 툴 우선순위 매핑
  * 우선순위: 구체적 패턴이 일반 패턴보다 먼저 매칭됨
+ * [FIX] chat/text/unknown taskType 에서도 툴이 활성화되도록 패턴 보강
  */
 const TOOL_PRIORITY_RULES = [
   // 1. 날씨 (최우선 — "날씨" 단어 포함)
@@ -274,9 +287,9 @@ const TOOL_PRIORITY_RULES = [
     hint:     '날씨 관련 질문에는 반드시 get_weather 툴을 먼저 호출하세요.',
     priority: 1,
   },
-  // 2. 환율 (구체적 통화 코드 또는 환율 단어)
+  // 2. 환율 (구체적 통화 코드 또는 환율 단어) — [FIX] 패턴 대폭 확장
   {
-    pattern:  /환율|달러.*원|원.*달러|엔화|유로화|위안|환전|USD|KRW|EUR|JPY|CNY/,
+    pattern:  /환율|달러|엔화|유로|위안|환전|USD|KRW|EUR|JPY|CNY|\$|원화|원짜리|단위환산|구매력|업비트|빗썸/,
     tool:     'get_exchange_rate',
     hint:     '환율·통화 질문에는 반드시 get_exchange_rate 툴을 먼저 호출하세요.',
     priority: 2,
@@ -288,9 +301,9 @@ const TOOL_PRIORITY_RULES = [
     hint:     '현재 시간·날짜·요일 질문에는 반드시 get_datetime 툴을 먼저 호출하세요.',
     priority: 3,
   },
-  // 4. 최신 정보 검색 (웹 검색)
+  // 4. 최신 정보 검색 (웹 검색) — [FIX] 패턴 대폭 확장
   {
-    pattern:  /최신|뉴스|트렌드|검색|찾아줘|알려줘|소식|업데이트|출시됐|발표됐|현재.*상황|지금.*어떻/,
+    pattern:  /최신|뉴스|트렌드|검색해|찾아줘|알려줘|소식|업데이트|출시|발표|현재.*상황|지금.*어떻|최근|요즘|어떻게\s*됐|얼마야|가격|주가|시세|현황|GPT|ChatGPT|AI.*모델|클로드|제미나이|라마|코파일럿|스타트업|기업|서비스|제품|사건|사고|정책|법안|선거|스포츠|경기|결과|순위|날씨.*내일|내일.*날씨|이번주|다음주/,
     tool:     'web_search',
     hint:     '최신 정보·뉴스·트렌드가 필요할 때는 web_search 툴을 먼저 호출하세요. 검색 결과를 내부 지식보다 우선하세요.',
     priority: 4,
@@ -349,4 +362,5 @@ module.exports = {
   getToolPriorityHint,
   selectPriorityTool,
   TOOL_PRIORITY_RULES,
+  TOOL_PRIORITY_TASK_TYPES,  // 외부 참조용 (테스트/관찰)
 };

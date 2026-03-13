@@ -37,7 +37,6 @@ const OpenAI = require('openai');
 
 const IntentAnalyzer = require('./orchestrator/intentAnalyzer');
 const moduleBridge = require('./services/moduleBridge');  // Python AI 모듈 브릿지
-const MasterOrchestrator = require('./orchestrator/masterOrchestrator');
 const DynamicOrchestrator = require('./orchestrator/dynamicOrchestrator');
 const MemoryEngine = require('./memory/memoryEngine');
 const { TASK_STATUS } = require('./types');
@@ -67,7 +66,9 @@ const {
 // ── 클라이언트 초기화 ──────────────────────────────────────
 // GenSpark LLM Proxy 지원: OPENAI_BASE_URL 사용
 const openaiConfig = {
-  apiKey: process.env.OPENAI_API_KEY || 'demo-mode'
+  apiKey:  process.env.OPENAI_API_KEY || 'demo-mode',
+  timeout: 20000,   // 20초 타임아웃 (SDK 생성자에서만 지원)
+  maxRetries: 1,    // 1회 재시도 (기본 2회 → 실패 시 빠른 포기)
 };
 if (process.env.OPENAI_BASE_URL) {
   openaiConfig.baseURL = process.env.OPENAI_BASE_URL;
@@ -585,14 +586,18 @@ app.delete('/api/memory-legacy/:sessionId', (req, res) => {
 
 // 메시지 처리 (REST fallback)
 app.post('/api/message', async (req, res) => {
-  const { sessionId, message } = req.body;
+  const { sessionId, message, mode } = req.body;
   if (!sessionId || !message) {
     return res.status(400).json({ error: '세션ID와 메시지가 필요합니다.' });
   }
 
   const session = getOrCreateSession(sessionId);
+  // [FIX] mode 파라미터를 processMessage에 전달 (chat → fast 전략 강제)
+  if (mode && ['chat', 'agent', 'research'].includes(mode)) {
+    session._clientMode = mode;
+  }
   try {
-    const result = await processMessage(session, message);
+    const result = await processMessage(session, message, mode);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1248,13 +1253,15 @@ const aiConnector        = require('./services/aiConnector');
 const multimodalPipeline = require('./pipelines/multimodalPipeline');
 
 // ── 신규 툴 파이프라인 ──────────────────────────────────────────────────────
-const pptPipeline   = require('./pipelines/pptPipeline');
-const pdfPipeline   = require('./pipelines/pdfPipeline');
-const excelPipeline = require('./pipelines/excelPipeline');
-const extraTools    = require('./tools/extraTools');
+const pptPipeline    = require('./pipelines/pptPipeline');
+const pdfPipeline    = require('./pipelines/pdfPipeline');
+const excelPipeline  = require('./pipelines/excelPipeline');
+const researchPipeline   = require('./pipelines/researchPipeline');
+const htmlSlidePipeline  = require('./pipelines/htmlSlidePipeline');
+const extraTools     = require('./tools/extraTools');
 
 // ── Phase 14: Platform Layer engines ─────────────────────────────────────
-const memoryEngine      = require('./services/memoryEngine');
+const memoryEngine      = require('./services/sessionStore');
 const storageEngine     = require('./services/storageEngine');
 const observability     = require('./services/observabilityEngine');
 const analytics         = require('./services/analyticsEngine');
@@ -2943,9 +2950,16 @@ async function callWithFunctionTools({
   // OpenAI 클라이언트가 없으면 function-calling 불가
   if (!openai || !openai.chat) return null;
 
-  // gpt-4o / gpt-4o-mini 모델만 지원 (claude/gemini는 도구 호출 방식 다름)
+  // [FIX] gpt-4o / gpt-4o-mini 모델만 지원
+  // claude / gemini 가 선택된 경우 → gpt-4o-mini로 자동 교체하여 tool 사용 보장
+  // (이전 코드: 비-GPT 모델이면 null 반환 → toolCallRate = 0% 유발)
   const modelLower = (selectedModel || '').toLowerCase();
-  if (!modelLower.startsWith('gpt')) return null;
+  let toolModel = selectedModel;
+  if (!modelLower.startsWith('gpt')) {
+    // claude, gemini 등 → function-calling 지원 GPT 모델로 교체
+    toolModel = 'gpt-4o-mini';
+    console.log(`[functionCall] 모델 교체: ${selectedModel} → ${toolModel} (function-calling 지원)`);
+  }
 
   const maxToolRounds = 3;   // 최대 tool-call 라운드 수
   let roundMessages = [
@@ -2956,19 +2970,43 @@ async function callWithFunctionTools({
   let toolsUsed = [];        // 사용된 툴 목록 (로깅용)
   let lastContent = null;
 
+  // 1라운드에서 toolPriorityHint 있으면 tool 호출 강제 (환율/날씨/뉴스 등)
+  const _hasPriorityHint = userMessage ? !!getToolPriorityHint(userMessage) : false;
+
   for (let round = 0; round < maxToolRounds; round++) {
     let response;
     try {
+      // 1라운드 + 툴 우선순위 힌트 있으면 'required' (강제 호출), 이후 'auto'
+      const toolChoice = (round === 0 && _hasPriorityHint && toolsUsed.length === 0)
+        ? 'required'
+        : 'auto';
       response = await openai.chat.completions.create({
-        model:       selectedModel,
+        model:       toolModel,   // [FIX] toolModel 사용 (claude→gpt-4o-mini 교체 반영)
         messages:    roundMessages,
         tools:       TOOL_DEFINITIONS,
-        tool_choice: 'auto',   // LLM이 자율 결정
+        tool_choice: toolChoice,
         max_tokens:  maxTokens,
         temperature,
+        // NOTE: timeout은 SDK 생성자(httpAgent)에서만 설정 가능, 여기선 제거
       });
     } catch (err) {
       console.warn(`[functionCall] round ${round} LLM 오류:`, err.message);
+      // [FIX] 오류 시 lastContent 있으면 반환 (tool 결과는 살림)
+      // round > 0 이면 tool 실행 완료 후 2차 LLM 실패 → tool 결과를 직접 응답으로 사용
+      if (lastContent) {
+        return { content: lastContent, model: toolModel, provider: 'openai', toolsUsed, isFallback: true };
+      }
+      // round > 0 이고 roundMessages에 tool 결과가 있으면 tool 결과를 내용으로 조합
+      if (round > 0 && toolsUsed.length > 0) {
+        const toolContents = roundMessages
+          .filter(m => m.role === 'tool')
+          .map(m => m.content)
+          .filter(Boolean)
+          .join('\n\n');
+        if (toolContents) {
+          return { content: toolContents, model: toolModel, provider: 'openai', toolsUsed, isFallback: true };
+        }
+      }
       return null;  // 실패 시 일반 callLLM 폴백
     }
 
@@ -2983,7 +3021,7 @@ async function callWithFunctionTools({
       console.log(`[functionCall] round ${round}: 최종 응답 (툴 사용: ${toolsUsed.join(', ') || '없음'})`);
       return {
         content:    lastContent,
-        model:      response.model || selectedModel,
+        model:      response.model || toolModel,
         provider:   'openai',
         toolsUsed,
         usage:      response.usage,
@@ -3049,7 +3087,7 @@ async function callWithFunctionTools({
   // 최대 라운드 초과 → 마지막 content 반환 (있으면)
   console.warn(`[functionCall] 최대 ${maxToolRounds}라운드 초과 — 마지막 응답 사용`);
   return lastContent
-    ? { content: lastContent, model: selectedModel, provider: 'openai', toolsUsed, isFallback: false }
+    ? { content: lastContent, model: toolModel, provider: 'openai', toolsUsed, isFallback: false }
     : null;
 }
 
@@ -3077,18 +3115,17 @@ function selectMaxTokens(strategy, taskType) {
 }
 
 // ── selectModel: strategy → 구체적 모델 ID 결정 ──────────────────────────
-// deep     → claude-sonnet-4-5 (코드·설계·복잡 분석) / gpt-4o (website·code)
-// balanced → gpt-4o (일반 대화·문서 작성)
-// fast     → gpt-4o-mini (인사·단순 질문·번역)
+// [FIX] deep 기본값을 gpt-4o-mini로 변경
+// - 이전: deep=claude-sonnet (모든 타입) → CB OPEN 시 tool 호출 불가, 비용 높음
+// - 수정: resume/report/document만 claude, 나머지 deep은 gpt-4o-mini
 function selectModel(strategy, taskType) {
   switch (strategy) {
     case 'deep':
-      // 코드·웹사이트 설계 → OpenAI gpt-4o 우선 (reasoning 강점)
       if (['code', 'website', 'reasoning'].includes(taskType)) return 'gpt-4o';
-      // 분석·문서·자소서 → Claude Sonnet 우선
-      return 'claude-sonnet-4-5-20250929';
+      if (['resume', 'report', 'document'].includes(taskType)) return 'claude-sonnet-4-5-20250929';
+      return 'gpt-4o-mini'; // 그 외 deep → gpt-4o-mini (안정성 우선)
     case 'balanced':
-      return 'gpt-4o';
+      return 'gpt-4o-mini'; // [FIX] gpt-4o → gpt-4o-mini (비용/속도 밸런스)
     case 'fast':
     default:
       return 'gpt-4o-mini';
@@ -3261,6 +3298,28 @@ Show your reasoning process clearly before presenting conclusions.`;
   // ppt_file / pdf / excel / youtube / qrcode / tts / palette / regex / summarycard / chat2pdf
   const TOOL_TASK_MAP = {
     ppt_file:   async () => pptPipeline.run({ topic: analysis?.extractedInfo?.topic || message }),
+    research_ppt: async () => {
+      const urlMatch = message.match(/https?:\/\/[^\s]+/);
+      const topic = analysis?.extractedInfo?.topic || message.replace(/https?:\/\/[^\s]+/g, '').replace(/분석해서|ppt|만들어줘|생성해줘|리서치|조사해서/gi, '').trim() || message;
+      const theme = message.includes('corporate') ? 'corporate' : message.includes('nature') ? 'nature' : message.includes('executive') ? 'executive' : 'modern';
+      // 1단계: researchPipeline으로 데이터 수집 + 구조화
+      const researchResult = await researchPipeline.run({
+        topic,
+        url: urlMatch ? urlMatch[0] : null,
+        query: topic,
+        outputType: 'ppt',
+      });
+      if (!researchResult?.success || !researchResult.structured?.sections?.length) {
+        throw new Error('리서치 데이터 수집 실패');
+      }
+      // 2단계: htmlSlidePipeline으로 고품질 PPT 생성
+      return htmlSlidePipeline.run({
+        structured: researchResult.structured,
+        topic,
+        theme,
+        usePuppeteer: true,
+      });
+    },
     pdf:        async () => pdfPipeline.run({ title: analysis?.extractedInfo?.topic || message, aiGenerate: true }),
     excel:      async () => excelPipeline.run({ topic: analysis?.extractedInfo?.topic || message }),
     youtube:    async () => {
@@ -3371,6 +3430,11 @@ Show your reasoning process clearly before presenting conclusions.`;
 
   if (MODULE_TASK_TYPES.has(taskType) && !['code', 'text', 'chat'].includes(taskType)) {
     // code는 아래 pipeline에서 처리하므로 제외, text/chat은 AI fallback 사용
+    // [FIX] 툴 우선순위 힌트가 있으면(날씨/환율/뉴스 등) function-calling 경로 우선 → ai-module-server 스킵
+    const _skipModule = !!getToolPriorityHint(message);
+    if (_skipModule) {
+      console.log(`[moduleBridge] taskType=${taskType} but toolPriorityHint exists → skip module, use function-calling`);
+    } else {
 
     // ── translate: 목표 언어 파싱 ─────────────────────────────────────
     const moduleExtra = {};
@@ -3434,6 +3498,7 @@ Show your reasoning process clearly before presenting conclusions.`;
       };
     }
     // 모듈 실패 시 AI fallback으로 계속 진행
+    } // end _skipModule else
   }
 
   // ── 파이프라인 자동 분기 ──────────────────────────────────────────
@@ -3527,13 +3592,17 @@ Show your reasoning process clearly before presenting conclusions.`;
       });
 
       if (agentResult && agentResult.content) {
+        // [FIX] toolsUsed 하드코딩 [] 제거 → agentResult.toolsUsed 또는 chainLog 에서 추출
+        // 이전: toolsUsed: [] → KPI toolCallRequests 집계 불가 (toolCallRate = 0%)
+        const agentToolsUsed = agentResult.toolsUsed
+          || (agentResult.chainLog?.flatMap(step => step.toolsUsed || []) ?? []);
         aiResult = {
           content:    agentResult.content,
           model:      selectedModel,
           provider:   'agent-runtime',
           ms:         agentResult.totalMs,
           isFallback: false,
-          toolsUsed:  [],
+          toolsUsed:  agentToolsUsed,
           usage:      null,
         };
         agentMeta = {
@@ -3641,13 +3710,23 @@ Show your reasoning process clearly before presenting conclusions.`;
 
   // STEP 7: Tool Observability — 요청 단위 로그 (responseMs + hasMemory 포함)
   try {
+    // [FIX] agent-runtime 경로: toolsUsed 가 빈 배열이어도 agentMeta.chainLog 에서 추출
+    // 이전: toolsUsed: [] 로 고정 → toolCallRequests 카운트 불가
+    let _toolsUsed = aiResult?.toolsUsed || [];
+    if (_toolsUsed.length === 0 && agentMeta?.chainLog?.length > 0) {
+      _toolsUsed = agentMeta.chainLog.flatMap(step => step.toolsUsed || step.tools || []);
+    }
+    // agent-runtime 실행 자체를 하나의 "tool" 사용으로 집계
+    if (_toolsUsed.length === 0 && aiResult?.provider === 'agent-runtime') {
+      _toolsUsed = ['agent_chain'];
+    }
     toolObs.logRequest({
       sessionId,
       query:          message,
       strategy,
       model:          aiResult?.model || selectedModel,
       taskType,
-      toolsUsed:      aiResult?.toolsUsed || [],
+      toolsUsed:      _toolsUsed,
       responseTokens: aiResult?.usage?.completion_tokens || 0,
       responseMs:     Date.now() - _processStart,  // ★ STEP 7
       hasMemory:      !!memoryPrompt,              // ★ STEP 7
@@ -5214,256 +5293,8 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log('[HealthProbe] 프로바이더 자동 상태 체크 스케줄 등록 (5분 간격)');
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ── 신규 툴 API 라우트 ──────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════
 
-// 공통 파일 전송 헬퍼
-function _sendFile(res, result, fallbackMsg = '생성 완료') {
-  if (!result.success) {
-    return res.status(500).json({ success: false, error: result.error });
-  }
-  if (result.fileBuf) {
-    res.setHeader('Content-Type', result.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(result.fileName)}`);
-    return res.send(result.fileBuf);
-  }
-  return res.json({ success: true, ...result, message: fallbackMsg });
-}
-
-// ── PPT 생성 ──────────────────────────────────────────────────────────────
-// POST /api/tools/ppt  { topic, slideCount, theme, aiContent }
-app.post('/api/tools/ppt', async (req, res) => {
-  try {
-    const { topic = '프레젠테이션', slideCount = 8, theme = 'blue', aiContent = null } = req.body;
-    const result = await pptPipeline.run({ topic, slideCount: Math.min(slideCount, 20), theme, aiContent });
-    _sendFile(res, result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── PDF 생성 ──────────────────────────────────────────────────────────────
-// POST /api/tools/pdf  { title, content, topic, isMarkdown, aiGenerate }
-app.post('/api/tools/pdf', async (req, res) => {
-  try {
-    const { title = 'AI 문서', content, topic, isMarkdown = true, aiGenerate = false } = req.body;
-    const result = await pdfPipeline.run({ title, content, topic, isMarkdown, aiGenerate });
-    _sendFile(res, result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── Excel 생성 ────────────────────────────────────────────────────────────
-// POST /api/tools/excel  { topic, content, aiGenerate }
-app.post('/api/tools/excel', async (req, res) => {
-  try {
-    const { topic = '데이터', content = null, aiGenerate = true } = req.body;
-    const result = await excelPipeline.run({ topic, content, aiGenerate });
-    _sendFile(res, result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── YouTube 요약 ──────────────────────────────────────────────────────────
-// POST /api/tools/youtube  { url }
-app.post('/api/tools/youtube', async (req, res) => {
-  try {
-    const { url } = req.body;
-    if (!url) return res.status(400).json({ success: false, error: 'url 필드 필요' });
-    const result = await extraTools.run('youtube', { url });
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── QR코드 생성 ───────────────────────────────────────────────────────────
-// POST /api/tools/qrcode  { text, size, darkColor, lightColor, format }
-app.post('/api/tools/qrcode', async (req, res) => {
-  try {
-    const { text, size = 400, darkColor = '#1E3A5F', lightColor = '#FFFFFF', format = 'png' } = req.body;
-    if (!text) return res.status(400).json({ success: false, error: 'text 필드 필요' });
-    const result = await extraTools.run('qrcode', { text, size, darkColor, lightColor, format });
-    if (format === 'dataurl') return res.json(result);
-    _sendFile(res, result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── 이미지 배경 제거 ──────────────────────────────────────────────────────
-// POST /api/tools/removebg  { imageUrl }
-app.post('/api/tools/removebg', async (req, res) => {
-  try {
-    const { imageUrl, image } = req.body;
-    if (!imageUrl && !image) return res.status(400).json({ success: false, error: 'imageUrl 필드 필요' });
-    const result = await extraTools.run('removebg', { imageUrl: imageUrl || image });
-    if (result.fileBuf) _sendFile(res, result);
-    else res.json(result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── TTS (텍스트→음성) ─────────────────────────────────────────────────────
-// POST /api/tools/tts  { text, voice, speed, format }
-app.post('/api/tools/tts', async (req, res) => {
-  try {
-    const { text, voice = 'nova', speed = 1.0, format = 'mp3' } = req.body;
-    if (!text) return res.status(400).json({ success: false, error: 'text 필드 필요' });
-    const result = await extraTools.run('tts', { text, voice, speed, format });
-    _sendFile(res, result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── 색상 팔레트 생성 ──────────────────────────────────────────────────────
-// POST /api/tools/palette  { theme }
-app.post('/api/tools/palette', async (req, res) => {
-  try {
-    const { theme = '모던 테크' } = req.body;
-    const result = await extraTools.run('palette', { theme });
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── 정규식 생성 ───────────────────────────────────────────────────────────
-// POST /api/tools/regex  { description }
-app.post('/api/tools/regex', async (req, res) => {
-  try {
-    const { description } = req.body;
-    if (!description) return res.status(400).json({ success: false, error: 'description 필드 필요' });
-    const result = await extraTools.run('regex', { description });
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── 요약 카드 (SVG 이미지) 생성 ──────────────────────────────────────────
-// POST /api/tools/summarycard  { content, title, theme }
-app.post('/api/tools/summarycard', async (req, res) => {
-  try {
-    const { content, title = 'AI 요약', theme = 'blue' } = req.body;
-    if (!content) return res.status(400).json({ success: false, error: 'content 필드 필요' });
-    const result = await extraTools.run('summarycard', { content, title, theme });
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── 채팅 PDF 내보내기 ─────────────────────────────────────────────────────
-// POST /api/tools/chat2pdf  { messages, title }
-app.post('/api/tools/chat2pdf', async (req, res) => {
-  try {
-    const { messages = [], title = '대화 내보내기' } = req.body;
-    const result = await extraTools.run('chat2pdf', { messages, title });
-    _sendFile(res, result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── 파일 업로드 + 이미지 분석 (multer) ───────────────────────────────────
-// POST /api/tools/analyze-image  (multipart: image file)
-const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
-
-app.post('/api/tools/analyze-image', upload.single('image'), async (req, res) => {
-  try {
-    if (!req.file && !req.body.imageUrl) {
-      return res.status(400).json({ success: false, error: '이미지 파일 또는 imageUrl 필요' });
-    }
-    const question = req.body.question || '이 이미지를 자세히 설명해주세요.';
-    let imageUrl = req.body.imageUrl;
-
-    if (req.file) {
-      // base64로 변환
-      const b64 = req.file.buffer.toString('base64');
-      const mime = req.file.mimetype || 'image/jpeg';
-      imageUrl = `data:${mime};base64,${b64}`;
-    }
-
-    const OpenAI = require('openai');
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const resp = await client.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image_url', image_url: { url: imageUrl } },
-          { type: 'text', text: question },
-        ],
-      }],
-      max_tokens: 1500,
-    });
-    res.json({ success: true, analysis: resp.choices[0].message.content, question });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── 파일 업로드 + STT (오디오 → 텍스트) ─────────────────────────────────
-// POST /api/tools/stt  (multipart: audio file)
-app.post('/api/tools/stt', upload.single('audio'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ success: false, error: '오디오 파일 필요' });
-    const { language = 'ko' } = req.body;
-
-    const OpenAI  = require('openai');
-    const client  = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-    // Whisper API는 File 객체 필요 → buffer를 FormData blob으로 변환
-    const { Readable } = require('stream');
-    const stream = Readable.from(req.file.buffer);
-    stream.path = req.file.originalname || `audio.${req.file.mimetype?.split('/')[1] || 'mp3'}`;
-
-    const transcription = await client.audio.transcriptions.create({
-      file:     stream,
-      model:    'whisper-1',
-      language,
-      response_format: 'verbose_json',
-    });
-
-    res.json({
-      success:  true,
-      text:     transcription.text,
-      language: transcription.language,
-      duration: transcription.duration,
-      segments: transcription.segments?.length || 0,
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── 툴 목록 조회 ─────────────────────────────────────────────────────────
-app.get('/api/tools/list', (_req, res) => {
-  res.json({
-    success: true,
-    tools: [
-      { id: 'ppt',          name: 'PPT 생성',        icon: '📊', desc: 'AI가 주제에 맞는 .pptx 파일 생성',          endpoint: 'POST /api/tools/ppt' },
-      { id: 'pdf',          name: 'PDF 생성',        icon: '📄', desc: 'Markdown/텍스트를 PDF로 변환',              endpoint: 'POST /api/tools/pdf' },
-      { id: 'excel',        name: 'Excel 생성',      icon: '📈', desc: 'AI 데이터 표를 .xlsx 파일로 생성',          endpoint: 'POST /api/tools/excel' },
-      { id: 'youtube',      name: 'YouTube 요약',    icon: '🎬', desc: 'YouTube URL → 핵심 내용 요약',             endpoint: 'POST /api/tools/youtube' },
-      { id: 'qrcode',       name: 'QR코드',          icon: '📱', desc: '텍스트/URL → QR코드 이미지',               endpoint: 'POST /api/tools/qrcode' },
-      { id: 'removebg',     name: '배경 제거',        icon: '✂️', desc: '이미지 배경 자동 제거',                    endpoint: 'POST /api/tools/removebg' },
-      { id: 'tts',          name: 'TTS 음성 변환',   icon: '🔊', desc: '텍스트 → MP3 음성 파일',                   endpoint: 'POST /api/tools/tts' },
-      { id: 'palette',      name: '색상 팔레트',      icon: '🎨', desc: 'AI 브랜드 색상 팔레트 생성',               endpoint: 'POST /api/tools/palette' },
-      { id: 'regex',        name: '정규식 생성',      icon: '🔍', desc: '자연어로 정규식 패턴 생성',                 endpoint: 'POST /api/tools/regex' },
-      { id: 'summarycard',  name: '요약 카드',        icon: '🃏', desc: '텍스트 → SNS용 SVG 이미지 카드',           endpoint: 'POST /api/tools/summarycard' },
-      { id: 'chat2pdf',     name: '대화 PDF 저장',   icon: '💾', desc: '채팅 히스토리를 PDF로 내보내기',            endpoint: 'POST /api/tools/chat2pdf' },
-      { id: 'analyze-image',name: '이미지 분석',      icon: '🖼️', desc: '업로드한 이미지를 GPT-4V로 분석',          endpoint: 'POST /api/tools/analyze-image' },
-      { id: 'stt',          name: '음성 인식',        icon: '🎤', desc: '오디오 파일을 텍스트로 변환 (Whisper)',     endpoint: 'POST /api/tools/stt' },
-    ],
-  });
-});
+// ── 툴 API 라우트 (src/routes/toolRoutes.js 로 분리) ─────────────────────
+require('./routes/toolRoutes')(app, { pptPipeline, pdfPipeline, excelPipeline, researchPipeline, htmlSlidePipeline, extraTools });
 
 module.exports = { app, server };

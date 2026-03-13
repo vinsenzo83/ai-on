@@ -1366,7 +1366,7 @@ router.post('/deploy', async (req, res) => {
 let _memoryEngine = null, _storageEngine = null, _observability = null;
 let _analytics = null, _jobEngine = null;
 
-function _mem()  { if (!_memoryEngine)  _memoryEngine  = require('../services/memoryEngine');       return _memoryEngine; }
+function _mem()  { if (!_memoryEngine)  _memoryEngine  = require('../services/sessionStore');       return _memoryEngine; }
 function _stor() { if (!_storageEngine) _storageEngine = require('../services/storageEngine');      return _storageEngine; }
 function _obs()  { if (!_observability) _observability = require('../services/observabilityEngine'); return _observability; }
 function _ana()  { if (!_analytics)     _analytics     = require('../services/analyticsEngine');    return _analytics; }

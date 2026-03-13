@@ -13,9 +13,53 @@
 // ============================================================
 
 const { TASK_PIPELINES, MODEL_REGISTRY, COMBO_ROLES, TASK_STATUS } = require('../types');
-const SharedContextBuffer = require('./sharedContextBuffer');
 const ComboOptimizer      = require('./comboOptimizer');
 const ModelBenchmark      = require('./modelBenchmark');
+
+// ── SharedContextBuffer (인라인 통합 – 별도 파일 제거) ──────────────
+const _MAX_STEP_CHARS  = 800;
+const _MAX_TOTAL_CHARS = 4000;
+class SharedContextBuffer {
+  constructor(taskType, taskInfo, userMemoryPrompt = '') {
+    this.taskType = taskType; this.taskInfo = taskInfo;
+    this.userMemoryPrompt = userMemoryPrompt; this.log = []; this.currentStep = null;
+  }
+  startStep(stepId, modelName, role) { this.currentStep = { stepId, modelName, role, startTs: Date.now() }; }
+  completeStep(stepId, modelName, role, result) {
+    const entry = { stepId, modelName, role, resultSummary: this.compress(result),
+      fullResult: result, durationMs: Date.now() - (this.currentStep?.startTs || Date.now()) };
+    this.log.push(entry); this.currentStep = null; return entry;
+  }
+  buildHandoffContext(currentStepId) {
+    const done = this.log.filter(e => e.stepId !== currentStepId);
+    if (done.length === 0 && !this.userMemoryPrompt) return '';
+    const lines = [];
+    if (this.userMemoryPrompt) { lines.push('【사용자 기억】'); lines.push(this.userMemoryPrompt.substring(0, 600)); lines.push(''); }
+    lines.push('【현재 작업 목표】');
+    const desc = this.taskInfo.topic || this.taskInfo.industry || this.taskInfo.subject || this.taskInfo.description || '사용자 요청';
+    lines.push(`${this._name(this.taskType)}: ${desc}`);
+    if (this.taskInfo.style)    lines.push(`스타일: ${this.taskInfo.style}`);
+    if (this.taskInfo.tone)     lines.push(`톤: ${this.taskInfo.tone}`);
+    if (this.taskInfo.audience) lines.push(`대상: ${this.taskInfo.audience}`);
+    lines.push('');
+    if (done.length > 0) {
+      lines.push('【이전 AI들의 작업 결과 – 반드시 이어받아 작업하세요】');
+      done.forEach((e, i) => { lines.push(`▶ Step ${i+1} | ${e.modelName} | [${e.role}]`); lines.push(e.resultSummary); lines.push(''); });
+    }
+    lines.push('【지금 당신의 역할】'); lines.push('위 내용을 정확히 이어받아 다음 단계를 수행하세요.');
+    const full = lines.join('\n');
+    return full.length > _MAX_TOTAL_CHARS ? full.substring(0, _MAX_TOTAL_CHARS) + '\n...(생략)' : full;
+  }
+  compress(r) {
+    if (!r) return '(결과 없음)';
+    if (typeof r === 'string' && r.length <= _MAX_STEP_CHARS) return r;
+    if (typeof r === 'object') { const s = JSON.stringify(r, null, 1); return s.length > _MAX_STEP_CHARS ? s.substring(0, _MAX_STEP_CHARS) + '...' : s; }
+    const s = String(r); return s.length > _MAX_STEP_CHARS ? s.substring(0, 500) + '\n...(중략)...\n' + s.substring(s.length - 200) : s;
+  }
+  getAllResults() { const r = {}; this.log.forEach(e => { r[e.stepId] = e.fullResult; }); return r; }
+  dump() { return { taskType: this.taskType, steps: this.log.map(e => ({ stepId: e.stepId, model: e.modelName, role: e.role, durationMs: e.durationMs })) }; }
+  _name(t) { return { ppt:'PPT', website:'홈페이지', blog:'블로그', report:'분석리포트', code:'코드개발', email:'이메일', resume:'자기소개서' }[t] || t; }
+}
 const aiConnector         = require('../services/aiConnector');
 
 // ── 상수 ─────────────────────────────────────────────────
@@ -360,28 +404,30 @@ class DynamicOrchestrator {
                 comboId = null, stepIndex = 0, userId = 'anonymous', role = 'unknown') {
     const isJSON = outputType === 'json';
 
-    // gpt-5 계열 가상 모델 → 실제 OpenAI 모델로 매핑
-    // MODEL_REGISTRY에는 마케팅용 이름(gpt-5, gpt-5.1 등)이 있으나
-    // 실제 OpenAI API에서는 gpt-4o / gpt-4o-mini만 지원됨
+    // gpt-5 계열 가상 모델 → 실제 모델로 매핑
+    // MODEL_REGISTRY의 마케팅용 이름을 실제 API 모델명으로 변환
+    // 2026-03 기준 실제 사용 가능 모델로 업데이트
+    const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
     const MODEL_ALIAS = {
-      // 주력 모델 매핑
+      // ── 플래그십 계열: Anthropic 키 있으면 Claude, 없으면 gpt-4o ──
+      'gpt-5.2':        hasAnthropic ? 'claude-sonnet-4-5-20250929' : 'gpt-4o',
+      'gpt-5.4':        hasAnthropic ? 'claude-sonnet-4-5-20250929' : 'gpt-4o',
+      'gpt-5.4-pro':    hasAnthropic ? 'claude-haiku-4-5-20251001'  : 'gpt-4o',
+      // ── 범용 고품질 ──
       'gpt-5':          'gpt-4o',
       'gpt-5.1':        'gpt-4o',
-      'gpt-5.2':        'gpt-4o',
-      'gpt-5.4':        'gpt-4o',
-      'gpt-5.4-pro':    'gpt-4o',
       'gpt-4.5':        'gpt-4o',
-      // mini/nano 계열
+      // ── mini/nano 계열 (속도/비용 최적화) ──
       'gpt-5-mini':     'gpt-4o-mini',
       'gpt-5-nano':     'gpt-4o-mini',
-      // 코드 특화 모델 (gpt-4o로 fallback)
+      // ── 코드 특화 (gpt-4o로 fallback) ──
       'gpt-5-codex':    'gpt-4o',
       'gpt-5.1-codex':  'gpt-4o',
-      'gpt-5.2-codex':  'gpt-4o',
+      'gpt-5.2-codex':  hasAnthropic ? 'claude-sonnet-4-5-20250929' : 'gpt-4o',
       'gpt-5.3-codex':  'gpt-4o',
-      // o-series (추론) - 실제 모델명으로 매핑
-      'o3':             'o3-mini',      // o3 미출시 → o3-mini fallback
-      'o4-mini':        'gpt-4o-mini',  // o4-mini 미출시 → gpt-4o-mini
+      // ── o-series (추론) ──
+      'o3':             'o3-mini',
+      'o4-mini':        'gpt-4o-mini',
     };
     const resolvedModelId = MODEL_ALIAS[modelId] || modelId;
 
@@ -806,3 +852,4 @@ class DynamicOrchestrator {
 }
 
 module.exports = DynamicOrchestrator;
+// (SharedContextBuffer is intentionally inlined above – no separate file needed)

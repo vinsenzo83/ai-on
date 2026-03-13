@@ -40,6 +40,7 @@ class IntentAnalyzer {
 - ppt_file: .pptx 파일 다운로드, 파워포인트 파일 생성/저장, "pptx 만들어줘", "ppt 파일 다운"
 - pdf: pdf 파일 생성/저장/변환, "pdf로 만들어줘", "pdf 저장해줘"
 - excel: 엑셀 파일 생성, xlsx, 스프레드시트, "표 엑셀로", "엑셀 파일"
+- research_ppt: URL/주제 리서치 후 고품질 PPT 생성, "분석해서 PPT", "리서치 PPT", "조사해서 발표자료", URL + "ppt 만들어줘"
 - youtube: 유튜브 영상 요약, youtube.com 또는 youtu.be URL + 요약
 - qrcode: QR코드 생성, 큐알코드, "qr코드 만들어줘"
 - tts: 텍스트를 음성으로, "읽어줘", "mp3로 변환", TTS, "목소리로"
@@ -227,6 +228,7 @@ deep — 아래 조건 중 하나라도 해당:
       { keywords: ['음성 변환', '음성 텍스트', '음성 인식', '받아쓰기', 'stt', 'speech to text', '자막 생성', '오디오 변환'], type: 'stt', infoKey: 'audioUrl' },
       // ── 신규 툴 키워드 ────────────────────────────────────────────────────
       { keywords: ['pptx', 'ppt 파일', '파워포인트 파일', '슬라이드 파일', '발표 파일 만들', 'ppt 다운'], type: 'ppt_file', infoKey: 'topic' },
+      { keywords: ['분석해서 ppt', '분석해서 발표', '리서치 ppt', '리서치 발표', '조사해서 ppt', '조사해서 발표', '검색해서 ppt', '검색해서 발표'], type: 'research_ppt', infoKey: 'topic' },
       { keywords: ['pdf 만들', 'pdf로 변환', 'pdf 저장', 'pdf 생성', '문서 pdf', 'pdf 파일'], type: 'pdf', infoKey: 'topic' },
       { keywords: ['엑셀', 'xlsx', '스프레드시트', '표 만들어', '엑셀 파일', 'excel'], type: 'excel', infoKey: 'topic' },
       { keywords: ['유튜브 요약', 'youtube 요약', 'yt 요약', '유튜브 영상 요약', 'youtu.be', 'youtube.com'], type: 'youtube', infoKey: 'url' },
@@ -291,7 +293,7 @@ deep — 아래 조건 중 하나라도 해당:
 // ── 규칙 기반 strategy 추론 (LLM 폴백 / 누락 보정용) ─────────────────
 function _inferStrategy(taskType, userInput = '') {
   // deep: 코드·설계·복잡 분석
-  const deepTypes = new Set(['code', 'website', 'vision', 'report', 'analysis']);
+  const deepTypes = new Set(['code', 'website', 'vision', 'report', 'analysis', 'research_ppt']);
   const deepKeywords = [
     '설계', '아키텍처', '최적화', '알고리즘', '구현', '전략 수립', '심층',
     'architecture', 'design', 'optimize', 'implement',

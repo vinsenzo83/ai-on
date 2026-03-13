@@ -35,12 +35,14 @@ const AGENT_CONFIG = {
 
   // 성능 제한 (Phase 2: costController로 위임, 여기선 하드 상한만)
   MAX_AUTONOMOUS_MS:  90_000,  // 전체 실행 최대 90초 (하드 리밋)
-  PLAN_TIMEOUT_MS:     5_000,  // 계획 생성 최대 5초
+  PLAN_TIMEOUT_MS:    15_000,  // 계획 생성 최대 15초 (LLM 응답 지연 대비 상향)
 
   // 자율 모드 활성화 태스크 타입 (code는 제외 — 직접 LLM이 더 빠름)
+  // [FIX] 자율 모드 활성화 타입 확대 - parallel KPI 0% 개선
   AUTONOMOUS_TASK_TYPES: new Set([
     'analysis', 'report', 'blog', 'research',
     'deep_analysis', 'comprehensive', 'strategy',
+    'summarize', 'extract', 'classify', 'unknown',
   ]),
 
   // 자율 모드 비활성화 태스크 타입
@@ -48,7 +50,7 @@ const AGENT_CONFIG = {
     'chat', 'greeting', 'translation', 'tts', 'image',
     'vision', 'stt', 'qrcode', 'ppt_file', 'pdf',
     'excel', 'removebg', 'chat2pdf', 'summarycard',
-    'code',  // code는 직접 LLM이 더 빠르고 정확함
+    'code',  // [FIX #6] code는 balanced/deep 전략이고 복잡 키워드 있을 때만 제외 완화 → 아래 조건으로 처리
   ]),
 };
 
@@ -71,12 +73,18 @@ class AgentRuntime {
 
   // ── 자율 모드 활성화 여부 결정 ───────────────────────────────
   shouldRunAutonomous(strategy, taskType, message) {
+    // [FIX #6] code 타입: deep/balanced + 복잡 키워드일 때만 에이전트 사용
+    if (taskType === 'code') {
+      const codeComplex = /설계|아키텍처|리팩|최적화|분석|비교|단계별|전체|시스템/i;
+      return (strategy === 'deep' || strategy === 'balanced') && codeComplex.test(message);
+    }
     if (AGENT_CONFIG.SKIP_AUTONOMOUS_TYPES.has(taskType)) return false;
     if (!AGENT_CONFIG.AUTONOMOUS_STRATEGIES.includes(strategy))  return false;
 
     // 복잡성 키워드 체크
     const complexKeywords = /심층|상세|전문|comprehensive|in-depth|analyze deeply|최신.*분석|검색.*후.*작성|단계별|설계|아키텍처/i;
-    const simpleKeywords  = /^.{0,30}$|안녕|고마워|감사|뭐야|맞아|ㅋㅋ|ㅎㅎ/i;
+    // [FIX #7] 30자 기준 제거 - '오늘 날씨 분석해줘'(11자)도 차단되던 문제 수정
+    const simpleKeywords  = /^(안녕|하이|hi|hello|고마워|고맙다|감사|응|ㄱㄱ|ㄱㄱㄱ|ㅅㅅ|ㅅㅅㅅ|ㅎㅎ|ㅎㅎㅎ|잘있어|줘봐|ok|okay|네|아니|맞아|올케)$/i;
 
     // 매우 짧거나 단순한 메시지는 자율 모드 건너뜀
     if (simpleKeywords.test(message)) return false;

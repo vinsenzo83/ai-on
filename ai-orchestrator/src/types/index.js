@@ -9,6 +9,16 @@
 //   - MMLU / HumanEval / GPQA Diamond / SWE-bench / AIME 2025 실측치
 //   - Overchat AI Hub, RankSaga, AnotherWrapper 리더보드
 //
+// ▶ 실제 라우팅 주의:
+//   MODEL_REGISTRY의 id('gpt-5.x')는 내부 식별자이며,
+//   dynamicOrchestrator.js의 MODEL_ALIAS를 통해 실제 API 모델로 변환됨:
+//     gpt-5, gpt-5.1     → gpt-4o
+//     gpt-5.2, gpt-5.4   → claude-sonnet-4-5-20250929 (Anthropic 키 있을 때) / gpt-4o
+//     gpt-5-mini         → gpt-4o-mini
+//     gpt-5-nano         → gpt-4o-mini
+//     gpt-5-codex        → gpt-4o
+//     gpt-5.2-codex      → claude-sonnet-4-5-20250929 / gpt-4o
+//
 // ▶ 분야별 최고 모델 요약 (2026 March 최신):
 //   S-tier:      GPT-5.4         (Elo 1555, SuperReasoning)
 //   추론 챔피언:  Claude Opus 4.6 (GPQA 91.9%, Adaptive Thinking)
@@ -123,10 +133,10 @@ const MODEL_REGISTRY = {
   // ■ OpenAI 계열
   // ══════════════════════════════════════════════════════════
 
-  // 종합 1위 – MMLU 93.0, AIME 100점 (벤치마크 종합 90.3)
+  // 종합 1위 – 실제: claude-sonnet-4-5-20250929 (Anthropic) / gpt-4o fallback
   GPT5_2: {
-    id:            'gpt-5.2',
-    name:          'GPT-5.2',
+    id:            'gpt-5.2',       // MODEL_ALIAS → claude-sonnet-4-5-20250929 or gpt-4o
+    name:          'Claude Sonnet / GPT-4o (Flagship)',
     provider:      'openai',
     tier:          'flagship',
     costPer1kTokens: 0.030,
@@ -169,10 +179,10 @@ const MODEL_REGISTRY = {
     available:  false   // GenSpark 프록시 미지원 → 내부적으로 gpt-5-codex 대체
   },
 
-  // 창의 글쓰기 1위 – Creative Writing v3 #1, 따뜻한 톤
+  // 창의 글쓰기 – 실제: gpt-4o
   GPT5_1: {
-    id:            'gpt-5.1',
-    name:          'GPT-5.1',
+    id:            'gpt-5.1',       // MODEL_ALIAS → gpt-4o
+    name:          'GPT-4o (Creative)',
     provider:      'openai',
     tier:          'flagship',
     costPer1kTokens: 0.025,
@@ -192,10 +202,10 @@ const MODEL_REGISTRY = {
     available:  true
   },
 
-  // 범용 오케스트레이터 – GPT-5 기본형
+  // 범용 오케스트레이터 – 실제: gpt-4o
   GPT5: {
-    id:            'gpt-5',
-    name:          'GPT-5',
+    id:            'gpt-5',         // MODEL_ALIAS → gpt-4o
+    name:          'GPT-4o (General)',
     provider:      'openai',
     tier:          'flagship',
     costPer1kTokens: 0.015,
@@ -215,10 +225,10 @@ const MODEL_REGISTRY = {
     available:  true
   },
 
-  // 속도형 mini – 저비용 검증·분류
+  // 속도형 mini – 실제: gpt-4o-mini
   GPT5_MINI: {
-    id:            'gpt-5-mini',
-    name:          'GPT-5 mini',
+    id:            'gpt-5-mini',    // MODEL_ALIAS → gpt-4o-mini
+    name:          'GPT-4o mini',
     provider:      'openai',
     tier:          'mini',
     costPer1kTokens: 0.0006,
@@ -238,10 +248,10 @@ const MODEL_REGISTRY = {
     available:  true
   },
 
-  // 초소형 nano
+  // 초소형 nano – 실제: gpt-4o-mini
   GPT5_NANO: {
-    id:            'gpt-5-nano',
-    name:          'GPT-5 nano',
+    id:            'gpt-5-nano',    // MODEL_ALIAS → gpt-4o-mini
+    name:          'GPT-4o mini (Nano)',
     provider:      'openai',
     tier:          'nano',
     costPer1kTokens: 0.0002,
@@ -261,10 +271,10 @@ const MODEL_REGISTRY = {
     available:  true
   },
 
-  // Codex 코드 특화 (GenSpark 지원)
+  // Codex 코드 특화 – 실제: gpt-4o
   GPT5_CODEX: {
-    id:            'gpt-5-codex',
-    name:          'GPT-5 Codex',
+    id:            'gpt-5-codex',   // MODEL_ALIAS → gpt-4o
+    name:          'GPT-4o (Code)',
     provider:      'openai',
     tier:          'specialized',
     costPer1kTokens: 0.020,
@@ -284,9 +294,10 @@ const MODEL_REGISTRY = {
     available:  true
   },
 
+  // 엔터프라이즈 코드 – 실제: claude-sonnet-4-5-20250929 or gpt-4o
   GPT5_2_CODEX: {
-    id:            'gpt-5.2-codex',
-    name:          'GPT-5.2 Codex',
+    id:            'gpt-5.2-codex', // MODEL_ALIAS → claude-sonnet-4-5-20250929 or gpt-4o
+    name:          'Claude Sonnet (Code)',
     provider:      'openai',
     tier:          'specialized',
     costPer1kTokens: 0.028,

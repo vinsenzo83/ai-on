@@ -122,13 +122,22 @@
   }
 
   async function createSession() {
+    // [FIX #9] sessionId를 localStorage에 유지 → 새로고침 후에도 메모리 컨텍스트 보존
+    // 이전: 매번 새 sessionId 생성 → memoryHitRate 22% 고착
+    const STORAGE_KEY = 'ai_session_id';
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      state.sessionId = saved;
+      return;
+    }
     try {
       const res = await fetch('/api/session', { method: 'POST' });
       const data = await res.json();
       state.sessionId = data.sessionId;
     } catch {
-      state.sessionId = 'fallback-' + Date.now();
+      state.sessionId = 'sid-' + Math.random().toString(36).slice(2, 10);
     }
+    localStorage.setItem(STORAGE_KEY, state.sessionId);
   }
 
   function connectSocket() {

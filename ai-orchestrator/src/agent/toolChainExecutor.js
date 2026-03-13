@@ -82,7 +82,11 @@ class ToolChainExecutor {
 
     // ── Phase 4: 태스크를 실행 웨이브로 그룹화 ──────────────────
     const waves = this._buildExecutionWaves(tasks);
-    console.log(`[ToolChain] 실행 웨이브: ${waves.length}개 (병렬 그룹 포함)`);
+    const parallelWaveCount = waves.filter(w => w.parallel && w.tasks.length > 1).length;
+    console.log(`[ToolChain] 실행 웨이브: ${waves.length}개 (병렬 그룹: ${parallelWaveCount}개)`);
+    waves.forEach((w, i) => {
+      console.log(`  웨이브[${i}] parallel=${w.parallel} tasks=${w.tasks.map(t => `${t.id}(${t.type})`).join(',')}`);
+    });
 
     for (const wave of waves) {
       // ── Phase 2: 매 wave 시작 전 시간 제한 확인 ────────────
@@ -338,7 +342,13 @@ class ToolChainExecutor {
       }
     }
 
-    const query = task.searchQuery || userMessage;
+    // search1/2/3 병렬 실행 시 각각 다른 각도로 쿼리 다변화
+    let query = task.searchQuery || userMessage;
+    if (!task.searchQuery) {
+      const taskNum = task.id === 'search2' ? 2 : task.id === 'search3' ? 3 : 1;
+      if (taskNum === 2) query = `${userMessage} 최신 동향 분석`;
+      if (taskNum === 3) query = `${userMessage} 사례 비교`;
+    }
 
     // Phase 6: 캐시 확인
     const cached = cacheLayer.get('search', query);
