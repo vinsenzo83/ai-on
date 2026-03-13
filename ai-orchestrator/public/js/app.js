@@ -13,7 +13,17 @@
     currentResult: null,
     currentTaskType: null,
     stepLog: [],
-    demoMode: false
+    demoMode: false,
+    // Agent 진행상태 (Phase 1)
+    agent: {
+      planId: null,
+      tasks: [],          // { id, name, type, status }
+      totalSteps: 0,
+      currentStep: 0,
+      lastMessage: null,  // 재시도를 위한 마지막 메시지 저장
+    },
+    // Phase 5: Mode
+    mode: 'chat',         // 'chat' | 'agent' | 'research'
   };
 
   // ── DOM refs ──────────────────────────────────────────────
@@ -52,7 +62,27 @@
     memTotal: $('mem-total'),
     memScore: $('mem-score'),
     memoryEpisodes: $('memory-episodes'),
-    clearMemoryBtn: $('clear-memory-btn')
+    clearMemoryBtn: $('clear-memory-btn'),
+    // Agent 진행상태 패널 (Phase 1)
+    agentPanel:          $('agent-panel'),
+    agentComplexBadge:   $('agent-complexity-badge'),
+    agentCurrentStep:    $('agent-current-step'),
+    agentTotalSteps:     $('agent-total-steps'),
+    agentProgressFill:   $('agent-progress-fill'),
+    agentProgressPct:    $('agent-progress-pct'),
+    agentStateBadge:     $('agent-state-badge'),
+    agentStateIcon:      $('agent-state-icon'),
+    agentStateLabel:     $('agent-state-label'),
+    agentCurrentTask:    $('agent-current-task-title'),
+    agentTaskList:       $('agent-task-list'),
+    agentErrorRow:       $('agent-error-row'),
+    agentErrorMsg:       $('agent-error-msg'),
+    agentRetryBtn:       $('agent-retry-btn'),
+    agentPanelClose:     $('agent-panel-close'),
+    // Phase 5: Mode selector
+    modeBtnChat:     $('mode-btn-chat'),
+    modeBtnAgent:    $('mode-btn-agent'),
+    modeBtnResearch: $('mode-btn-research'),
   };
 
   // ── Init ──────────────────────────────────────────────────
@@ -161,6 +191,25 @@
       if (result.memoryState) {
         loadMemoryPanel();
       }
+      // Agent 모드였다면 패널에 최종 완료 표시
+      if (result.isAgentMode && dom.agentPanel && !dom.agentPanel.classList.contains('hidden')) {
+        agentSetState('done');
+        agentSetCurrentTask('최종 결과 수신 완료');
+        if (dom.agentPanel) dom.agentPanel.classList.add('agent-done');
+      }
+      // Phase 2: partial result 배너
+      if (result.agentMeta?.isPartial) {
+        const bs = result.agentMeta.budgetSummary;
+        const reason = bs?.budget_stop_reason || 'budget_exceeded';
+        const reasonLabels = {
+          max_llm_calls_exceeded:         'LLM 호출 한도 초과',
+          max_tool_calls_exceeded:        '도구 호출 한도 초과',
+          max_tokens_exceeded:            '토큰 사용 한도 초과',
+          max_execution_time_exceeded:    '실행 시간 초과',
+          max_correction_rounds_exceeded: '자기교정 한도 초과',
+        };
+        showToast(`⚠️ 부분 결과: ${reasonLabels[reason] || reason}`, 'warning', 6000);
+      }
     });
 
     state.socket.on('error', ({ message }) => {
@@ -168,7 +217,292 @@
       hideProgressOverlay();
       addMessage('assistant', `❌ 오류: ${message}`);
       showToast(message, 'error');
+      // Agent 패널이 열려 있으면 에러 상태로 전환
+      if (dom.agentPanel && !dom.agentPanel.classList.contains('hidden')) {
+        agentShowError(message);
+      }
     });
+
+    // ── Agent 진행상태 이벤트 (Phase 1) ──────────────────────
+
+    // agent:planning — 계획 수립 시작
+    state.socket.on('agent:planning', (data) => {
+      agentPanelShow();
+      agentSetState('planning');
+      agentSetCurrentTask(data.message || '계획 수립 중...');
+    });
+
+    // agent:plan_ready — 계획 완성, task 목록 표시
+    state.socket.on('agent:plan_ready', (data) => {
+      state.agent.planId     = data.planId;
+      state.agent.tasks      = (data.tasks || []).map(t => ({ ...t, status: 'pending' }));
+      state.agent.totalSteps = data.totalSteps || data.tasks?.length || 0;
+      state.agent.currentStep = 0;
+
+      agentSetComplexity(data.complexity);
+      agentRenderTaskList(state.agent.tasks);
+      agentUpdateProgress(0, state.agent.totalSteps);
+      agentSetState('planning');
+      agentSetCurrentTask('실행 준비 완료');
+    });
+
+    // agent:executing — 실행 시작
+    state.socket.on('agent:executing', (data) => {
+      agentSetState('running');
+      agentSetCurrentTask(data.message || '실행 중...');
+    });
+
+    // agent:state_update — task 상태 변경
+    state.socket.on('agent:state_update', (data) => {
+      const { task_state, current_step, total_steps, progress } = data;
+
+      // 진행률 업데이트
+      const pct = typeof progress === 'number' ? Math.round(progress)
+                : total_steps ? Math.round((current_step / total_steps) * 100) : 0;
+      agentUpdateProgress(current_step || 0, total_steps || state.agent.totalSteps, pct);
+      agentSetState(task_state || 'running');
+
+      // 현재 실행 중인 task 찾아 UI 반영
+      if (state.agent.tasks.length) {
+        const runningIdx = (current_step || 1) - 1;
+        state.agent.tasks = state.agent.tasks.map((t, i) => ({
+          ...t,
+          status: i < runningIdx ? 'done'
+                : i === runningIdx ? 'running'
+                : 'pending',
+        }));
+        agentRenderTaskList(state.agent.tasks);
+        const runningTask = state.agent.tasks[runningIdx];
+        if (runningTask) agentSetCurrentTask(runningTask.name);
+      }
+    });
+
+    // agent:task_progress — 세부 progress 업데이트
+    state.socket.on('agent:task_progress', (data) => {
+      const { taskId, taskName, status, groupIndex, totalGroups } = data;
+
+      // 상태 기반 task_state 매핑
+      if (taskName) agentSetCurrentTask(taskName);
+      if (status)   agentSetState(status);
+
+      // task 리스트 상태 업데이트
+      if (taskId && state.agent.tasks.length) {
+        state.agent.tasks = state.agent.tasks.map(t =>
+          t.id === taskId ? { ...t, status: status || 'running' } : t
+        );
+        agentRenderTaskList(state.agent.tasks);
+      }
+
+      // 그룹 기반 진행률
+      if (typeof groupIndex === 'number' && totalGroups) {
+        const pct = Math.round(((groupIndex + 1) / totalGroups) * 100);
+        agentUpdateProgress(groupIndex + 1, totalGroups, pct);
+      }
+    });
+
+    // agent:complete — 완료 (Phase 2: isPartial 처리)
+    state.socket.on('agent:complete', (data) => {
+      const isPartial = !!data.isPartial;
+
+      if (isPartial) {
+        // 부분 결과: 일부 task만 완료 처리
+        agentSetState('done');
+        agentSetCurrentTask('⚠️ 부분 결과 반환됨');
+        // 미완료 task는 pending 유지
+        agentRenderTaskList(state.agent.tasks);
+      } else {
+        state.agent.tasks = state.agent.tasks.map(t => ({ ...t, status: 'done' }));
+        agentRenderTaskList(state.agent.tasks);
+        agentUpdateProgress(state.agent.totalSteps, state.agent.totalSteps, 100);
+        agentSetState('done');
+        agentSetCurrentTask('완료');
+      }
+      if (dom.agentPanel) dom.agentPanel.classList.add('agent-done');
+
+      // budget 사용량 요약 표시
+      if (data.budget) agentShowBudgetSummary(data.budget);
+
+      // 자동 닫힘: 완료 4초, partial 8초(재시도 여유)
+      setTimeout(() => {
+        if (dom.agentPanel && !dom.agentPanel.classList.contains('hidden')) {
+          agentPanelHide();
+        }
+      }, isPartial ? 8000 : 4000);
+    });
+
+    // agent:budget_exceeded — 예산 초과 (Phase 2)
+    state.socket.on('agent:budget_exceeded', (data) => {
+      const reasonLabels = {
+        max_llm_calls_exceeded:         '⚠️ LLM 호출 한도 초과',
+        max_tool_calls_exceeded:        '⚠️ 도구 호출 한도 초과',
+        max_tokens_exceeded:            '⚠️ 토큰 사용 한도 초과',
+        max_execution_time_exceeded:    '⏱️ 실행 시간 초과',
+        max_correction_rounds_exceeded: '🔄 자기교정 한도 초과',
+        already_exceeded:               '⚠️ 예산 초과',
+      };
+      const label = reasonLabels[data.reason] || '⚠️ 예산 초과';
+      const msg   = data.message || '한도를 초과하여 부분 결과를 반환합니다.';
+
+      // budget 사용량 표시 (있을 경우)
+      let budgetDetail = '';
+      if (data.budget) {
+        const b = data.budget;
+        budgetDetail = ` (LLM ${b.llm_calls_used || 0}/${b.limits?.maxLLMCalls || '?'}, `
+          + `Tool ${b.tool_calls_used || 0}/${b.limits?.maxToolCalls || '?'}, `
+          + `${Math.round((b.execution_time_ms || 0) / 1000)}s)`;
+      }
+
+      agentSetState('failed');
+      agentShowError(`${label}: ${msg}${budgetDetail}`);
+      // budget 사용량 bar 표시
+      if (data.budget) agentShowBudgetSummary(data.budget);
+      console.warn('[AgentUI] budget_exceeded:', data);
+    });
+  }
+
+  // ============================================================
+  // Agent 진행상태 패널 함수 (Phase 1)
+  // ============================================================
+
+  // 상태별 아이콘·레이블 맵
+  const AGENT_STATE_MAP = {
+    planning:  { icon: '📋', label: '계획 수립 중',  cls: 'state-planning'  },
+    searching: { icon: '🔍', label: '검색 중',       cls: 'state-searching' },
+    analyzing: { icon: '🧠', label: '분석 중',       cls: 'state-analyzing' },
+    writing:   { icon: '✍️', label: '작성 중',       cls: 'state-writing'   },
+    reviewing: { icon: '🔎', label: '검토 중',       cls: 'state-reviewing' },
+    running:   { icon: '⚙️', label: '실행 중',       cls: 'state-running'   },
+    done:      { icon: '✅', label: '완료',          cls: 'state-done'      },
+    failed:    { icon: '❌', label: '실패',          cls: 'state-failed'    },
+  };
+
+  function agentPanelShow() {
+    if (!dom.agentPanel) return;
+    dom.agentPanel.classList.remove('hidden', 'agent-done');
+    // 초기화
+    if (dom.agentErrorRow)   dom.agentErrorRow.classList.add('hidden');
+    if (dom.agentTaskList)   dom.agentTaskList.innerHTML = '';
+    if (dom.agentCurrentTask) dom.agentCurrentTask.textContent = '';
+    agentUpdateProgress(0, 0, 0);
+    agentSetState('planning');
+  }
+
+  function agentPanelHide() {
+    if (!dom.agentPanel) return;
+    dom.agentPanel.classList.add('hidden');
+  }
+
+  function agentSetState(stateKey) {
+    if (!dom.agentStateBadge) return;
+    const info = AGENT_STATE_MAP[stateKey] || AGENT_STATE_MAP.running;
+
+    // 이전 state 클래스 제거
+    Object.values(AGENT_STATE_MAP).forEach(s =>
+      dom.agentStateBadge.classList.remove(s.cls)
+    );
+    dom.agentStateBadge.classList.add(info.cls);
+    if (dom.agentStateIcon)  dom.agentStateIcon.textContent  = info.icon;
+    if (dom.agentStateLabel) dom.agentStateLabel.textContent = info.label;
+  }
+
+  function agentSetComplexity(complexity) {
+    if (!dom.agentComplexBadge) return;
+    const map = { simple: 'simple', normal: 'normal', complex: 'complex' };
+    const labels = { simple: 'Simple', normal: 'Normal', complex: 'Complex' };
+    dom.agentComplexBadge.className = 'agent-complexity-badge ' + (map[complexity] || '');
+    dom.agentComplexBadge.textContent = labels[complexity] || complexity || '';
+  }
+
+  function agentSetCurrentTask(title) {
+    if (dom.agentCurrentTask) dom.agentCurrentTask.textContent = title || '';
+  }
+
+  function agentUpdateProgress(current, total, pct) {
+    const p = typeof pct === 'number' ? pct
+            : total > 0 ? Math.round((current / total) * 100) : 0;
+    if (dom.agentCurrentStep)  dom.agentCurrentStep.textContent  = current || 0;
+    if (dom.agentTotalSteps)   dom.agentTotalSteps.textContent   = total   || 0;
+    if (dom.agentProgressFill) dom.agentProgressFill.style.width = p + '%';
+    if (dom.agentProgressPct)  dom.agentProgressPct.textContent  = p + '%';
+  }
+
+  // task 목록 렌더링
+  function agentRenderTaskList(tasks) {
+    if (!dom.agentTaskList || !tasks) return;
+    dom.agentTaskList.innerHTML = '';
+
+    const TASK_ICONS = {
+      search: '🔍', extract: '📄', analyze: '🧠', summarize: '📝',
+      write: '✍️', code: '💻', review: '🔎', plan: '📋',
+      tool: '🔧', synthesize: '🔗',
+    };
+
+    tasks.forEach(task => {
+      const status = task.status || 'pending';
+      const div = document.createElement('div');
+      div.className = `agent-task-item task-${status}`;
+      div.dataset.taskId = task.id || '';
+
+      const icon   = TASK_ICONS[task.type] || '⚙️';
+      const typeLabel = (task.type || '').toUpperCase();
+
+      div.innerHTML = `
+        <span class="agent-task-icon">${status === 'done' ? '✅' : status === 'running' ? '' : icon}</span>
+        <span class="agent-task-name">${escapeHtml(task.name || task.id || '')}</span>
+        <span class="agent-task-type">${escapeHtml(typeLabel)}</span>
+      `;
+      dom.agentTaskList.appendChild(div);
+    });
+  }
+
+  // agent 에러 표시 + 재시도 버튼 활성화
+  function agentShowError(errorMsg) {
+    if (!dom.agentErrorRow) return;
+    dom.agentErrorRow.classList.remove('hidden');
+    if (dom.agentErrorMsg) dom.agentErrorMsg.textContent = errorMsg || '실행 중 오류가 발생했습니다.';
+    agentSetState('failed');
+    if (dom.agentPanel) dom.agentPanel.classList.remove('agent-done');
+  }
+
+  // ── Phase 2: budget 사용량 요약 표시 ──────────────────────────
+  function agentShowBudgetSummary(budget) {
+    if (!budget || !dom.agentPanel) return;
+    // 기존 summary row 제거
+    const existing = dom.agentPanel.querySelector('.agent-budget-summary');
+    if (existing) existing.remove();
+
+    const llm   = budget.llm_calls_used   ?? budget.llmCalls   ?? 0;
+    const tool  = budget.tool_calls_used  ?? budget.toolCalls  ?? 0;
+    const tok   = budget.total_tokens_used ?? budget.totalTokens ?? 0;
+    const ms    = budget.execution_time_ms ?? 0;
+    const sec   = (ms / 1000).toFixed(1);
+    const maxL  = budget.limits?.maxLLMCalls  || '?';
+    const maxT  = budget.limits?.maxToolCalls || '?';
+    const maxTk = budget.limits?.maxTokens    || '?';
+    const isStop = budget.is_partial_result || budget.isExceeded || false;
+
+    const row = document.createElement('div');
+    row.className = `agent-budget-summary${isStop ? ' budget-exceeded' : ''}`;
+    row.innerHTML = `
+      <span class="bsum-item" title="LLM 호출">🤖 ${llm}/${maxL}</span>
+      <span class="bsum-item" title="도구 호출">🔧 ${tool}/${maxT}</span>
+      <span class="bsum-item" title="토큰 사용">📊 ${tok.toLocaleString()}/${Number(maxTk).toLocaleString()}</span>
+      <span class="bsum-item" title="실행 시간">⏱️ ${sec}s</span>
+    `;
+
+    // 태스크 리스트 아래 삽입
+    const taskList = dom.agentPanel.querySelector('.agent-task-list');
+    if (taskList) taskList.after(row);
+    else dom.agentPanel.appendChild(row);
+  }
+
+  // HTML 이스케이프 유틸
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   // ── Event Binding ─────────────────────────────────────────
@@ -224,12 +558,52 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') closeModal();
     });
+
+    // Agent 패널 닫기 버튼
+    dom.agentPanelClose?.addEventListener('click', () => {
+      agentPanelHide();
+    });
+
+    // Agent 재시도 버튼
+    dom.agentRetryBtn?.addEventListener('click', () => {
+      if (state.agent.lastMessage) {
+        // 에러 행 숨기고 재전송
+        if (dom.agentErrorRow) dom.agentErrorRow.classList.add('hidden');
+        if (dom.input) dom.input.value = state.agent.lastMessage;
+        sendMessage();
+      }
+    });
+
+    // Phase 5: Mode selector 버튼
+    [dom.modeBtnChat, dom.modeBtnAgent, dom.modeBtnResearch].forEach(btn => {
+      btn?.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        setMode(mode);
+      });
+    });
   }
 
   function autoResizeTextarea() {
     const ta = dom.input;
     ta.style.height = 'auto';
     ta.style.height = Math.min(ta.scrollHeight, 150) + 'px';
+  }
+
+  // ── Phase 5: Mode Selector ────────────────────────────────
+  function setMode(mode) {
+    state.mode = mode;
+    // 버튼 active 업데이트
+    [dom.modeBtnChat, dom.modeBtnAgent, dom.modeBtnResearch].forEach(btn => {
+      btn?.classList.toggle('active', btn?.dataset.mode === mode);
+    });
+    // placeholder 업데이트
+    const placeholders = {
+      chat:     '빠른 질문이나 간단한 요청을 입력하세요...',
+      agent:    '복잡한 작업을 에이전트에게 맡겨보세요...',
+      research: '심층 리서치·분석 주제를 입력하세요...',
+    };
+    if (dom.input) dom.input.placeholder = placeholders[mode] || '무엇을 도와드릴까요?';
+    console.log(`[Mode] 변경: ${mode}`);
   }
 
   // ── Send Message ──────────────────────────────────────────
@@ -240,6 +614,8 @@
     hideWelcome();
     setProcessing(true);
     addMessage('user', text);
+    // 재시도를 위해 마지막 메시지 저장
+    state.agent.lastMessage = text;
     dom.input.value = '';
     dom.charCount.textContent = '0/2000';
     autoResizeTextarea();
@@ -250,7 +626,8 @@
     if (state.socket && state.socket.connected) {
       state.socket.emit('message', {
         sessionId: state.sessionId,
-        message: text
+        message: text,
+        mode: state.mode,    // Phase 5: 모드 전달
       });
     }
 
@@ -898,7 +1275,7 @@
     dom.input.disabled = val;
   }
 
-  function showToast(message, type = 'info') {
+  function showToast(message, type = 'info', duration = 3000) {
     let container = document.querySelector('.toast-container');
     if (!container) {
       container = document.createElement('div');
@@ -916,7 +1293,7 @@
       toast.style.transform = 'translateY(10px)';
       toast.style.transition = 'all 0.3s';
       setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, duration);
   }
 
   // ══════════════════════════════════════════════════════════

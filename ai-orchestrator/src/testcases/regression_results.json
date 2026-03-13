@@ -1,0 +1,95 @@
+{
+  "timestamp": "2026-03-13T19:29:45.514Z",
+  "url": "http://localhost:3000",
+  "mode": "group-K",
+  "summary": {
+    "total": 6,
+    "passed": 4,
+    "failed": 2,
+    "passRate": 66.7,
+    "avgMs": 476,
+    "kpiMet": false,
+    "slowCount": 0
+  },
+  "results": [
+    {
+      "id": "K1",
+      "category": "에이전트",
+      "desc": "/api/agent/status — Agent Runtime 활성 + 컴포넌트 확인",
+      "pass": true,
+      "failures": [],
+      "latency": 25,
+      "latencyWarn": null,
+      "strategy": null,
+      "model": null,
+      "taskType": null
+    },
+    {
+      "id": "K2",
+      "category": "에이전트",
+      "desc": "/api/agent/skills — 6개 이상 스킬 반환",
+      "pass": true,
+      "failures": [],
+      "latency": 4,
+      "latencyWarn": null,
+      "strategy": null,
+      "model": null,
+      "taskType": null
+    },
+    {
+      "id": "K3",
+      "category": "에이전트",
+      "desc": "deep 코드 분석 → 100자 이상 응답",
+      "pass": false,
+      "failures": [
+        "strategy: 기대=\"deep\" 실제=\"balanced\"",
+        "reply 너무 짧음: 0자 < 100자",
+        "reply에 키워드 미포함 (any): [async, await]"
+      ],
+      "latency": 2244,
+      "latencyWarn": null,
+      "strategy": "balanced",
+      "model": "gpt-4o",
+      "taskType": "unknown"
+    },
+    {
+      "id": "K4",
+      "category": "에이전트",
+      "desc": "분석 태스크 → Planner + 응답",
+      "pass": false,
+      "failures": [
+        "reply 너무 짧음: 0자 < 100자",
+        "reply에 키워드 미포함 (any): [AI, 개발, 인공지능]"
+      ],
+      "latency": 417,
+      "latencyWarn": null,
+      "strategy": "deep",
+      "model": "claude-sonnet-4-5-20250929",
+      "taskType": "analysis"
+    },
+    {
+      "id": "K5",
+      "category": "에이전트",
+      "desc": "POST /api/agent/plan — 플래너 계획 생성 (STEP 10)",
+      "pass": true,
+      "failures": [],
+      "latency": 164,
+      "latencyWarn": null,
+      "strategy": null,
+      "model": null,
+      "taskType": null
+    },
+    {
+      "id": "K6",
+      "category": "에이전트",
+      "desc": "POST /api/agent/plan/status/:planId — 상태 조회 (STEP 12)",
+      "pass": true,
+      "failures": [],
+      "latency": 4,
+      "latencyWarn": null,
+      "strategy": null,
+      "model": null,
+      "taskType": null
+    }
+  ]
+}

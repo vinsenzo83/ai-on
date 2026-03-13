@@ -155,33 +155,92 @@ function buildUrlList(seeds = [], opts = {}) {
 }
 
 // ─────────────────────────────────────────────────────────
-// Puppeteer stub
+// 실제 크롤링: Tavily Extract API → fetch fallback
 // ─────────────────────────────────────────────────────────
 async function callPuppeteer(url, strategyKey, _opts) {
-  // 실제 연동 시 교체:
-  // const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
-  // const page = await browser.newPage();
-  // await page.goto(url, { waitUntil: strat.waitFor });
-  // if (strat.scrollToBottom) await autoScroll(page);
-  // const data = await page.evaluate(selectors => { ... }, strat.selectors);
-  // await browser.close();
-  // return data;
-  const strat = CRAWL_STRATEGIES[strategyKey] || CRAWL_STRATEGIES.news_feed;
-  const stubData = {};
-  for (const field of Object.keys(strat.selectors || {})) {
-    stubData[field] = `[stub] ${field} extracted from ${url}`;
+  const tavilyKey = process.env.TAVILY_API_KEY;
+
+  // ① Tavily Extract API로 실제 페이지 콘텐츠 추출
+  if (tavilyKey) {
+    try {
+      const res = await fetch('https://api.tavily.com/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: tavilyKey, urls: [url] }),
+        signal: AbortSignal.timeout(12000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const extracted = (data.results || [])[0];
+        if (extracted && extracted.raw_content) {
+          const rawText = extracted.raw_content.slice(0, 8000);
+          console.log(`[crawlerPipeline] Tavily Extract 성공: ${url} (${rawText.length}자)`);
+          return {
+            stub:       false,
+            url,
+            strategy:   strategyKey,
+            rawData:    { title: extracted.title || url, body: rawText },
+            images:     [],
+            links:      [],
+            rawText,
+            statusCode: 200,
+            crawledAt:  new Date().toISOString(),
+            source:     'tavily-extract',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[crawlerPipeline] Tavily Extract 실패:', err.message);
+    }
   }
+
+  // ② fetch fallback (간단한 HTML 텍스트 추출)
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AI-Orchestrator/1.0)' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      // HTML 태그 제거 후 텍스트만 추출
+      const rawText = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 5000);
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const title = titleMatch ? titleMatch[1].trim() : url;
+      return {
+        stub:       false,
+        url,
+        strategy:   strategyKey,
+        rawData:    { title, body: rawText },
+        images:     [],
+        links:      [],
+        rawText,
+        statusCode: res.status,
+        crawledAt:  new Date().toISOString(),
+        source:     'fetch-fallback',
+      };
+    }
+  } catch (err) {
+    console.warn('[crawlerPipeline] fetch fallback 실패:', err.message);
+  }
+
+  // ③ 최종 fallback
   return {
-    stub:       true,
+    stub:       false,
     url,
     strategy:   strategyKey,
-    rawData:    stubData,
-    images:     [`https://stub.img/1.jpg`, `https://stub.img/2.jpg`],
-    links:      [`${url}/page/2`, `${url}/category`],
-    rawText:    `[stub] 크롤링 결과 텍스트 — Puppeteer 설치 후 활성화 (url: ${url})`,
-    statusCode: 200,
+    rawData:    { title: url, body: `[크롤링 실패] ${url}에 접근할 수 없습니다.` },
+    images:     [],
+    links:      [],
+    rawText:    `[크롤링 실패] ${url}`,
+    statusCode: 0,
     crawledAt:  new Date().toISOString(),
-    message:    'Puppeteer stub — npm install puppeteer 후 실제 크롤링 활성화',
+    source:     'failed',
   };
 }
 
@@ -246,6 +305,11 @@ async function execute(opts = {}) {
     structured,
     output,
     outputFormat,
+    // ★ rawText를 content/text로 노출해 server.js에서 reply 추출 가능하게
+    content:     rawResult.rawText || '',
+    text:        rawResult.rawText || '',
+    title:       (rawResult.rawData || {}).title || url,
+    source:      rawResult.source || 'unknown',
     durationMs:  Date.now() - startMs,
     readyToUse:  !rawResult.stub,
     meta: { strategies: Object.keys(CRAWL_STRATEGIES), schedules: Object.keys(SCHEDULE_TYPES) },

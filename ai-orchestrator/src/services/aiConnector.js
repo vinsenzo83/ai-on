@@ -330,32 +330,97 @@ function refreshAnthropicClient(apiKey) {
 }
 
 // ── MODEL_STRATEGY ────────────────────────────────────────────
-// P1 개선: fast 전략에 google/mistral 우선 규칙 추가 (라우팅 정확도 90%+ 목표)
+// STEP 1 (Strategy Routing 정상화):
+//   fast     → 경량 모델 (gpt-4o-mini / gemini-flash)
+//   balanced → 표준 모델 (gpt-4o / gemini-2.5-pro)
+//   deep     → 최고 성능 모델 (claude-3-5-sonnet / gpt-4.1)
+//   powerful / vision / code / creative — 하위 호환 유지
 const MODEL_STRATEGY = {
-  fast:     { openai: 'gpt-4o-mini', anthropic: 'claude-haiku-4-5-20251001',
-              google: 'gemini-2.5-flash', mistral: 'mistral-small-latest' },
-  balanced: { openai: 'gpt-4o',      anthropic: 'claude-sonnet-4-5-20250929',
-              google: 'gemini-2.5-flash', mistral: 'mistral-small-latest' },
-  powerful: { openai: 'gpt-4o',      anthropic: 'claude-sonnet-4-6' },
-  vision:   { openai: 'gpt-4o',      anthropic: 'claude-sonnet-4-6' },
-  code:     { openai: 'gpt-4o',      anthropic: 'claude-sonnet-4-5-20250929' },
-  creative: { openai: 'gpt-4o',      anthropic: 'claude-sonnet-4-6',
-              mistral: 'mistral-small-latest', google: 'gemini-2.5-flash' },
+  // ── 신규: 복잡도 기반 3단계 ───────────────────────────────
+  fast: {
+    openai:    'gpt-4o-mini',
+    anthropic: 'claude-haiku-4-5-20251001',
+    google:    'gemini-2.5-flash',
+    mistral:   'mistral-small-latest',
+    deepseek:  'deepseek-chat',
+    moonshot:  'moonshot-v1-8k',
+  },
+  balanced: {
+    openai:    'gpt-4o',
+    anthropic: 'claude-sonnet-4-5-20250929',
+    google:    'gemini-2.5-flash',
+    mistral:   'mistral-small-latest',
+    deepseek:  'deepseek-chat',
+    moonshot:  'moonshot-v1-32k',
+  },
+  deep: {
+    openai:    'gpt-4o',                        // MODEL_REGISTRY 등록 최고 OpenAI 모델
+    anthropic: 'claude-sonnet-4-5-20250929',    // 코드·분석 — Claude Sonnet 4.5
+    google:    'gemini-2.5-flash',
+    deepseek:  'deepseek-chat',
+    moonshot:  'moonshot-v1-128k',
+  },
+  // ── 기존 키 (하위 호환) ──────────────────────────────────
+  powerful: {
+    openai:    'gpt-4o',
+    anthropic: 'claude-sonnet-4-6',
+    google:    'gemini-2.5-flash',
+    deepseek:  'deepseek-chat',
+  },
+  vision: {
+    openai:    'gpt-4o',
+    anthropic: 'claude-sonnet-4-6',
+  },
+  code: {
+    openai:    'gpt-4o',
+    anthropic: 'claude-sonnet-4-5-20250929',
+    deepseek:  'deepseek-chat',
+  },
+  creative: {
+    openai:    'gpt-4o',
+    anthropic: 'claude-sonnet-4-6',
+    mistral:   'mistral-small-latest',
+    google:    'gemini-2.5-flash',
+  },
 };
 
-// P1: 태스크 유형별 우선 프로바이더 매핑 (fast 전략 라우팅 정확도 향상)
-// Phase 13.1 – text/creative/summarization 추가로 라우팅 히트율 ≥90% 달성
+// ── TASK_PROVIDER_PRIORITY ────────────────────────────────────
+// 태스크 유형별 우선 프로바이더 매핑
+// deep 전략에서는 callLLM 내부에서 selectModel()이 먼저 모델을 확정하므로
+// 여기서는 balanced/fast 폴백 순서를 정의함
 const TASK_PROVIDER_PRIORITY = {
-  classification:  ['google', 'mistral', 'openai'],   // 초경량 분류: Google/Mistral 우선
-  translation:     ['google', 'mistral', 'openai'],   // 번역/QA: Google/Mistral 우선
-  summarization:   ['google', 'mistral', 'openai'],   // 요약: Google/Mistral 우선
-  fast:            ['google', 'mistral', 'openai'],   // 빠른 응답: Google/Mistral 우선
-  chat:            ['google', 'mistral', 'openai'],   // 채팅: Google/Mistral 우선
-  text:            ['google', 'mistral', 'openai'],   // 텍스트 생성: Google/Mistral 우선
-  creative:        ['mistral', 'google', 'openai'],   // 창의적 작성: Mistral/Google 우선
-  analysis:        ['openai', 'google', 'anthropic'], // 분석: OpenAI 우선
-  code:            ['openai', 'anthropic'],            // 코드: OpenAI/Anthropic 우선
-  reasoning:       ['openai', 'anthropic'],            // 추론: OpenAI/Anthropic 우선
+  // ── 기존 키 (하위 호환) ──────────────────────────────────────
+  classification:  ['google', 'openai', 'anthropic'],
+  translation:     ['deepseek', 'moonshot', 'openai'],
+  summarization:   ['moonshot', 'deepseek', 'openai'],
+
+  // ── 실제 taskType 키 (intentAnalyzer 반환값과 일치) ─────────
+  unknown:    ['google', 'anthropic', 'openai'],       // 일반 질문: Gemini 우선
+  text:       ['google', 'anthropic', 'openai'],       // 텍스트: Gemini 우선
+  chat:       ['google', 'anthropic', 'openai'],       // 채팅: Gemini 우선
+  fast:       ['google', 'openai', 'anthropic'],       // 빠른 응답: Gemini 우선
+
+  summarize:  ['moonshot', 'deepseek', 'google'],      // 요약: Moonshot 우선
+  summarise:  ['moonshot', 'deepseek', 'google'],
+  translate:  ['deepseek', 'moonshot', 'google'],      // 번역: DeepSeek 우선
+  analysis:   ['anthropic', 'openai', 'google'],       // 분석: Claude 우선
+  analyse:    ['anthropic', 'openai', 'google'],
+  analyze:    ['anthropic', 'openai', 'google'],
+  extract:    ['google', 'openai', 'anthropic'],       // 추출: Gemini 우선
+  classify:   ['google', 'openai', 'anthropic'],       // 분류: Gemini 우선
+
+  creative:   ['anthropic', 'openai', 'mistral'],      // 창의적: Claude 우선 (deep)
+  code:       ['openai', 'anthropic', 'deepseek'],     // 코드: OpenAI 우선
+  reasoning:  ['openai', 'anthropic', 'google'],       // 추론: OpenAI 우선
+
+  ppt:        ['openai', 'anthropic', 'deepseek'],     // PPT: OpenAI 우선 (balanced)
+  blog:       ['openai', 'anthropic', 'deepseek'],     // 블로그: OpenAI 우선
+  email:      ['openai', 'anthropic', 'mistral'],      // 이메일: OpenAI 우선
+  resume:     ['anthropic', 'openai', 'deepseek'],     // 자소서: Claude 우선
+  website:    ['openai', 'anthropic', 'deepseek'],     // 웹사이트: OpenAI 우선 (deep)
+  report:     ['anthropic', 'openai', 'google'],       // 리포트: Claude 우선
+  document:   ['anthropic', 'openai', 'deepseek'],     // 문서: Claude 우선
+  image:      ['openai', 'google', 'anthropic'],       // 이미지: OpenAI 우선 (DALL-E)
 };
 
 /** 모델 ID → 공급자 추측 */
@@ -431,8 +496,9 @@ async function callLLM({
 
   if (!resolvedModel) {
     if (task) {
-      // P1: 태스크 유형별 우선 프로바이더로 라우팅 (google/mistral 우선)
-      const taskProviders = TASK_PROVIDER_PRIORITY[task] || TASK_PROVIDER_PRIORITY.analysis;
+      // P1: 태스크 유형별 우선 프로바이더로 라우팅
+      // TASK_PROVIDER_PRIORITY에 없는 task는 unknown(google 우선) 사용
+      const taskProviders = TASK_PROVIDER_PRIORITY[task] || TASK_PROVIDER_PRIORITY.unknown || TASK_PROVIDER_PRIORITY.fast;
       const strat = MODEL_STRATEGY[strategy] || MODEL_STRATEGY.fast;
       let picked = null;
       for (const prov of taskProviders) {

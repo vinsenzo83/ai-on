@@ -576,6 +576,12 @@
       </div>
       <div id="messages" class="messages"></div>
       <div class="input-area">
+        <!-- Phase 5: Mode Selector -->
+        <div class="mode-selector-bar" id="mode-selector-bar">
+          <button class="mode-btn active" id="mode-btn-chat"     data-mode="chat"     title="빠른 답변, 최소 도구 사용">💬 Chat</button>
+          <button class="mode-btn"       id="mode-btn-agent"    data-mode="agent"    title="전체 플래너, 태스크 실행">🤖 Agent</button>
+          <button class="mode-btn"       id="mode-btn-research" data-mode="research" title="심층 리서치, 다중 분석">🔬 Research</button>
+        </div>
         <div class="input-wrapper">
           <textarea id="message-input" class="message-input"
             placeholder="무엇을 만들어드릴까요? 자유롭게 말씀해주세요..."
@@ -1649,6 +1655,52 @@
       </div>
       <div id="progress-percent" class="progress-percent">0%</div>
       <div id="progress-steps" class="progress-steps"></div>
+    </div>
+  </div>
+
+  <!-- ── Agent 진행상태 패널 (PHASE 1) ── -->
+  <div id="agent-panel" class="agent-panel hidden">
+    <div class="agent-panel-header">
+      <div class="agent-panel-title">
+        <span class="agent-icon">🤖</span>
+        <span>AI Agent 실행 중</span>
+        <span id="agent-complexity-badge" class="agent-complexity-badge"></span>
+      </div>
+      <button id="agent-panel-close" class="agent-panel-close" title="패널 닫기">✕</button>
+    </div>
+
+    <!-- 전체 진행률 -->
+    <div class="agent-overall-progress">
+      <div class="agent-step-counter">
+        <span id="agent-current-step">0</span>
+        <span class="agent-step-sep">/</span>
+        <span id="agent-total-steps">0</span>
+        <span class="agent-step-label">단계</span>
+      </div>
+      <div class="agent-progress-bar">
+        <div id="agent-progress-fill" class="agent-progress-fill" style="width:0%"></div>
+      </div>
+      <span id="agent-progress-pct" class="agent-progress-pct">0%</span>
+    </div>
+
+    <!-- 현재 상태 뱃지 -->
+    <div class="agent-state-row">
+      <div id="agent-state-badge" class="agent-state-badge state-planning">
+        <span id="agent-state-icon">📋</span>
+        <span id="agent-state-label">계획 수립 중</span>
+      </div>
+      <div id="agent-current-task-title" class="agent-current-task"></div>
+    </div>
+
+    <!-- Task 목록 -->
+    <div class="agent-task-list" id="agent-task-list">
+      <!-- 동적 생성 -->
+    </div>
+
+    <!-- 실패 시 에러 + 재시도 -->
+    <div id="agent-error-row" class="agent-error-row hidden">
+      <div id="agent-error-msg" class="agent-error-msg"></div>
+      <button id="agent-retry-btn" class="agent-retry-btn">🔄 재시도</button>
     </div>
   </div>
 

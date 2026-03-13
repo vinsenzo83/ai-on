@@ -1,0 +1,35 @@
+{
+  "totalRequests": 331,
+  "toolCallRequests": 0,
+  "memoryHitRequests": 42,
+  "totalResponseMs": 109353,
+  "totalTokens": 0,
+  "errorRequests": 0,
+  "toolEvents": {},
+  "strategyStats": {
+    "balanced": {
+      "calls": 182,
+      "totalMs": 78820,
+      "totalTokens": 0
+    },
+    "fast": {
+      "calls": 12,
+      "totalMs": 500,
+      "totalTokens": 0
+    },
+    "deep": {
+      "calls": 137,
+      "totalMs": 30033,
+      "totalTokens": 0
+    }
+  },
+  "dailyStats": {
+    "2026-03-13": {
+      "requests": 331,
+      "toolCalls": 0,
+      "totalMs": 109353,
+      "totalTokens": 0
+    }
+  },
+  "lastUpdated": "2026-03-13T19:29:45.337Z"
+}

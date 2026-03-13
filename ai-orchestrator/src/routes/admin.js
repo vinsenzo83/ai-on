@@ -1289,31 +1289,69 @@ router.get('/beta/stats', (req, res) => {
 // 이 라우트만 requireAuth 없이 호출 가능 (별도 퍼블릭 라우터 필요)
 // → server.js에 /api/beta/register 퍼블릭 라우트 추가 예정
 
-module.exports = router;
-module.exports._apiConfigStore = _apiConfigStore;   // aiConnector에서 DB키 조회용
-
-// ── POST /deploy — git pull + pm2 restart (Phase 13.1 핫 배포) ──────
-// 사용: POST /api/admin/deploy  { "branch": "genspark_ai_developer" }
-router.post('/deploy', async (req, res) => {
+// ── POST /hot-restart — git pull + process.exit(0) → pm2 auto-restart ───
+// 새 파일 배포 시 npm install 없이 재시작. pm2가 자동으로 재기동.
+// 사용: POST /api/admin/hot-restart  { "branch": "genspark_ai_developer" }
+router.post('/hot-restart', (req, res) => {
   const { exec } = require('child_process');
-  const branch = (req.body && req.body.branch) || 'genspark_ai_developer';
+  const branch   = (req.body && req.body.branch) || 'genspark_ai_developer';
   const APP_PATH = process.env.APP_PATH || '/opt/ai-orchestrator/app';
-  const cmd = [
+
+  const pullCmd = [
     `cd ${APP_PATH}`,
     `git fetch origin`,
     `git checkout ${branch}`,
     `git pull origin ${branch} --ff-only`,
-    `cd ${APP_PATH}/ai-orchestrator && npm ci --only=production --quiet`,
-    `pm2 restart ai-orchestrator || pm2 start ${APP_PATH}/ai-orchestrator/ecosystem.vps.config.js`
   ].join(' && ');
 
-  res.json({ success: true, status: 'deploying', branch, cmd: cmd.replace(/&&/g,'&&\n') });
+  res.json({ success: true, status: 'hot-restarting', branch,
+             message: 'git pull 실행 후 pm2 auto-restart (2초 후 process.exit)' });
+
+  setTimeout(() => {
+    exec(pullCmd, { timeout: 30000 }, (err, stdout, stderr) => {
+      if (err) {
+        console.error('[admin][hot-restart] git pull 실패:', err.message);
+        return;
+      }
+      console.log('[admin][hot-restart] git pull 완료:', stdout.trim().slice(0, 200));
+      console.log('[admin][hot-restart] process.exit(0) → pm2 재시작');
+      // pm2가 자동으로 재기동 (autorestart: true)
+      setTimeout(() => process.exit(0), 500);
+    });
+  }, 200);
+});
+
+module.exports = router;
+module.exports._apiConfigStore = _apiConfigStore;   // aiConnector에서 DB키 조회용
+
+// ── POST /deploy — git pull + pm2 restart (Phase 13.1 핫 배포) ──────
+// 사용: POST /api/admin/deploy  { "branch": "genspark_ai_developer", "skipNpm": true }
+router.post('/deploy', async (req, res) => {
+  const { exec } = require('child_process');
+  const branch   = (req.body && req.body.branch)  || 'genspark_ai_developer';
+  const skipNpm  = (req.body && req.body.skipNpm) || false;
+  const APP_PATH = process.env.APP_PATH || '/opt/ai-orchestrator/app';
+
+  const steps = [
+    `cd ${APP_PATH}`,
+    `git fetch origin`,
+    `git checkout ${branch}`,
+    `git pull origin ${branch} --ff-only`,
+  ];
+  if (!skipNpm) {
+    steps.push(`cd ${APP_PATH}/ai-orchestrator && npm install --only=production --quiet`);
+  }
+  steps.push(`pm2 reload ai-orchestrator --update-env || pm2 restart ai-orchestrator || pm2 start ${APP_PATH}/ai-orchestrator/ecosystem.vps.config.js`);
+
+  const cmd = steps.join(' && ');
+
+  res.json({ success: true, status: 'deploying', branch, skipNpm, cmd: cmd.replace(/&&/g,'&&\n') });
 
   // Run after response sent so client gets ACK
   setTimeout(() => {
-    exec(cmd, { timeout: 120000 }, (err, stdout, stderr) => {
-      const msg = err ? `DEPLOY ERROR: ${err.message}` : `DEPLOY OK:\n${stdout}`;
-      console.log('[admin][deploy]', msg, stderr || '');
+    exec(cmd, { timeout: 180000 }, (err, stdout, stderr) => {
+      const msg = err ? `DEPLOY ERROR: ${err.message}\n${stderr}` : `DEPLOY OK:\n${stdout}`;
+      console.log('[admin][deploy]', msg.slice(0, 2000));
     });
   }, 200);
 });
