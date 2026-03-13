@@ -1,0 +1,239 @@
+{
+  "cycleId": "cycle_2026-03-11T03-20-15-046Z",
+  "generatedAt": "2026-03-11T03:20:15.164Z",
+  "summary": {
+    "totalCases": 1255,
+    "readyCases": 1185,
+    "readyPct": "94.4%",
+    "apiNeededCases": 41,
+    "apiNeededPct": "3.3%",
+    "newCasesThisCycle": 50
+  },
+  "patch": {
+    "rolesAdded": 0,
+    "combosAdded": 0,
+    "taskTypesAdded": 0,
+    "newRoles": [],
+    "newCombos": [],
+    "newTaskTypes": [],
+    "patchedAt": "2026-03-11T03:20:15.094Z"
+  },
+  "missingAnalysis": {
+    "topMissingTech": [
+      [
+        "NER_파이프라인",
+        17
+      ],
+      [
+        "수식인식_OCR",
+        13
+      ],
+      [
+        "공간인식_AI",
+        13
+      ],
+      [
+        "3D렌더링_API",
+        12
+      ],
+      [
+        "캐릭터일관성_AI",
+        12
+      ],
+      [
+        "의료영상_AI",
+        12
+      ],
+      [
+        "크립토_분석_엔진",
+        12
+      ],
+      [
+        "이탈예측_모델",
+        10
+      ],
+      [
+        "상품페이지_스크래퍼",
+        9
+      ],
+      [
+        "기업조사_API",
+        9
+      ]
+    ],
+    "topMissingApis": [
+      [
+        "ImageGen_API",
+        86
+      ],
+      [
+        "Email_API",
+        68
+      ],
+      [
+        "Whisper_STT",
+        65
+      ],
+      [
+        "GPT4V_API",
+        59
+      ],
+      [
+        "Puppeteer",
+        57
+      ],
+      [
+        "SMS_API",
+        43
+      ],
+      [
+        "Slack_API",
+        38
+      ],
+      [
+        "GitHub_API",
+        35
+      ],
+      [
+        "CRM_API",
+        24
+      ],
+      [
+        "OCR_API",
+        19
+      ]
+    ],
+    "uncoveredDomains": [
+      [
+        "creative",
+        46
+      ],
+      [
+        "data_ai",
+        30
+      ],
+      [
+        "ecommerce",
+        29
+      ],
+      [
+        "marketing",
+        24
+      ],
+      [
+        "edu_med",
+        23
+      ],
+      [
+        "b2b",
+        18
+      ],
+      [
+        "real_estate",
+        8
+      ],
+      [
+        "healthcare",
+        8
+      ],
+      [
+        "government",
+        6
+      ],
+      [
+        "finance_invest",
+        3
+      ],
+      [
+        "it",
+        1
+      ],
+      [
+        "legal_hr",
+        1
+      ]
+    ]
+  },
+  "domainBreakdown": {
+    "ecommerce": 130,
+    "marketing": 125,
+    "b2b": 109,
+    "it": 125,
+    "legal_hr": 109,
+    "edu_med": 102,
+    "creative": 102,
+    "data_ai": 102,
+    "real_estate": 90,
+    "finance_invest": 90,
+    "healthcare": 90,
+    "government": 81
+  },
+  "complexityBreakdown": {
+    "high": 525,
+    "extreme": 109,
+    "medium": 583,
+    "low": 38
+  },
+  "topRoles": {
+    "analyst": 533,
+    "writer": 380,
+    "researcher": 315,
+    "data_scientist": 300,
+    "automation_engineer": 237,
+    "financial_analyst": 233,
+    "coder": 225,
+    "designer": 153,
+    "legal_expert": 142,
+    "medical_writer": 120
+  },
+  "topApis": {
+    "ImageGen_API": 90,
+    "Email_API": 78,
+    "Whisper_STT": 69,
+    "GPT4V_API": 64,
+    "Puppeteer": 60,
+    "SMS_API": 47,
+    "Slack_API": 42,
+    "GitHub_API": 39,
+    "CRM_API": 25,
+    "OCR_API": 24
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "ImageGen_API 연동 구현",
+      "impact": "86개 케이스 즉시 커버 가능",
+      "effort": "중간"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Email_API 연동 구현",
+      "impact": "68개 케이스 즉시 커버 가능",
+      "effort": "중간"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Whisper_STT 연동 구현",
+      "impact": "65개 케이스 즉시 커버 가능",
+      "effort": "중간"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "NER_파이프라인 모듈 개발",
+      "impact": "17개 케이스 커버",
+      "effort": "높음"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "수식인식_OCR 모듈 개발",
+      "impact": "13개 케이스 커버",
+      "effort": "높음"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "공간인식_AI 모듈 개발",
+      "impact": "13개 케이스 커버",
+      "effort": "높음"
+    }
+  ]
+}

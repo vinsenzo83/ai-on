@@ -1,0 +1,52 @@
+KBeauty AutoCommerce — 소스코드 패키지
+=======================================
+Repository  : https://github.com/vinsenzo83/kbeauty-autocommerce
+Branch      : genspark_ai_developer
+Commit Hash : 5fa21b7202469f1e5bc9773dcee94a47fa1ee98d
+Short Hash  : 5fa21b7
+Date        : 2026-03-13 (UTC)
+Subject     : feat(routes): Phase 15-17 FastAPI route exposure + orchestration API
+
+PR          : https://github.com/vinsenzo83/kbeauty-autocommerce/pull/1
+             (genspark_ai_developer → main)
+
+레이어별 완료 상태
+─────────────────────────────────────────────────────────
+Phase 12-13  Engine (Node.js AI Orchestrator)    ✅ ai-orchestrator/
+Phase 14     Module Execution Layer              ✅ app/modules/
+Phase 15     General Tool Layer (6 tools)        ✅ app/tools/  +  /tools API
+Phase 16     DevTools Layer (18 tools)           ✅ app/devtools/  +  /devtools API
+Phase 17     Integration + Orchestration API     ✅ app/tools/integrations/
+                                                    app/modules/integrations/
+                                                    app/routers/orchestration.py
+
+Sprint 1-18  Business Logic (Python Backend)     ✅ app/ (전체)
+Dashboard    Next.js (Sprint 1-18 + Phase 16)    ✅ dashboard/
+
+테스트 현황
+─────────────────────────────────────────────────────────
+전체: 1,492 passed / 0 failed / 13 warnings
+  - Route integration (Phase 15-17)  :   90 tests
+  - Module/Tool integration (Ph.17)  :  196 tests
+  - DevTools (Phase 16)              :  276 tests
+  - Tools (Phase 15)                 :  120 tests
+  - Modules (Phase 14)               :  162 tests
+  - Business logic (Sprint 1-18)     : ~650 tests
+
+서비스 포트
+─────────────────────────────────────────────────────────
+Python FastAPI   : 8000  (app/main.py  →  uvicorn)
+Node.js AI Orch  : 9000  (ai-orchestrator/src/server.js)
+Next.js Dashboard: 3001  (dashboard/  →  next dev -p 3001)
+PostgreSQL       : 5432
+Redis            : 6379
+
+API Routes (97개)
+─────────────────────────────────────────────────────────
+/health                          상태 확인
+/admin/*                         비즈니스 관리 API (Sprint 1-18)
+/webhook/*                       웹훅 수신
+/tools/*                         Phase 15 — 일반 도구 API
+/devtools/*                      Phase 16 — 개발자 도구 API
+/orchestration/*                 Phase 17 — 워크플로우 오케스트레이션 API
+/docs                            Swagger UI

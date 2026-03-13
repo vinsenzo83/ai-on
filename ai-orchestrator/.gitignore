@@ -1,0 +1,16 @@
+node_modules/
+data/episodic.json
+data/semantic.json
+logs/
+.env
+*.log
+data/orchestrator.db
+data/orchestrator.db-shm
+data/orchestrator.db-wal
+
+# 민감 파일
+ecosystem.main.config.js
+nginx/ssl/
+
+# 테스트 임시 파일
+*.tmp

@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 오케스트레이터 — 현재 상태 마스터 문서</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d2e;
+    --surface2: #242740;
+    --border: #2e3250;
+    --accent: #6366f1;
+    --accent2: #8b5cf6;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --tag-bg: #1e2235;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #1a1d2e 0%, #0f1117 100%);
+    border-bottom: 2px solid var(--accent);
+    padding: 48px 40px 36px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .header .subtitle { color: var(--muted); font-size: 13px; }
+  .header .meta-row { display: flex; gap: 20px; margin-top: 16px; flex-wrap: wrap; }
+  .meta-chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 14px; font-size: 12px; color: var(--muted);
+  }
+  .meta-chip span { color: var(--text); font-weight: 600; }
+
+  /* NAV */
+  .nav-wrap {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .nav-wrap a {
+    display: inline-block;
+    padding: 14px 16px;
+    font-size: 12px; color: var(--muted);
+    text-decoration: none; border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .nav-wrap a:hover { color: var(--text); border-color: var(--accent); }
+
+  /* LAYOUT */
+  .container { max-width: 1200px; margin: 0 auto; padding: 40px; }
+
+  /* SECTION */
+  .section { margin-bottom: 56px; }
+  .section-title {
+    font-size: 20px; font-weight: 700; color: #fff;
+    padding-bottom: 12px; border-bottom: 2px solid var(--border);
+    margin-bottom: 24px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-num {
+    background: var(--accent); color: #fff;
+    border-radius: 6px; padding: 2px 8px; font-size: 12px;
+  }
+  h3 { font-size: 16px; color: var(--text); margin: 24px 0 12px; }
+  p { color: var(--muted); margin-bottom: 10px; }
+  strong { color: var(--text); }
+
+  /* STATUS BADGES */
+  .badge {
+    display: inline-block; border-radius: 4px;
+    padding: 2px 8px; font-size: 11px; font-weight: 700; white-space: nowrap;
+  }
+  .badge-impl    { background: rgba(16,185,129,.2); color: #34d399; border: 1px solid rgba(16,185,129,.3); }
+  .badge-partial { background: rgba(245,158,11,.2); color: #fbbf24; border: 1px solid rgba(245,158,11,.3); }
+  .badge-ui      { background: rgba(99,102,241,.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,.3); }
+  .badge-none    { background: rgba(239,68,68,.2);  color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+  .badge-unver   { background: rgba(148,163,184,.15); color: #94a3b8; border: 1px solid rgba(148,163,184,.2); }
+
+  /* SUMMARY TABLE */
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--surface2); }
+  th { padding: 12px 14px; text-align: left; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  td { padding: 11px 14px; border-top: 1px solid var(--border); color: var(--text); vertical-align: top; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .check-yes { color: var(--green); }
+  .check-no  { color: var(--red); }
+  .check-part{ color: var(--yellow); }
+
+  /* CARDS */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 16px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
+  }
+  .card.green  { border-left: 3px solid var(--green); }
+  .card.yellow { border-left: 3px solid var(--yellow); }
+  .card.red    { border-left: 3px solid var(--red); }
+  .card.blue   { border-left: 3px solid var(--blue); }
+  .card h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .card p  { font-size: 13px; }
+  .card ul { padding-left: 16px; }
+  .card li { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+
+  /* LISTS */
+  ul.check-list { list-style: none; padding: 0; }
+  ul.check-list li { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 14px; display: flex; align-items: flex-start; gap: 8px; }
+  ul.check-list li .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: #0d1117; border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; font-family: monospace;
+    font-size: 12px; color: #a3e6cb; overflow-x: auto;
+  }
+
+  /* PROGRESS BAR */
+  .progress-item { margin-bottom: 14px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .progress-label .name { color: var(--text); }
+  .progress-label .pct { font-weight: 700; }
+  .bar-track { background: var(--surface2); border-radius: 4px; height: 8px; }
+  .bar-fill  { height: 8px; border-radius: 4px; }
+  .bar-green { background: var(--green); }
+  .bar-yellow{ background: var(--yellow); }
+  .bar-red   { background: var(--red); }
+  .bar-blue  { background: var(--blue); }
+
+  /* SUMMARY SECTION */
+  .summary-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px; margin-bottom: 16px;
+  }
+  .summary-box h4 { color: #fff; font-size: 15px; margin-bottom: 12px; }
+  .summary-box p  { font-size: 13px; }
+
+  /* LINK */
+  a.ext-link {
+    color: var(--accent); text-decoration: none;
+    border-bottom: 1px solid rgba(99,102,241,.3);
+    transition: border-color 0.2s;
+  }
+  a.ext-link:hover { border-color: var(--accent); }
+
+  /* RISK */
+  .risk-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; margin-bottom: 12px;
+    border-left: 3px solid var(--red);
+  }
+  .risk-item.yellow { border-left-color: var(--yellow); }
+  .risk-item.blue   { border-left-color: var(--blue); }
+  .risk-num { color: var(--red); font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .risk-item.yellow .risk-num { color: var(--yellow); }
+  .risk-item.blue   .risk-num { color: var(--blue); }
+
+  /* TOP 5 */
+  .top5-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 18px; margin-bottom: 10px;
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .top5-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  .num-green { background: rgba(16,185,129,.2); color: var(--green); }
+  .num-yellow{ background: rgba(245,158,11,.2); color: var(--yellow); }
+  .top5-text { flex: 1; }
+  .top5-text strong { display: block; margin-bottom: 4px; font-size: 14px; }
+  .top5-text p { font-size: 12px; }
+
+  /* FOOTER */
+  .footer {
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 30px 40px; text-align: center; color: var(--muted); font-size: 12px;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  /* BACK TO TOP */
+  #back-top {
+    position: fixed; bottom: 30px; right: 30px;
+    background: var(--accent); color: #fff; border: none; border-radius: 50%;
+    width: 44px; height: 44px; cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(99,102,241,.4); transition: transform 0.2s;
+  }
+  #back-top:hover { transform: translateY(-2px); }
+
+  @media(max-width:768px){
+    .header, .container { padding: 20px; }
+    .nav-wrap { padding: 0 12px; }
+    .header h1 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header" id="top">
+  <h1>🤖 AI 오케스트레이터 — 현재 상태 마스터 문서</h1>
+  <div class="subtitle">구현된 기능만 기술한 사실 기반 현황 보고서 (미래 계획·마케팅 언어 제외)</div>
+  <div class="meta-row">
+    <div class="meta-chip">작성일 <span>2026-03-10</span></div>
+    <div class="meta-chip">버전 <span>1.0.0</span></div>
+    <div class="meta-chip">서비스 <span><a class="ext-link" href="https://3000-iw5vceswxgjko3pmqbm7y-18e660f9.sandbox.novita.ai" target="_blank">Live Demo</a></span></div>
+    <div class="meta-chip">어드민 <span><a class="ext-link" href="https://3000-iw5vceswxgjko3pmqbm7y-18e660f9.sandbox.novita.ai/admin" target="_blank">Admin Panel</a></span></div>
+    <div class="meta-chip">GitHub PR <span><a class="ext-link" href="https://github.com/vinsenzo83/kbeauty-autocommerce/pull/1" target="_blank">#1</a></span></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav-wrap">
+  <a href="#s1">1.목적</a>
+  <a href="#s2">2.자료목록</a>
+  <a href="#s3">3.제품요약</a>
+  <a href="#s4">4.전체현황</a>
+  <a href="#s5">5.완료영역</a>
+  <a href="#s6">6.부분구현</a>
+  <a href="#s7">7.미구현</a>
+  <a href="#s8">8.UI상태</a>
+  <a href="#s9">9.어드민</a>
+  <a href="#s10">10.AI·오케스트레이션</a>
+  <a href="#s11">11.데이터지속성</a>
+  <a href="#s12">12.보안·운영</a>
+  <a href="#s13">13.시각화·메트릭</a>
+  <a href="#s14">14.기술현실</a>
+  <a href="#s15">15.증거해석</a>
+  <a href="#s16">16.리스크</a>
+  <a href="#s17">17.SaaS조건</a>
+  <a href="#s18">18.최종평가</a>
+  <a href="#s19">19.요약표</a>
+</div>
+
+<div class="container">
+
+<!-- ═══════════════════════════════════════════ 1 -->
+<div class="section" id="s1">
+  <div class="section-title"><span class="section-num">01</span> 문서 목적</div>
+  <div class="summary-box">
+    <p>이 문서는 AI 오케스트레이터 프로젝트에서 <strong>실제로 구현된 것과 그렇지 않은 것</strong>을 구분합니다.<br>
+    제공된 코드, 라이브 서비스, 데이터베이스 레코드를 직접 검증한 결과를 바탕으로 작성되었으며,
+    미래 계획·전략 제안·리디자인·마케팅 언어는 일체 포함하지 않습니다.</p>
+    <br>
+    <p><strong>판정 기준 4단계:</strong></p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+      <span class="badge badge-impl">✅ 구현됨</span>
+      <span class="badge badge-partial">🟡 부분 구현</span>
+      <span class="badge badge-ui">🔷 UI전용/플레이스홀더</span>
+      <span class="badge badge-none">❌ 미검증/미구현</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 2 -->
+<div class="section" id="s2">
+  <div class="section-title"><span class="section-num">02</span> 검토 자료 목록</div>
+  <ul class="check-list">
+    <li><span class="icon">📂</span><div>소스코드: <code>src/server.js</code>(3,248줄), <code>src/services/aiConnector.js</code>(436줄), <code>src/routes/admin.js</code>(821줄), 총 56개 JS 파일</div></li>
+    <li><span class="icon">🗄️</span><div>SQLite DB: <code>data/orchestrator.db</code> — 직접 쿼리로 Users=3, Costs=62건, Jobs=0 확인</div></li>
+    <li><span class="icon">📊</span><div><code>data/benchmark.json</code>(69줄) — 2개 항목, 타임스탬프 기반 기록</div></li>
+    <li><span class="icon">🌐</span><div>라이브 서비스: <a class="ext-link" href="https://3000-iw5vceswxgjko3pmqbm7y-18e660f9.sandbox.novita.ai" target="_blank">https://3000-iw5vceswxgjko3pmqbm7y-18e660f9.sandbox.novita.ai</a></div></li>
+    <li><span class="icon">🔑</span><div>API 테스트: JWT 토큰 발급 후 <code>/api/admin/*</code>, <code>/api/ai/vision</code>, <code>/api/pipelines</code> 실시간 호출</div></li>
+    <li><span class="icon">📄</span><div>UI 파일: <code>public/admin.html</code>(~1,600줄), <code>public/index.html</code></div></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════ 3 -->
+<div class="section" id="s3">
+  <div class="section-title"><span class="section-num">03</span> 제품 요약</div>
+  <div class="card-grid">
+    <div class="card blue">
+      <h4>🏗️ 인프라</h4>
+      <ul>
+        <li>Node.js 20 + Express</li>
+        <li>SQLite (better-sqlite3)</li>
+        <li>Socket.IO</li>
+        <li>JWT 인증</li>
+        <li>Helmet + Rate Limiter</li>
+      </ul>
+    </div>
+    <div class="card blue">
+      <h4>🤖 AI 연결 대상</h4>
+      <ul>
+        <li>OpenAI (기본 프록시)</li>
+        <li>Anthropic (SDK 탑재)</li>
+        <li>Google, Groq, DeepSeek</li>
+        <li>xAI, Moonshot, Mistral</li>
+        <li>Alibaba, Meta/Together</li>
+      </ul>
+    </div>
+    <div class="card yellow">
+      <h4>📋 파이프라인 (11개)</h4>
+      <ul>
+        <li>Live 6개: imageGen, stt, crawler, vision, threeD, ner 등</li>
+        <li>Stub 5개: email, spatialAI, formulaOCR 등</li>
+        <li>총 426개 케이스 메타데이터</li>
+      </ul>
+    </div>
+    <div class="card red">
+      <h4>⚠️ 실제 AI 상태</h4>
+      <ul>
+        <li>OpenAI API 키 401 오류</li>
+        <li>모든 LLM 호출 → mock 응답</li>
+        <li>Vision 호출 → 401 실패</li>
+        <li>실제 추론 0건 확인</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 4 -->
+<div class="section" id="s4">
+  <div class="section-title"><span class="section-num">04</span> 전체 구현 현황</div>
+
+  <div class="progress-item">
+    <div class="progress-label">
+      <span class="name">Phase 1~6 파이프라인 <em style="color:var(--muted);font-size:11px;">(코드 존재 기준)</em></span>
+      <span class="pct" style="color:var(--green)">100%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill bar-green" style="width:100%"></div></div>
+  </div>
+
+  <div class="progress-item">
+    <div class="progress-label">
+      <span class="name">Phase 7 시스템 구조 <em style="color:var(--muted);font-size:11px;">(파일 존재 기준)</em></span>
+      <span class="pct" style="color:var(--green)">100%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill bar-green" style="width:100%"></div></div>
+  </div>
+
+  <div class="progress-item">
+    <div class="progress-label">
+      <span class="name">Phase 7 UI <em style="color:var(--muted);font-size:11px;">(렌더링 기준)</em></span>
+      <span class="pct" style="color:var(--green)">100%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill bar-green" style="width:100%"></div></div>
+  </div>
+
+  <div class="progress-item">
+    <div class="progress-label">
+      <span class="name">AI API 실제 연동 <em style="color:var(--muted);font-size:11px;">(멀티모달 코드만 존재)</em></span>
+      <span class="pct" style="color:var(--yellow)">5%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill bar-yellow" style="width:5%"></div></div>
+  </div>
+
+  <div class="progress-item">
+    <div class="progress-label">
+      <span class="name">DB 영구 저장 <em style="color:var(--muted);font-size:11px;">(설정·상태 재시작 후 유지)</em></span>
+      <span class="pct" style="color:var(--red)">0%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill bar-red" style="width:2%"></div></div>
+  </div>
+
+  <div class="progress-item">
+    <div class="progress-label">
+      <span class="name">보안 / Rate-Limit <em style="color:var(--muted);font-size:11px;">(코드 존재, 운영 검증 미완)</em></span>
+      <span class="pct" style="color:var(--red)">0%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill bar-red" style="width:2%"></div></div>
+  </div>
+
+  <div class="progress-item">
+    <div class="progress-label">
+      <span class="name">차트 / 시각화 <em style="color:var(--muted);font-size:11px;">(bar chart만 실동작)</em></span>
+      <span class="pct" style="color:var(--yellow)">10%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill bar-yellow" style="width:10%"></div></div>
+  </div>
+
+  <div class="progress-item">
+    <div class="progress-label">
+      <span class="name">어드민 / 백오피스 <em style="color:var(--muted);font-size:11px;">(불완전·불충분)</em></span>
+      <span class="pct" style="color:var(--yellow)">40%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill bar-yellow" style="width:40%"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 5 -->
+<div class="section" id="s5">
+  <div class="section-title"><span class="section-num">05</span> 완료 영역 <span class="badge badge-impl" style="font-size:13px;padding:3px 12px;">✅ 구현됨</span></div>
+  <ul class="check-list">
+    <li><span class="icon">✅</span><div><strong>JWT 인증 시스템</strong> — 로그인·토큰 발급·<code>requireAuth</code>·<code>requireRole('admin')</code> 미들웨어 정상 작동. 비인증 요청 시 401 반환 확인.</div></li>
+    <li><span class="icon">✅</span><div><strong>전역 Rate Limiter</strong> — <code>src/middleware/security.js</code>: 300 req/min 글로벌, 인증 엔드포인트 별도 리미터 적용.</div></li>
+    <li><span class="icon">✅</span><div><strong>Helmet CSP</strong> — Content-Security-Policy, CORS allowlist (sandbox.novita.ai, e2b.dev 포함) 설정 확인.</div></li>
+    <li><span class="icon">✅</span><div><strong>SQLite 스키마</strong> — <code>users, jobs, costs, pipelines, versions, scheduler_jobs, audit_logs</code> 테이블 초기화. Users 3건, Costs 62건 실데이터 존재.</div></li>
+    <li><span class="icon">✅</span><div><strong>감사 로그</strong> — 어드민 API 호출마다 <code>audit_logs</code> 테이블에 기록. 실시간 DB 쓰기 확인.</div></li>
+    <li><span class="icon">✅</span><div><strong>사용자 관리 API</strong> — GET/PUT/DELETE <code>/api/admin/users</code> 엔드포인트 정상 작동.</div></li>
+    <li><span class="icon">✅</span><div><strong>파이프라인 메타데이터</strong> — <code>GET /api/pipelines</code>: 11개 파이프라인, 총 426 케이스 정보 반환.</div></li>
+    <li><span class="icon">✅</span><div><strong>API 키 등록·연결 테스트 엔드포인트</strong> — <code>POST /api/admin/apiconfig/test-key</code>: 공급자별 테스트 로직 (Anthropic 401 감지, xAI Cloudflare 차단 감지 포함).</div></li>
+    <li><span class="icon">✅</span><div><strong>비용 트래커 코드</strong> — <code>costTracker.js</code>: 모델별 토큰 단가 정의, 일일 $50 / 월 $500 한도 설정. 62건 레코드 존재.</div></li>
+    <li><span class="icon">✅</span><div><strong>벤치마크 JSON 파일</strong> — <code>data/benchmark.json</code>: 2개 항목, 실행 횟수·평균 점수·지연시간 기록 (JSON 파일 기반 영속성).</div></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════ 6 -->
+<div class="section" id="s6">
+  <div class="section-title"><span class="section-num">06</span> 부분 구현 <span class="badge badge-partial" style="font-size:13px;padding:3px 12px;">🟡 부분 구현</span></div>
+  <ul class="check-list">
+    <li><span class="icon">🟡</span><div><strong>AI 멀티모달 파이프라인</strong> — <code>multimodalPipeline.js</code>가 <code>aiConnector.callVision()</code> 실제 호출 시도. 그러나 현재 OpenAI API 키 401로 인해 실패. 코드 경로는 완성, 실행 결과 없음.</div></li>
+    <li><span class="icon">🟡</span><div><strong>aiConnector 멀티-프로바이더 라우팅</strong> — 코드 존재, 10개 공급자 매핑. API 키 없으므로 모든 호출이 <code>_mockResponse()</code>로 대체.</div></li>
+    <li><span class="icon">🟡</span><div><strong>파이프라인 실행 라우트</strong> — <code>POST /api/pipelines/run</code> 존재. 테스트 결과 <code>marketing</code> 등 주요 파이프라인은 "unknown pipeline" 반환. 등록된 파이프라인 11개만 라우팅 가능.</div></li>
+    <li><span class="icon">🟡</span><div><strong>모델 화이트리스트 관리</strong> — 33개 모델 toggle·예산 설정 API 존재. 그러나 인-메모리 저장만으로, 서버 재시작 시 초기화.</div></li>
+    <li><span class="icon">🟡</span><div><strong>모델 우선순위 (3-Layer)</strong> — 6개 태스크 타입(text, analysis, chat, code, creative, fast) 기본값 존재. 역시 인-메모리, 재시작 시 초기화.</div></li>
+    <li><span class="icon">🟡</span><div><strong>비용 기록 데이터</strong> — 62건 레코드가 DB에 있으나 5개 타임스탬프에 집중. seed/자동 테스트 데이터로 추정, 실제 사용자 사용 미확인.</div></li>
+    <li><span class="icon">🟡</span><div><strong>masterOrchestrator.js</strong> (812줄), <strong>dynamicOrchestrator.js</strong> (718줄) — 코드 존재, 스텁 플레이스홀더 1~2개 포함. 실제 LLM 호출 경로로의 연결 미확인.</div></li>
+    <li><span class="icon">🟡</span><div><strong>작업 큐 (jobQueue.js)</strong> — 메모리 Map 기반으로 작동. bullmq·ioredis 패키지는 package.json에 선언되나 Redis 미연결, 실제 비동기 큐 미사용.</div></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════ 7 -->
+<div class="section" id="s7">
+  <div class="section-title"><span class="section-num">07</span> 미구현 / 누락 <span class="badge badge-none" style="font-size:13px;padding:3px 12px;">❌ 없음</span></div>
+  <ul class="check-list">
+    <li><span class="icon">❌</span><div><strong>실제 AI 추론</strong> — 유효한 API 키 없음 → 모든 LLM 호출이 mock 모드. 실제 추론 결과 0건.</div></li>
+    <li><span class="icon">❌</span><div><strong>설정 영구 저장</strong> — API 키, 모델 화이트리스트, 우선순위 모두 인-메모리. 재시작 시 전부 초기화. DB 테이블에 이 데이터를 저장하는 로직 없음.</div></li>
+    <li><span class="icon">❌</span><div><strong>테넌트/워크스페이스 격리</strong> — DB에 <code>tenant_id</code> 컬럼 없음. 멀티테넌시 구조 미구현.</div></li>
+    <li><span class="icon">❌</span><div><strong>Redis / BullMQ 연동</strong> — 코드에 선언만 존재. 실제 연결 없음.</div></li>
+    <li><span class="icon">❌</span><div><strong>email·SMS·Slack 알림 파이프라인</strong> — <code>live: false</code> 상태, SMTP/SendGrid 키 없음.</div></li>
+    <li><span class="icon">❌</span><div><strong>STT (Whisper) 파이프라인</strong> — <code>live: true</code>로 표시되나 OpenAI 키 없어 실제 실행 불가.</div></li>
+    <li><span class="icon">❌</span><div><strong>3D / OCR / Spatial AI 파이프라인</strong> — stub 상태.</div></li>
+    <li><span class="icon">❌</span><div><strong>실시간 WebSocket 메트릭</strong> — <code>/metrics</code> 네임스페이스 엔드포인트 정의는 있으나 502 오류 반환.</div></li>
+    <li><span class="icon">❌</span><div><strong>modelRegistry.js 영속성</strong> — 217개 모델 정의가 인-메모리 Map으로만 유지, DB와 연결 없음.</div></li>
+    <li><span class="icon">❌</span><div><strong>cronScheduler 실제 실행</strong> — 파일 존재, 실행 여부 미확인.</div></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════ 8 -->
+<div class="section" id="s8">
+  <div class="section-title"><span class="section-num">08</span> 세부 UI 상태</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>UI 컴포넌트</th>
+          <th>렌더링</th>
+          <th>기능 연결</th>
+          <th>상태</th>
+          <th>비고</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>메인 대시보드</td>
+          <td class="check-yes">✅</td>
+          <td class="check-part">🟡</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+          <td>UI 정상 로드, 실시간 메트릭 502 오류</td>
+        </tr>
+        <tr>
+          <td>AI 콤보 분석 탭</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌</td>
+          <td><span class="badge badge-ui">UI 전용</span></td>
+          <td>버튼 존재, 실제 최적화 미연결</td>
+        </tr>
+        <tr>
+          <td>파이프라인 목록</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td><span class="badge badge-impl">구현됨</span></td>
+          <td>11개 파이프라인 메타데이터 정상 반환</td>
+        </tr>
+        <tr>
+          <td>파이프라인 실행 버튼</td>
+          <td class="check-yes">✅</td>
+          <td class="check-part">🟡</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+          <td>일부 "unknown pipeline" 오류</td>
+        </tr>
+        <tr>
+          <td>차트 (비용·성능)</td>
+          <td class="check-yes">✅</td>
+          <td class="check-part">🟡</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+          <td>Chart.js 로드됨, bar chart만 실데이터</td>
+        </tr>
+        <tr>
+          <td>WebSocket 실시간 지표</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌</td>
+          <td><span class="badge badge-ui">UI 전용</span></td>
+          <td>/metrics 엔드포인트 502</td>
+        </tr>
+        <tr>
+          <td>이미지 업로드 (Vision)</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌</td>
+          <td><span class="badge badge-ui">UI 전용</span></td>
+          <td>파일 선택 가능, API 호출 시 401</td>
+        </tr>
+        <tr>
+          <td>비용 추적 패널</td>
+          <td class="check-yes">✅</td>
+          <td class="check-part">🟡</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+          <td>62건 레코드 존재(seed 추정)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 9 -->
+<div class="section" id="s9">
+  <div class="section-title"><span class="section-num">09</span> 어드민 / 백오피스 상태</div>
+
+  <h3>🔗 어드민 패널 URL: <a class="ext-link" href="https://3000-iw5vceswxgjko3pmqbm7y-18e660f9.sandbox.novita.ai/admin" target="_blank">https://3000-iw5vceswxgjko3pmqbm7y-18e660f9.sandbox.novita.ai/admin</a></h3>
+
+  <div class="table-wrap" style="margin-top:16px;">
+    <table>
+      <thead>
+        <tr>
+          <th>어드민 기능</th>
+          <th>UI 존재</th>
+          <th>API 동작</th>
+          <th>영속성</th>
+          <th>상태</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>사용자 목록 조회</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅ DB</td>
+          <td><span class="badge badge-impl">구현됨</span></td>
+        </tr>
+        <tr>
+          <td>사용자 역할 변경</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅ DB</td>
+          <td><span class="badge badge-impl">구현됨</span></td>
+        </tr>
+        <tr>
+          <td>사용자 삭제</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅ DB</td>
+          <td><span class="badge badge-impl">구현됨</span></td>
+        </tr>
+        <tr>
+          <td>API 키 등록</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌ 메모리</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+        </tr>
+        <tr>
+          <td>연결 테스트 (Anthropic·xAI 등)</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td>N/A</td>
+          <td><span class="badge badge-impl">구현됨</span></td>
+        </tr>
+        <tr>
+          <td>모델 화이트리스트 토글</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌ 메모리</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+        </tr>
+        <tr>
+          <td>모델 예산 설정</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌ 메모리</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+        </tr>
+        <tr>
+          <td>태스크 우선순위 설정</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌ 메모리</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+        </tr>
+        <tr>
+          <td>비용 현황 조회</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅ DB</td>
+          <td><span class="badge badge-impl">구현됨</span></td>
+        </tr>
+        <tr>
+          <td>감사 로그 조회</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅ DB</td>
+          <td><span class="badge badge-impl">구현됨</span></td>
+        </tr>
+        <tr>
+          <td>시스템 통계</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td>N/A (실시간)</td>
+          <td><span class="badge badge-impl">구현됨</span></td>
+        </tr>
+        <tr>
+          <td>브로드캐스트 메시지</td>
+          <td class="check-yes">✅</td>
+          <td class="check-part">🟡</td>
+          <td>N/A</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+        </tr>
+        <tr>
+          <td>테넌트/워크스페이스 관리</td>
+          <td class="check-no">❌</td>
+          <td class="check-no">❌</td>
+          <td class="check-no">❌</td>
+          <td><span class="badge badge-none">미구현</span></td>
+        </tr>
+        <tr>
+          <td>결제/플랜 관리</td>
+          <td class="check-no">❌</td>
+          <td class="check-no">❌</td>
+          <td class="check-no">❌</td>
+          <td><span class="badge badge-none">미구현</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 10 -->
+<div class="section" id="s10">
+  <div class="section-title"><span class="section-num">10</span> AI · 오케스트레이션 상태</div>
+
+  <div class="card-grid">
+    <div class="card red">
+      <h4>❌ 실제 AI 추론</h4>
+      <p>유효한 API 키 없음. <code>aiConnector._mockResponse()</code>가 모든 LLM 호출을 대체. mock 모델명 "mock-gpt" 반환.</p>
+    </div>
+    <div class="card yellow">
+      <h4>🟡 코드 구조</h4>
+      <p>10개 공급자 라우팅 코드 완성. <code>masterOrchestrator.js</code> 812줄, <code>dynamicOrchestrator.js</code> 718줄 존재하나 실제 LLM 호출 연결 미확인.</p>
+    </div>
+    <div class="card yellow">
+      <h4>🟡 멀티모달 코드</h4>
+      <p><code>multimodalPipeline.js</code>: <code>callVision()</code> 5회, <code>callLLM()</code> 5회 실제 호출. 현재 키 없어 모두 실패.</p>
+    </div>
+    <div class="card red">
+      <h4>❌ 파이프라인 실행</h4>
+      <p>11개 중 6개 "live" 표시. 실제 테스트 시 marketing 등 주요 파이프라인이 "unknown pipeline" 오류 반환. 실제 LLM 결과 0건.</p>
+    </div>
+  </div>
+
+  <h3>공급자별 현재 상태</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>공급자</th><th>코드</th><th>API 키</th><th>실제 동작</th><th>비고</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>OpenAI</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌ 401</td>
+          <td class="check-no">❌ Mock</td>
+          <td>기본 프록시 URL 사용, 키 만료</td>
+        </tr>
+        <tr>
+          <td>Anthropic</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌ 401</td>
+          <td class="check-no">❌ Mock</td>
+          <td>sk-ant-api03-... 키 인증 실패</td>
+        </tr>
+        <tr>
+          <td>xAI (Grok)</td>
+          <td class="check-yes">✅</td>
+          <td class="check-part">🟡 형식 유효</td>
+          <td class="check-no">❌ CF 차단</td>
+          <td>샌드박스 IP Cloudflare 403 차단</td>
+        </tr>
+        <tr>
+          <td>Google (Gemini)</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌ 미등록</td>
+          <td class="check-no">❌</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>DeepSeek/Groq/Mistral/Moonshot/Alibaba/Meta</td>
+          <td class="check-yes">✅</td>
+          <td class="check-no">❌ 미등록</td>
+          <td class="check-no">❌</td>
+          <td>코드만 존재</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 11 -->
+<div class="section" id="s11">
+  <div class="section-title"><span class="section-num">11</span> 데이터 지속성 상태</div>
+  <div class="card-grid">
+    <div class="card green">
+      <h4>✅ DB에 영구 저장됨</h4>
+      <ul>
+        <li>사용자 계정 (3건)</li>
+        <li>비용 레코드 (62건)</li>
+        <li>감사 로그 (다수)</li>
+        <li>벤치마크 (JSON 파일)</li>
+      </ul>
+    </div>
+    <div class="card red">
+      <h4>❌ 재시작 시 초기화</h4>
+      <ul>
+        <li>API 키 설정</li>
+        <li>모델 화이트리스트 상태</li>
+        <li>모델 예산 설정</li>
+        <li>태스크 우선순위</li>
+        <li>활성 제공자 목록</li>
+        <li>모델 레지스트리 (217개 인-메모리)</li>
+      </ul>
+    </div>
+    <div class="card yellow">
+      <h4>🟡 미확인</h4>
+      <ul>
+        <li>jobs 테이블 (Jobs = 0)</li>
+        <li>scheduler_jobs</li>
+        <li>비용 62건의 출처 (seed 가능성)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 12 -->
+<div class="section" id="s12">
+  <div class="section-title"><span class="section-num">12</span> 보안 · 운영 준비 상태</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>보안 항목</th><th>코드 존재</th><th>운영 검증</th><th>상태</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>JWT 인증</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅ 실테스트 통과</td>
+          <td><span class="badge badge-impl">구현됨</span></td>
+        </tr>
+        <tr>
+          <td>역할 기반 접근 제어 (RBAC)</td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅ 실테스트 통과</td>
+          <td><span class="badge badge-impl">구현됨</span></td>
+        </tr>
+        <tr>
+          <td>Helmet (HTTP 보안 헤더)</td>
+          <td class="check-yes">✅</td>
+          <td class="check-part">🟡 코드 확인만</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+        </tr>
+        <tr>
+          <td>Rate Limiter (300 req/min)</td>
+          <td class="check-yes">✅</td>
+          <td class="check-part">🟡 코드 확인만</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+        </tr>
+        <tr>
+          <td>JWT 시크릿 환경변수화</td>
+          <td class="check-no">❌</td>
+          <td class="check-no">❌</td>
+          <td><span class="badge badge-none">미구현</span></td>
+          <td>하드코딩: 'ai-orchestrator-jwt-secret-2024'</td>
+        </tr>
+        <tr>
+          <td>입력 유효성 검증 (전체)</td>
+          <td class="check-part">🟡</td>
+          <td class="check-no">❌</td>
+          <td><span class="badge badge-partial">부분 구현</span></td>
+          <td>일부 엔드포인트만 검증</td>
+        </tr>
+        <tr>
+          <td>HTTPS 강제</td>
+          <td class="check-no">❌</td>
+          <td class="check-no">❌</td>
+          <td><span class="badge badge-none">미구현</span></td>
+          <td>샌드박스 프록시가 처리</td>
+        </tr>
+        <tr>
+          <td>테넌트 격리</td>
+          <td class="check-no">❌</td>
+          <td class="check-no">❌</td>
+          <td><span class="badge badge-none">미구현</span></td>
+          <td>멀티테넌시 구조 없음</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 13 -->
+<div class="section" id="s13">
+  <div class="section-title"><span class="section-num">13</span> 시각화 · 메트릭 상태</div>
+  <ul class="check-list">
+    <li><span class="icon">✅</span><div><strong>Chart.js 라이브러리</strong> — <code>public/js/chart.min.js</code> 205,399바이트 로드 확인.</div></li>
+    <li><span class="icon">🟡</span><div><strong>Bar 차트</strong> — 비용 데이터(62건)를 기반으로 렌더링 가능. 단, seed 데이터 가능성 있음.</div></li>
+    <li><span class="icon">❌</span><div><strong>실시간 메트릭 (WebSocket)</strong> — <code>/metrics</code> 네임스페이스 502 오류. 라이브 데이터 미수신.</div></li>
+    <li><span class="icon">❌</span><div><strong>AI 성능 비교 차트</strong> — 실제 AI 호출 없어 비교 데이터 없음.</div></li>
+    <li><span class="icon">❌</span><div><strong>파이프라인 실행 타임라인</strong> — jobs 테이블 0건, 표시할 데이터 없음.</div></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════ 14 -->
+<div class="section" id="s14">
+  <div class="section-title"><span class="section-num">14</span> 기술 현실 평가</div>
+  <div class="summary-box">
+    <h4>코드 규모 vs 실제 작동 비율</h4>
+    <p style="margin-top:8px;">전체 소스코드 약 <strong>15,000줄 이상</strong>이 존재하지만, 유효한 AI API 키 없이는 핵심 기능(LLM 추론, 파이프라인 실행)이 전혀 작동하지 않습니다.</p>
+    <br>
+    <div class="code-block">
+[실제 동작하는 것]
+✅ 인증/인가 (JWT + RBAC)
+✅ 감사 로그 DB 쓰기
+✅ 사용자 CRUD
+✅ API 키 등록 UI + 테스트 엔드포인트
+✅ 파이프라인 메타데이터 반환
+
+[코드 존재하지만 미작동]
+🟡 multimodalPipeline.js → callVision() 호출 시도 but 401
+🟡 모델 화이트리스트/우선순위 설정 → 인메모리만
+❌ 모든 LLM 추론 → _mockResponse() 대체
+❌ 비동기 작업 큐 (BullMQ/Redis 미연결)
+❌ 실시간 WebSocket 메트릭 (502)
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 15 -->
+<div class="section" id="s15">
+  <div class="section-title"><span class="section-num">15</span> 증거 해석</div>
+  <div class="card-grid">
+    <div class="card green">
+      <h4>✅ 신뢰할 수 있는 증거</h4>
+      <ul>
+        <li>DB 직접 쿼리: Users=3, Costs=62, Jobs=0</li>
+        <li>JWT 로그인 실제 성공</li>
+        <li>Admin API 401 미인증 차단 확인</li>
+        <li>감사 로그 실시간 기록 확인</li>
+        <li>benchmark.json 2개 항목 실존</li>
+      </ul>
+    </div>
+    <div class="card yellow">
+      <h4>🟡 불확실한 증거</h4>
+      <ul>
+        <li>Costs 62건: seed 또는 자동테스트 데이터 추정</li>
+        <li>xAI 키: 형식 유효하나 실제 API 테스트 불가 (Cloudflare 차단)</li>
+        <li>masterOrchestrator 812줄: 실제 호출 경로 미확인</li>
+      </ul>
+    </div>
+    <div class="card red">
+      <h4>❌ 허위/과장된 증거</h4>
+      <ul>
+        <li>pipelineManager의 stubReady:true — 실제 준비 아님</li>
+        <li>"live: true" 파이프라인 — 실제론 mock</li>
+        <li>AI 추론 결과 전부 mock-gpt 응답</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 16 -->
+<div class="section" id="s16">
+  <div class="section-title"><span class="section-num">16</span> 현재 상태 리스크</div>
+
+  <div class="risk-item">
+    <div class="risk-num">🔴 리스크 #1 — 핵심 기능 미작동</div>
+    <p>UI는 완성되어 있으나 AI 추론이 전혀 작동하지 않음. 사용자가 파이프라인을 실행하면 mock 응답이 반환되어 허위 결과를 제공할 위험.</p>
+  </div>
+
+  <div class="risk-item">
+    <div class="risk-num">🔴 리스크 #2 — 설정 비영속성</div>
+    <p>서버 재시작 시 API 키, 모델 화이트리스트, 우선순위가 초기화됨. 운영 환경에서 치명적.</p>
+  </div>
+
+  <div class="risk-item yellow">
+    <div class="risk-num">🟡 리스크 #3 — JWT 시크릿 하드코딩</div>
+    <p><code>src/server.js</code>에 JWT 시크릿이 평문으로 하드코딩. 보안 취약점.</p>
+  </div>
+
+  <div class="risk-item yellow">
+    <div class="risk-num">🟡 리스크 #4 — 비용 데이터 신뢰성</div>
+    <p>62건의 비용 레코드가 실제 사용 데이터인지 seed 데이터인지 불명확. 잘못된 비용 보고 위험.</p>
+  </div>
+
+  <div class="risk-item blue">
+    <div class="risk-num">🔵 리스크 #5 — 코드와 실제 간 괴리</div>
+    <p>3,000줄 이상의 오케스트레이터 코드(masterOrchestrator, comboOptimizer 등)가 실제 실행 경로에 포함되는지 미확인. 데드코드 가능성.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 17 -->
+<div class="section" id="s17">
+  <div class="section-title"><span class="section-num">17</span> 실제 SaaS라 부르기 위한 최소 조건</div>
+  <ul class="check-list">
+    <li><span class="icon">1️⃣</span><div><strong>유효한 AI API 키 1개 이상 등록</strong> → mock 모드 해제, 실제 LLM 추론 결과 확인.</div></li>
+    <li><span class="icon">2️⃣</span><div><strong>API 키·모델 설정 DB 영구 저장</strong> → 재시작 후 설정 복원. DB에 <code>api_configs</code> 테이블 추가 필요.</div></li>
+    <li><span class="icon">3️⃣</span><div><strong>엔드-투-엔드 파이프라인 1개 검증</strong> → 요청 → 실제 LLM → 비용 기록 → DB jobs 저장 → UI 결과 표시.</div></li>
+    <li><span class="icon">4️⃣</span><div><strong>JWT 시크릿 환경변수 강제</strong> → <code>process.env.JWT_SECRET</code> 없을 시 서버 시작 거부.</div></li>
+    <li><span class="icon">5️⃣</span><div><strong>WebSocket 실시간 메트릭 정상화</strong> → 502 오류 해결, 실제 지표 전송.</div></li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════ 18 -->
+<div class="section" id="s18">
+  <div class="section-title"><span class="section-num">18</span> 최종 평가</div>
+
+  <div class="summary-box">
+    <h4>💼 창업자 관점</h4>
+    <p>제품 외형과 UI는 완성도가 높습니다. 그러나 핵심 가치제안인 "AI 오케스트레이션"이 아직 mock 모드입니다. 
+    유효한 API 키 1개와 DB 영속성 코드 추가만으로 데모 가능 수준으로 전환할 수 있습니다.</p>
+  </div>
+
+  <div class="summary-box">
+    <h4>🧑‍💼 제품 관점</h4>
+    <p>어드민 패널은 사용자 관리, 비용 조회, 감사 로그 등 운영 도구로서 기본 기능을 갖추고 있습니다. 
+    그러나 API 키와 모델 설정의 비영속성 때문에 실제 팀이 운영하기에는 불완전합니다.</p>
+  </div>
+
+  <div class="summary-box">
+    <h4>🔧 엔지니어링 관점</h4>
+    <p>코드 구조는 잘 설계되어 있으며 멀티-프로바이더 라우팅 아키텍처는 확장 가능합니다. 
+    실제 검증이 필요한 항목: (1) masterOrchestrator 호출 경로, (2) BullMQ/Redis 연동, (3) 모든 stub 파이프라인의 실제 구현, 
+    (4) JWT 시크릿 하드코딩 해결, (5) 모델 레지스트리 DB 연동.</p>
+  </div>
+
+  <h3 style="color:var(--green)">🏆 실제로 구현된 Top 5</h3>
+  <div class="top5-item">
+    <div class="top5-num num-green">1</div>
+    <div class="top5-text">
+      <strong>JWT + RBAC 인증 시스템</strong>
+      <p>로그인, 토큰 발급, admin 역할 보호, 실제 테스트 통과. 모든 admin API 인증 차단 확인.</p>
+    </div>
+  </div>
+  <div class="top5-item">
+    <div class="top5-num num-green">2</div>
+    <div class="top5-text">
+      <strong>SQLite 기반 감사 로그·비용 추적</strong>
+      <p>DB에 실시간 쓰기 확인. 62건 비용 레코드, 다수의 감사 로그 실존.</p>
+    </div>
+  </div>
+  <div class="top5-item">
+    <div class="top5-num num-green">3</div>
+    <div class="top5-text">
+      <strong>공급자별 연결 테스트 엔드포인트</strong>
+      <p>Anthropic 401 상세 안내, xAI Cloudflare 차단 감지, 한국어 오류 메시지 포함. 실제 API 호출로 검증.</p>
+    </div>
+  </div>
+  <div class="top5-item">
+    <div class="top5-num num-green">4</div>
+    <div class="top5-text">
+      <strong>파이프라인 메타데이터 시스템</strong>
+      <p>11개 파이프라인, 426 케이스 정보, 라이브/스텁 구분, 필요 환경변수 정보 포함.</p>
+    </div>
+  </div>
+  <div class="top5-item">
+    <div class="top5-num num-green">5</div>
+    <div class="top5-text">
+      <strong>어드민 사용자 관리 (CRUD)</strong>
+      <p>사용자 목록 조회, 역할 변경, 삭제 — DB 영속성 포함, 실제 동작 확인.</p>
+    </div>
+  </div>
+
+  <h3 style="color:var(--yellow);margin-top:32px;">⚠️ 인상적이지만 미검증 Top 5</h3>
+  <div class="top5-item">
+    <div class="top5-num num-yellow">1</div>
+    <div class="top5-text">
+      <strong>masterOrchestrator.js (812줄) + dynamicOrchestrator.js (718줄)</strong>
+      <p>방대한 오케스트레이션 코드. 실제 LLM 호출 경로 연결 미확인, 스텁 플레이스홀더 포함.</p>
+    </div>
+  </div>
+  <div class="top5-item">
+    <div class="top5-num num-yellow">2</div>
+    <div class="top5-text">
+      <strong>comboOptimizer.js (395줄) AI 모델 조합 최적화</strong>
+      <p>알고리즘 구조 완성, 그러나 실제 벤치마크 데이터 2건만 존재. 대규모 데이터 없이 최적화 효과 미검증.</p>
+    </div>
+  </div>
+  <div class="top5-item">
+    <div class="top5-num num-yellow">3</div>
+    <div class="top5-text">
+      <strong>Phase 1~6 파이프라인 "426 케이스"</strong>
+      <p>메타데이터만 존재. 실제 케이스 중 실행 가능한 것은 0건(API 키 없음).</p>
+    </div>
+  </div>
+  <div class="top5-item">
+    <div class="top5-num num-yellow">4</div>
+    <div class="top5-text">
+      <strong>modelRegistry.js 217개 모델 정의</strong>
+      <p>모델 ID·공급자·티어·가용성 정보. 그러나 인-메모리만, DB 연결 없음. 모델 대부분 실제 호출 불가.</p>
+    </div>
+  </div>
+  <div class="top5-item">
+    <div class="top5-num num-yellow">5</div>
+    <div class="top5-text">
+      <strong>BullMQ + Redis 의존성 선언</strong>
+      <p>package.json에 bullmq, ioredis 포함. 그러나 Redis 연결 없음, 실제 비동기 큐 미사용.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 19 -->
+<div class="section" id="s19">
+  <div class="section-title"><span class="section-num">19</span> 종합 요약표</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>영역</th>
+          <th>UI 표시</th>
+          <th>기능 검증</th>
+          <th>부분 구현</th>
+          <th>UI전용/플레이스홀더</th>
+          <th>미검증</th>
+          <th>비고</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>인증 (JWT)</strong></td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>실테스트 통과</td>
+        </tr>
+        <tr>
+          <td><strong>RBAC (역할 제어)</strong></td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>admin 보호 확인</td>
+        </tr>
+        <tr>
+          <td><strong>Rate Limiter</strong></td>
+          <td>N/A</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>코드 확인, 부하 테스트 미실시</td>
+        </tr>
+        <tr>
+          <td><strong>AI 추론 (LLM)</strong></td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>전부 mock-gpt 응답</td>
+        </tr>
+        <tr>
+          <td><strong>멀티모달 파이프라인</strong></td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>코드 존재, API 키 없어 실패</td>
+        </tr>
+        <tr>
+          <td><strong>파이프라인 메타데이터</strong></td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>11개, 426 케이스</td>
+        </tr>
+        <tr>
+          <td><strong>파이프라인 실행</strong></td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>일부 unknown 오류, mock만</td>
+        </tr>
+        <tr>
+          <td><strong>사용자 관리 (CRUD)</strong></td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>DB 영속</td>
+        </tr>
+        <tr>
+          <td><strong>API 키 관리</strong></td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>인-메모리만, 재시작 초기화</td>
+        </tr>
+        <tr>
+          <td><strong>모델 화이트리스트</strong></td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>인-메모리만</td>
+        </tr>
+        <tr>
+          <td><strong>비용 트래커</strong></td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>62건 DB, 출처 불명확</td>
+        </tr>
+        <tr>
+          <td><strong>감사 로그</strong></td>
+          <td class="check-yes">✅</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>실시간 DB 쓰기 확인</td>
+        </tr>
+        <tr>
+          <td><strong>차트 / 시각화</strong></td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td>bar chart만 실데이터</td>
+        </tr>
+        <tr>
+          <td><strong>WebSocket 메트릭</strong></td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>502 오류</td>
+        </tr>
+        <tr>
+          <td><strong>AI 콤보 최적화 UI</strong></td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>—</td>
+          <td>버튼만 존재</td>
+        </tr>
+        <tr>
+          <td><strong>작업 큐 (BullMQ)</strong></td>
+          <td>N/A</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>패키지만 선언, Redis 미연결</td>
+        </tr>
+        <tr>
+          <td><strong>테넌트 격리</strong></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>미구현</td>
+        </tr>
+        <tr>
+          <td><strong>결제/플랜</strong></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td class="check-yes">✅</td>
+          <td>미구현</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>AI 오케스트레이터 현재 상태 마스터 문서 | 2026-03-10</p>
+  <p style="margin-top:8px;">
+    <a href="https://3000-iw5vceswxgjko3pmqbm7y-18e660f9.sandbox.novita.ai" target="_blank">🌐 서비스</a> &nbsp;·&nbsp;
+    <a href="https://3000-iw5vceswxgjko3pmqbm7y-18e660f9.sandbox.novita.ai/admin" target="_blank">⚙️ 어드민</a> &nbsp;·&nbsp;
+    <a href="https://github.com/vinsenzo83/kbeauty-autocommerce/pull/1" target="_blank">📌 GitHub PR #1</a>
+  </p>
+</div>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="맨 위로">↑</button>
+
+</body>
+</html>

@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Orchestrator — Current-State Master Document</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --bg2: #1a1d27;
+      --bg3: #22263a;
+      --border: #2e3347;
+      --text: #e2e8f0;
+      --text2: #94a3b8;
+      --text3: #64748b;
+      --accent: #6366f1;
+      --accent2: #818cf8;
+      --green: #22c55e;
+      --yellow: #f59e0b;
+      --orange: #f97316;
+      --red: #ef4444;
+      --teal: #14b8a6;
+      --radius: 10px;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(15,17,23,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex; align-items: center; gap: 16px;
+      height: 52px;
+    }
+    .topbar-title { font-size: 13px; font-weight: 600; color: var(--accent2); white-space: nowrap; }
+    .topbar-date { font-size: 11px; color: var(--text3); white-space: nowrap; }
+    .topbar-spacer { flex: 1; }
+    .topbar-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .pill {
+      font-size: 10px; font-weight: 600; padding: 3px 9px;
+      border-radius: 99px; border: 1px solid;
+      white-space: nowrap;
+    }
+    .pill-mock { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.3); color: #fca5a5; }
+    .pill-partial { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.3); color: #fcd34d; }
+    .pill-real { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.3); color: #86efac; }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: calc(100vh - 52px); }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 240px; min-width: 240px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      padding: 20px 0;
+      position: sticky; top: 52px;
+      height: calc(100vh - 52px);
+      overflow-y: auto;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .sb-section { padding: 6px 16px 2px; font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-top: 8px; }
+    .sb-link {
+      display: block; padding: 6px 20px;
+      font-size: 12px; color: var(--text2);
+      text-decoration: none; border-left: 2px solid transparent;
+      transition: all .15s;
+    }
+    .sb-link:hover, .sb-link.active { color: var(--accent2); border-left-color: var(--accent); background: rgba(99,102,241,.06); }
+
+    /* ── Main content ── */
+    .main { flex: 1; padding: 40px 48px; max-width: 1100px; overflow-x: hidden; }
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { padding: 24px 20px; }
+    }
+
+    /* ── Headers ── */
+    .doc-title {
+      font-size: 28px; font-weight: 800; color: #fff;
+      background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.25; margin-bottom: 8px;
+    }
+    .doc-subtitle { font-size: 14px; color: var(--text2); margin-bottom: 32px; }
+    .doc-meta {
+      display: flex; flex-wrap: wrap; gap: 20px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px;
+      margin-bottom: 40px;
+    }
+    .doc-meta-item { font-size: 12px; }
+    .doc-meta-label { color: var(--text3); margin-right: 6px; }
+    .doc-meta-value { color: var(--text); font-weight: 600; }
+
+    h2 {
+      font-size: 18px; font-weight: 700; color: #fff;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px; margin: 48px 0 20px;
+      scroll-margin-top: 72px;
+    }
+    h2 .sec-num { color: var(--accent2); margin-right: 8px; font-size: 13px; }
+    h3 {
+      font-size: 14px; font-weight: 700; color: var(--text);
+      margin: 28px 0 12px; scroll-margin-top: 72px;
+    }
+    h3::before { content: '▸ '; color: var(--accent2); }
+
+    p { margin-bottom: 12px; color: var(--text2); }
+    strong { color: var(--text); font-weight: 600; }
+
+    /* ── Alert boxes ── */
+    .alert {
+      padding: 14px 18px; border-radius: var(--radius);
+      border: 1px solid; margin: 16px 0; font-size: 13px;
+    }
+    .alert-red    { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: #fca5a5; }
+    .alert-yellow { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.25); color: #fcd34d; }
+    .alert-green  { background: rgba(34,197,94,.08);  border-color: rgba(34,197,94,.25);  color: #86efac; }
+    .alert-blue   { background: rgba(99,102,241,.08); border-color: rgba(99,102,241,.25); color: #a5b4fc; }
+    .alert-title  { font-weight: 700; margin-bottom: 4px; }
+
+    /* ── Status badges ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 700; padding: 2px 8px;
+      border-radius: 99px; border: 1px solid; white-space: nowrap;
+    }
+    .b-impl    { background: rgba(34,197,94,.1);  border-color: rgba(34,197,94,.3);  color: #86efac; }
+    .b-partial { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.3); color: #fcd34d; }
+    .b-ui      { background: rgba(99,102,241,.1); border-color: rgba(99,102,241,.3); color: #a5b4fc; }
+    .b-no      { background: rgba(239,68,68,.1);  border-color: rgba(239,68,68,.3);  color: #fca5a5; }
+    .b-risk    { background: rgba(249,115,22,.1); border-color: rgba(249,115,22,.3); color: #fdba74; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; margin: 16px 0; border-radius: var(--radius); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead { background: var(--bg3); }
+    th {
+      padding: 10px 12px; text-align: left;
+      font-size: 10px; font-weight: 700; color: var(--text3);
+      text-transform: uppercase; letter-spacing: .06em;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 9px 12px; border-bottom: 1px solid rgba(46,51,71,.5);
+      color: var(--text2); vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(99,102,241,.04); }
+    td.cell-name { color: var(--text); font-weight: 500; font-size: 12px; }
+    td code { font-family: var(--mono); font-size: 11px; background: var(--bg3); padding: 1px 5px; border-radius: 4px; color: #c4b5fd; }
+
+    /* ── Code blocks ── */
+    pre {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px;
+      overflow-x: auto; margin: 12px 0;
+      font-family: var(--mono); font-size: 12px; line-height: 1.6;
+      color: #e2e8f0;
+    }
+    code { font-family: var(--mono); font-size: 12px; color: #c4b5fd; }
+
+    /* ── Section cards ── */
+    .card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 22px;
+      margin: 12px 0;
+    }
+    .card-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+
+    /* ── KPI row ── */
+    .kpi-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+    .kpi {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 18px;
+      flex: 1; min-width: 140px;
+    }
+    .kpi-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    .kpi-value { font-size: 22px; font-weight: 800; color: #fff; }
+    .kpi-note  { font-size: 10px; color: var(--text3); margin-top: 2px; }
+    .kpi-green .kpi-value { color: var(--green); }
+    .kpi-yellow .kpi-value { color: var(--yellow); }
+    .kpi-red   .kpi-value { color: var(--red); }
+    .kpi-blue  .kpi-value { color: var(--accent2); }
+
+    /* ── Summary boxes ── */
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+    @media (max-width: 700px) { .summary-grid { grid-template-columns: 1fr; } }
+    .summary-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px;
+    }
+    .summary-card-title { font-size: 11px; font-weight: 700; color: var(--accent2); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; }
+    .summary-card ul { list-style: none; padding: 0; }
+    .summary-card li { font-size: 12px; color: var(--text2); padding: 3px 0; padding-left: 16px; position: relative; }
+    .summary-card li::before { content: '•'; color: var(--accent2); position: absolute; left: 4px; }
+
+    /* ── Top-5 lists ── */
+    .top5-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+    @media (max-width: 700px) { .top5-grid { grid-template-columns: 1fr; } }
+    .top5-card {
+      border-radius: var(--radius); padding: 18px 20px; border: 1px solid;
+    }
+    .top5-real  { background: rgba(34,197,94,.06);  border-color: rgba(34,197,94,.2); }
+    .top5-show  { background: rgba(245,158,11,.06); border-color: rgba(245,158,11,.2); }
+    .top5-title { font-size: 12px; font-weight: 700; margin-bottom: 12px; }
+    .top5-real  .top5-title { color: #86efac; }
+    .top5-show  .top5-title { color: #fcd34d; }
+    .top5-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+    .top5-num  { font-size: 18px; font-weight: 800; line-height: 1; min-width: 24px; }
+    .top5-real .top5-num  { color: rgba(34,197,94,.4); }
+    .top5-show .top5-num  { color: rgba(245,158,11,.4); }
+    .top5-text strong { font-size: 12px; display: block; color: var(--text); }
+    .top5-text span   { font-size: 11px; color: var(--text3); }
+
+    /* ── Risk items ── */
+    .risk-item {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-left: 3px solid var(--orange);
+      border-radius: var(--radius); padding: 14px 18px; margin: 10px 0;
+    }
+    .risk-title { font-size: 13px; font-weight: 700; color: var(--orange); margin-bottom: 4px; }
+    .risk-body { font-size: 12px; color: var(--text2); }
+
+    /* ── Verdict ── */
+    .verdict {
+      background: linear-gradient(135deg, rgba(99,102,241,.1), rgba(167,139,250,.08));
+      border: 1px solid rgba(99,102,241,.3);
+      border-radius: var(--radius); padding: 24px 28px; margin: 20px 0;
+    }
+    .verdict-label { font-size: 10px; font-weight: 700; color: var(--accent2); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; }
+    .verdict-text { font-size: 15px; font-weight: 600; color: #fff; line-height: 1.5; }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid var(--border);
+      margin-top: 64px; padding: 24px 0;
+      font-size: 11px; color: var(--text3); text-align: center;
+    }
+
+    /* ── TOC progress ── */
+    #toc-progress {
+      position: fixed; top: 52px; left: 0; right: 0;
+      height: 2px; background: transparent; z-index: 99;
+    }
+    #toc-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #6366f1, #a78bfa);
+      transition: width .1s;
+    }
+
+    /* ── Print ── */
+    @media print {
+      .topbar, .sidebar, #toc-progress { display: none; }
+      .main { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="toc-progress"><div id="toc-bar"></div></div>
+
+<!-- Top bar -->
+<div class="topbar">
+  <span class="topbar-title">AI Orchestrator · Current-State Master Document</span>
+  <span class="topbar-date">Assessment date: 2026-03-10</span>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-pills">
+    <span class="pill pill-mock">⚠ AI: Mock Mode</span>
+    <span class="pill pill-partial">🟡 DB: Partial</span>
+    <span class="pill pill-real">✅ Auth: Real</span>
+    <span class="pill pill-partial">🟡 Admin: Partial</span>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sb-section">Overview</div>
+  <a class="sb-link" href="#s1">1. Purpose</a>
+  <a class="sb-link" href="#s2">2. Materials</a>
+  <a class="sb-link" href="#s3">3. Product Summary</a>
+  <a class="sb-link" href="#s4">4. Overall Status</a>
+
+  <div class="sb-section">Implementation</div>
+  <a class="sb-link" href="#s5">5. Completed</a>
+  <a class="sb-link" href="#s6">6. Partial</a>
+  <a class="sb-link" href="#s7">7. Missing</a>
+
+  <div class="sb-section">Screens</div>
+  <a class="sb-link" href="#s8">8. User Screens</a>
+  <a class="sb-link" href="#s9">9. Admin Panel</a>
+
+  <div class="sb-section">Deep Dive</div>
+  <a class="sb-link" href="#s10">10. AI / Orchestration</a>
+  <a class="sb-link" href="#s11">11. Data / Persistence</a>
+  <a class="sb-link" href="#s12">12. Security</a>
+  <a class="sb-link" href="#s13">13. Visualization</a>
+  <a class="sb-link" href="#s14">14. Technical Reality</a>
+
+  <div class="sb-section">Assessment</div>
+  <a class="sb-link" href="#s15">15. Real vs Show</a>
+  <a class="sb-link" href="#s16">16. Evidence</a>
+  <a class="sb-link" href="#s17">17. Risks</a>
+  <a class="sb-link" href="#s18">18. SaaS Requirements</a>
+  <a class="sb-link" href="#s19">19. Final Verdict</a>
+  <a class="sb-link" href="#s20">20. Summaries</a>
+</nav>
+
+<!-- Main -->
+<main class="main" id="main-content">
+
+  <div class="doc-title">AI Orchestrator<br>Current-State Master Document</div>
+  <div class="doc-subtitle">냉정하고 실무적인 현재 상태 평가 — 미래 계획 없음, 마케팅 문구 없음</div>
+
+  <div class="doc-meta">
+    <div class="doc-meta-item"><span class="doc-meta-label">Document Type</span><span class="doc-meta-value">Current-State Assessment Only</span></div>
+    <div class="doc-meta-item"><span class="doc-meta-label">Date</span><span class="doc-meta-value">2026-03-10</span></div>
+    <div class="doc-meta-item"><span class="doc-meta-label">Scope</span><span class="doc-meta-value">ai-orchestrator subdirectory</span></div>
+    <div class="doc-meta-item"><span class="doc-meta-label">Live URL</span><span class="doc-meta-value">Port 3000 sandbox</span></div>
+    <div class="doc-meta-item"><span class="doc-meta-label">Runtime</span><span class="doc-meta-value">Node.js 20 · Express · SQLite · Socket.IO</span></div>
+  </div>
+
+  <!-- Legend -->
+  <div class="card">
+    <div class="card-title">Classification Legend</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+      <span class="badge b-impl">✅ Implemented</span><span style="font-size:12px;color:var(--text2);align-self:center;">Verified functional by live test or code path</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+      <span class="badge b-partial">🟡 Partial</span><span style="font-size:12px;color:var(--text2);align-self:center;">Code exists but key components missing, stubbed, or mock-dependent</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+      <span class="badge b-ui">🔶 UI Only</span><span style="font-size:12px;color:var(--text2);align-self:center;">Visible in browser; no verified backend execution</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+      <span class="badge b-no">❌ Not Verified</span><span style="font-size:12px;color:var(--text2);align-self:center;">Absent or unconfirmed by any evidence reviewed</span>
+    </div>
+  </div>
+
+  <!-- ══════════ S1 ══════════ -->
+  <h2 id="s1"><span class="sec-num">1</span>Document Purpose</h2>
+  <p>This document describes the <strong>actual, verified state</strong> of the AI Orchestrator product as of the assessment date. It does not describe plans, roadmaps, or aspirational capabilities. Every claim is backed by direct code inspection, live API responses, or database queries conducted during this session.</p>
+
+  <!-- ══════════ S2 ══════════ -->
+  <h2 id="s2"><span class="sec-num">2</span>Materials Reviewed</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Material</th><th>How Reviewed</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td class="cell-name">Live service URL</td><td>Playwright console capture, curl from sandbox</td></tr>
+        <tr><td>2</td><td class="cell-name"><code>src/server.js</code> (3,216 lines)</td><td>grep, sed, direct read</td></tr>
+        <tr><td>3</td><td class="cell-name"><code>src/services/aiConnector.js</code></td><td>Full read, grep</td></tr>
+        <tr><td>4</td><td class="cell-name"><code>src/services/modelRegistry.js</code></td><td>Full read</td></tr>
+        <tr><td>5</td><td class="cell-name"><code>src/services/costTracker.js</code></td><td>Partial read</td></tr>
+        <tr><td>6</td><td class="cell-name"><code>src/routes/admin.js</code> (753 lines)</td><td>Full read, curl test</td></tr>
+        <tr><td>7</td><td class="cell-name"><code>src/orchestrator/*.js</code> (9 files, ~3,000 lines)</td><td>Stub-count grep, imports check</td></tr>
+        <tr><td>8</td><td class="cell-name"><code>src/pipelines/pipelineManager.js</code></td><td>Full read</td></tr>
+        <tr><td>9</td><td class="cell-name"><code>src/pipelines/multimodalPipeline.js</code></td><td>Grep, imports check</td></tr>
+        <tr><td>10</td><td class="cell-name"><code>src/pipelines/visionPipeline.js</code></td><td>callVisionAPI check</td></tr>
+        <tr><td>11</td><td class="cell-name"><code>src/pipelines/marketingPipeline.js</code></td><td>callLLM check</td></tr>
+        <tr><td>12</td><td class="cell-name"><code>src/db/database.js</code></td><td>Schema grep, PRAGMA table_info query</td></tr>
+        <tr><td>13</td><td class="cell-name"><code>data/benchmark.json</code></td><td>Direct read</td></tr>
+        <tr><td>14</td><td class="cell-name"><code>data/orchestrator.db</code></td><td>Live better-sqlite3 query</td></tr>
+        <tr><td>15</td><td class="cell-name"><code>public/admin.html</code> (~1,600 lines)</td><td>Grep, JS syntax check</td></tr>
+        <tr><td>16</td><td class="cell-name">Live API calls</td><td>curl with valid admin JWT</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════ S3 ══════════ -->
+  <h2 id="s3"><span class="sec-num">3</span>Current Product Summary</h2>
+
+  <div class="alert alert-red">
+    <div class="alert-title">⚠️ Critical — Current AI Status</div>
+    The active OpenAI key is returning <code>401 Incorrect API key provided</code>. <strong>All LLM calls currently fall back to <code>_mockResponse()</code></strong>. This was confirmed by live API test: <code>"provider":"mock","isMock":true</code>. No real AI inference is occurring in the current deployment.
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi kpi-green"><div class="kpi-label">UI Completeness</div><div class="kpi-value">High</div><div class="kpi-note">Professional, multi-page, consistent</div></div>
+    <div class="kpi kpi-yellow"><div class="kpi-label">Server Infrastructure</div><div class="kpi-value">Solid</div><div class="kpi-note">Express + JWT + SQLite + Socket.IO</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Real AI Execution</div><div class="kpi-value">0%</div><div class="kpi-note">All calls → mock fallback</div></div>
+    <div class="kpi kpi-yellow"><div class="kpi-label">DB Persistence</div><div class="kpi-value">Partial</div><div class="kpi-note">Schema real; config in-memory only</div></div>
+    <div class="kpi kpi-yellow"><div class="kpi-label">Security</div><div class="kpi-value">Partial</div><div class="kpi-note">JWT+helmet+rate-limit; no tenant</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Jobs Processed</div><div class="kpi-value">0</div><div class="kpi-note">jobs table empty in SQLite</div></div>
+  </div>
+
+  <p>In plain terms: the server starts, the UI renders, auth works, admin routes are protected — but <strong>no real AI inference is currently executing</strong>. All LLM results visible in the UI are mock/placeholder text.</p>
+
+  <!-- ══════════ S4 ══════════ -->
+  <h2 id="s4"><span class="sec-num">4</span>Overall Status Summary</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Dimension</th><th>Status</th><th>Assessment</th></tr></thead>
+      <tbody>
+        <tr><td class="cell-name">UI completeness</td><td><span class="badge b-impl">✅ High</span></td><td>Professional, multi-page, consistent design</td></tr>
+        <tr><td class="cell-name">Server infrastructure</td><td><span class="badge b-impl">✅ Real</span></td><td>Express, JWT, SQLite, Socket.IO all wired</td></tr>
+        <tr><td class="cell-name">Real AI execution</td><td><span class="badge b-no">❌ None</span></td><td>OpenAI key invalid → mock fallback active</td></tr>
+        <tr><td class="cell-name">DB persistence</td><td><span class="badge b-partial">🟡 Partial</span></td><td>Schema exists; critical config is in-memory only</td></tr>
+        <tr><td class="cell-name">Security</td><td><span class="badge b-partial">🟡 Partial</span></td><td>JWT, helmet, rate-limit implemented; no tenant isolation</td></tr>
+        <tr><td class="cell-name">Orchestration logic</td><td><span class="badge b-ui">🔶 Unverified</span></td><td>Code exists; not reachable via real AI calls</td></tr>
+        <tr><td class="cell-name">Admin panel</td><td><span class="badge b-partial">🟡 Partial</span></td><td>UI complete; some endpoints functional; monitoring limited</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════ S5 ══════════ -->
+  <h2 id="s5"><span class="sec-num">5</span>Completed Areas <span class="badge b-impl">✅ Verified</span></h2>
+
+  <h3>5.1 Authentication &amp; Session</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Item</th><th>Status</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /api/auth/register</code></td><td><span class="badge b-impl">✅</span></td><td>Creates user, BCrypt hash, stores to SQLite</td></tr>
+      <tr><td><code>POST /api/auth/login</code></td><td><span class="badge b-impl">✅</span></td><td>Validates password, issues JWT (24h)</td></tr>
+      <tr><td>JWT verification middleware</td><td><span class="badge b-impl">✅</span></td><td><code>security.requireAuth</code> applied to admin router</td></tr>
+      <tr><td><code>requireRole('admin')</code></td><td><span class="badge b-impl">✅</span></td><td>Enforced on all <code>/api/admin/*</code> routes</td></tr>
+      <tr><td>Unauth request → 401</td><td><span class="badge b-impl">✅</span></td><td>Live test confirmed: <code>{"error":"Authentication required"}</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.2 Admin Route Protection</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Item</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>All admin routes behind auth + role + rate-limit</td><td><span class="badge b-impl">✅</span></td><td>3-layer: requireAuth + requireRole('admin') + authLimiter</td></tr>
+      <tr><td>Admin audit log → SQLite</td><td><span class="badge b-impl">✅</span></td><td>Active writes confirmed in this session</td></tr>
+      <tr><td>Global rate limiter (300 req/min)</td><td><span class="badge b-impl">✅</span></td><td>Applied at <code>app.use</code> level</td></tr>
+      <tr><td>authLimiter on login/register</td><td><span class="badge b-impl">✅</span></td><td>Confirmed in <code>server.js</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.3 Provider API Key Management</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Endpoint</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /api/admin/apiconfig</code></td><td><span class="badge b-impl">✅</span></td><td>Returns providers with masked keys</td></tr>
+      <tr><td><code>POST /api/admin/apiconfig</code></td><td><span class="badge b-impl">✅</span></td><td>Stores to runtime <code>_apiConfigStore</code> (in-memory)</td></tr>
+      <tr><td><code>DELETE /api/admin/apiconfig/:provider</code></td><td><span class="badge b-impl">✅</span></td><td>Removes provider</td></tr>
+      <tr><td>Connection test with detailed errors</td><td><span class="badge b-impl">✅</span></td><td>9 providers, Korean error messages, xAI CF-block detection</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="alert alert-yellow">
+    <div class="alert-title">⚠ Persistence Caveat</div>
+    All registered API keys exist in process memory only. Server restart silently loses all registered keys.
+  </div>
+
+  <h3>5.4 Model Whitelist (In-Memory)</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Endpoint</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /api/admin/models/whitelist</code></td><td><span class="badge b-impl">✅</span></td><td>Returns 33 models with enabled/budget state</td></tr>
+      <tr><td><code>PATCH /api/admin/models/:id/toggle</code></td><td><span class="badge b-impl">✅</span></td><td>Toggles in runtime store</td></tr>
+      <tr><td><code>PATCH /api/admin/models/:id/budget</code></td><td><span class="badge b-impl">✅</span></td><td>Sets monthly budget cap (in-memory)</td></tr>
+      <tr><td><code>PUT /api/admin/models/priority</code></td><td><span class="badge b-impl">✅</span></td><td>Sets 6 task-type priorities (in-memory)</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ══════════ S6 ══════════ -->
+  <h2 id="s6"><span class="sec-num">6</span>Partially Implemented Areas <span class="badge b-partial">🟡 Partial</span></h2>
+
+  <h3>6.1 AI API Integration</h3>
+  <p><code>aiConnector.js</code> supports 11 providers by architecture (OpenAI-compatible SDK with <code>baseURL</code> swapping) and Anthropic via official SDK. <code>callLLM()</code>, <code>callStructured()</code>, <code>callVision()</code>, <code>getEmbedding()</code>, <code>transcribeAudio()</code> all have real code paths.</p>
+  <div class="alert alert-red">
+    <div class="alert-title">⚠️ Live Test Result</div>
+    Direct call to <code>POST /api/ai/chat</code> returned: <code>"provider":"mock","isMock":true,"content":"✅ AI 분석 완료 (Mock 모드)"</code>. Vision endpoint returns <code>401 Incorrect API key</code>. <strong>Zero real inference confirmed.</strong>
+  </div>
+
+  <h3>6.2 Cost Tracking</h3>
+  <p><code>costTracker.js</code> has real pricing tables and a <code>record()</code> function. 62 cost records exist in SQLite.</p>
+  <div class="alert alert-yellow">
+    <div class="alert-title">⚠ Data Provenance Warning</div>
+    All 62 cost records share only <strong>5 distinct timestamps</strong> (clustered at exact minutes). This strongly suggests they were created via <code>POST /api/admin/seed</code> or <code>POST /api/cost/record</code> test endpoint — <strong>not from real pipeline executions</strong>. The jobs table has 0 rows, consistent with no real pipeline runs.
+  </div>
+
+  <h3>6.3 Pipeline Execution</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Finding</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /api/pipelines/run</code> route exists</td><td><span class="badge b-partial">🟡</span></td></tr>
+      <tr><td>11 pipeline modules registered in pipelineManager</td><td><span class="badge b-partial">🟡</span></td></tr>
+      <tr><td><code>marketingPipeline.js</code> does NOT import <code>aiConnector</code></td><td><span class="badge b-no">❌</span></td></tr>
+      <tr><td><code>visionPipeline.js</code> — real API call is commented out, returns stub</td><td><span class="badge b-no">❌</span></td></tr>
+      <tr><td><code>/api/pipelines/run</code> with <code>pipeline:"marketing"</code> → "알 수 없는 파이프라인"</td><td><span class="badge b-no">❌</span></td></tr>
+      <tr><td><code>multimodalPipeline.js</code> correctly imports and calls <code>aiConnector</code></td><td><span class="badge b-partial">🟡 Best case</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>6.4 Benchmark Persistence</h3>
+  <p><code>modelBenchmark.js</code> writes to <code>data/benchmark.json</code> via <code>fs.writeFileSync()</code>. The file contains <strong>2 execution records</strong> (ppt pipeline, scores 88 and 91). Whether these entries were generated by real LLM executions or test scaffolding is <strong>not verified</strong>.</p>
+
+  <h3>6.5 Memory Engine</h3>
+  <p><code>memoryEngine.js</code> writes episodic/semantic memory to JSON files. Code for <code>saveEpisode()</code> exists. Whether it is actually called during pipeline execution in the current server instance is <strong>not verified</strong>.</p>
+
+  <h3>6.6 Job Queue</h3>
+  <p><code>jobQueue.js</code> is an <strong>in-memory implementation</strong> (<code>new Map()</code>). <code>bullmq</code> and <code>ioredis</code> are in <code>package.json</code> but are <strong>not used</strong> in the current implementation. The jobs table in SQLite has <strong>0 rows</strong>.</p>
+
+  <!-- ══════════ S7 ══════════ -->
+  <h2 id="s7"><span class="sec-num">7</span>Unimplemented / Missing Areas <span class="badge b-no">❌</span></h2>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Missing Item</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">Real AI execution (current)</td><td>All calls → mock (isMock: true confirmed by live test)</td></tr>
+      <tr><td class="cell-name">Tenant / workspace isolation</td><td>No tenant_id, org_id, or workspace_id in any DB table</td></tr>
+      <tr><td class="cell-name">Redis / BullMQ</td><td>In package.json but not instantiated</td></tr>
+      <tr><td class="cell-name">STT (Whisper)</td><td>Returns <code>"[Whisper 연동 준비 완료 - 파일 스트림 필요]"</code></td></tr>
+      <tr><td class="cell-name">Email delivery</td><td><code>live: false</code>, no SMTP configured</td></tr>
+      <tr><td class="cell-name">Notification (Slack/SMS/GitHub)</td><td><code>live: false</code>, no webhook tokens</td></tr>
+      <tr><td class="cell-name">3D / Spatial / Formula OCR / Churn ML</td><td>All 5 advanced pipelines: <code>live: false</code></td></tr>
+      <tr><td class="cell-name">Pipeline builder execution</td><td>Named pipelines from UI builder return "알 수 없는 파이프라인"</td></tr>
+      <tr><td class="cell-name">API key / whitelist / priority persistence</td><td>In-memory only; resets on every server restart</td></tr>
+      <tr><td class="cell-name">Auto-learning / EMA from real executions</td><td>Data fields exist; no verified live update path</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ══════════ S8 ══════════ -->
+  <h2 id="s8"><span class="sec-num">8</span>User-Facing Screen Status</h2>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Screen / Element</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">8.1 Main Homepage</td></tr>
+      <tr><td>Page loads and renders</td><td><span class="badge b-impl">✅</span></td><td>~11s load via sandbox proxy</td></tr>
+      <tr><td>Navigation tabs</td><td><span class="badge b-ui">🔶 UI only</span></td><td>Tabs switch views; no backend dependency</td></tr>
+      <tr><td>"최적 모델 조합" hero messaging</td><td><span class="badge b-ui">🔶 UI only</span></td><td>Marketing copy; combo logic not executing</td></tr>
+      <tr><td>ComboOptimizer tab</td><td><span class="badge b-ui">🔶 UI only</span></td><td>Backend not verified</td></tr>
+      <tr><td>WebSocket real-time metrics feed</td><td><span class="badge b-no">❌</span></td><td>wss://…/metrics returns 502 via proxy</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">8.2 Dashboard</td></tr>
+      <tr><td>Dashboard renders</td><td><span class="badge b-impl">✅</span></td><td>Visible in browser</td></tr>
+      <tr><td>Cost bar chart</td><td><span class="badge b-partial">🟡</span></td><td>Chart.js present; populated from seeded cost data</td></tr>
+      <tr><td>Pipeline execution counts</td><td><span class="badge b-ui">🔶 UI only</span></td><td>jobs table = 0 rows</td></tr>
+      <tr><td>Real-time metrics</td><td><span class="badge b-no">❌</span></td><td>WebSocket feed unreachable</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">8.3 Task Creation</td></tr>
+      <tr><td>Task submission form</td><td><span class="badge b-ui">🔶 UI only</span></td><td>Form renders; execution → mock output</td></tr>
+      <tr><td>Pipeline selection</td><td><span class="badge b-partial">🟡</span></td><td>GET /api/pipelines returns real metadata</td></tr>
+      <tr><td>Strategy selector</td><td><span class="badge b-ui">🔶 UI only</span></td><td>Strategies defined; all resolve to mock</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">8.4 Result Screen</td></tr>
+      <tr><td>Result display</td><td><span class="badge b-partial">🟡</span></td><td>Returns mock text with "Mock 모드" label</td></tr>
+      <tr><td>Result saved to DB</td><td><span class="badge b-no">❌</span></td><td>jobs table empty; no save path confirmed</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">8.5 Model Screens</td></tr>
+      <tr><td>Model list display</td><td><span class="badge b-ui">🔶 UI only</span></td><td>MODEL_REGISTRY (33 models) rendered</td></tr>
+      <tr><td>Model availability</td><td><span class="badge b-ui">🔶 UI only</span></td><td>Derived from static registry, not live API</td></tr>
+      <tr><td>Benchmark ranking</td><td><span class="badge b-ui">🔶 UI only</span></td><td>2 entries in JSON; UI display not confirmed</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">8.6 Orchestration Screens</td></tr>
+      <tr><td>Combo optimizer UI</td><td><span class="badge b-ui">🔶 UI only</span></td><td>Backend not verified</td></tr>
+      <tr><td>Pipeline builder (visual)</td><td><span class="badge b-partial">🟡</span></td><td>Nodes/edges saveable to DB; execution broken</td></tr>
+      <tr><td>Dynamic plan visualization</td><td><span class="badge b-ui">🔶 UI only</span></td><td>dynamicPlanner.js exists; no live execution</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">8.7 History / Memory</td></tr>
+      <tr><td>Task history list</td><td><span class="badge b-ui">🔶 UI only</span></td><td>jobs table = 0 rows</td></tr>
+      <tr><td>Memory / context panel</td><td><span class="badge b-ui">🔶 UI only</span></td><td>memoryEngine.js exists; write path not confirmed</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">8.8 Usage / Cost Screen</td></tr>
+      <tr><td>Cost totals</td><td><span class="badge b-partial">🟡</span></td><td>62 records in SQLite; API returns them</td></tr>
+      <tr><td>Cost by pipeline chart</td><td><span class="badge b-partial">🟡</span></td><td>API functional; data likely seeded</td></tr>
+      <tr><td>Real-time usage</td><td><span class="badge b-no">❌</span></td><td>WebSocket feed unavailable</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ══════════ S9 ══════════ -->
+  <h2 id="s9"><span class="sec-num">9</span>Admin / Backoffice Status</h2>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Area</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">9.1 Admin Dashboard</td></tr>
+      <tr><td>Admin panel loads (auth required)</td><td><span class="badge b-impl">✅</span></td><td>Accessible at /admin; login enforced</td></tr>
+      <tr><td>Stats summary</td><td><span class="badge b-partial">🟡</span></td><td>Returns from DB; job counts = 0</td></tr>
+      <tr><td>System info (memory, uptime)</td><td><span class="badge b-impl">✅</span></td><td>Returns OS memory, uptime, Node version</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">9.2 User Management</td></tr>
+      <tr><td>User list (3 users in DB)</td><td><span class="badge b-impl">✅</span></td><td>Returned correctly from SQLite</td></tr>
+      <tr><td>Role change, user delete</td><td><span class="badge b-impl">✅</span></td><td>Routes implemented; self-delete blocked</td></tr>
+      <tr><td>Workspace / Org separation</td><td><span class="badge b-no">❌</span></td><td>No tenant model in any DB schema</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">9.3 Job Monitoring</td></tr>
+      <tr><td>Job list UI</td><td><span class="badge b-ui">🔶 UI only</span></td><td>0 rows in jobs table</td></tr>
+      <tr><td>Job status tracking schema</td><td><span class="badge b-partial">🟡</span></td><td>Schema exists; no data to display</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">9.4 Model Registry</td></tr>
+      <tr><td>33-model whitelist display + toggle</td><td><span class="badge b-impl">✅</span></td><td>In-memory; lost on restart</td></tr>
+      <tr><td>Per-model budget cap</td><td><span class="badge b-impl">✅</span></td><td>In-memory; lost on restart</td></tr>
+      <tr><td>Persistence across restart</td><td><span class="badge b-no">❌</span></td><td>In-memory only</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">9.5 Routing / Combo / Benchmark</td></tr>
+      <tr><td>Task priority config endpoint</td><td><span class="badge b-impl">✅</span></td><td>PUT /api/admin/models/priority wired</td></tr>
+      <tr><td>Combo optimizer panel</td><td><span class="badge b-ui">🔶 UI only</span></td><td>Backend execution not verified</td></tr>
+      <tr><td>Benchmark leaderboard</td><td><span class="badge b-ui">🔶 UI only</span></td><td>2 entries in JSON; UI display not confirmed</td></tr>
+      <tr><td>Win-rate / EMA display</td><td><span class="badge b-ui">🔶 UI only</span></td><td>Fields exist; no live update path</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">9.6 Usage / Cost</td></tr>
+      <tr><td>Cost totals API</td><td><span class="badge b-partial">🟡</span></td><td>Returns DB data; data likely seeded</td></tr>
+      <tr><td>Budget alert</td><td><span class="badge b-ui">🔶 UI only</span></td><td>Logic in costTracker.js; not wired to real data</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">9.7 Logs / Audit</td></tr>
+      <tr><td>Audit log (active)</td><td><span class="badge b-impl">✅</span></td><td>Active writes confirmed this session</td></tr>
+      <tr><td>Application / error logs</td><td><span class="badge b-no">❌ Not verified</span></td><td>winston in deps; no log files observed</td></tr>
+
+      <tr><td colspan="3" style="background:var(--bg3);font-weight:700;font-size:11px;color:var(--text3);text-transform:uppercase;">9.8 Settings</td></tr>
+      <tr><td>API key registration / test / delete</td><td><span class="badge b-impl">✅</span></td><td>All working; in-memory</td></tr>
+      <tr><td>Seed data endpoint</td><td><span class="badge b-impl">✅</span></td><td>POST /api/admin/seed functional</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ══════════ S10 ══════════ -->
+  <h2 id="s10"><span class="sec-num">10</span>AI / Orchestration State</h2>
+
+  <div class="alert alert-blue">
+    <div class="alert-title">Important Distinction</div>
+    All of the following describes <strong>code that exists in the repository</strong>. Due to the currently invalid OpenAI API key, none of the AI execution paths have been verified as producing real output.
+  </div>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Component</th><th>Lines</th><th>Code Exists</th><th>Connected to Real AI</th><th>Verified E2E</th></tr></thead>
+    <tbody>
+      <tr><td><code>masterOrchestrator.js</code></td><td>812</td><td><span class="badge b-impl">✅</span></td><td><span class="badge b-no">❌ No direct callLLM found</span></td><td><span class="badge b-no">❌</span></td></tr>
+      <tr><td><code>dynamicOrchestrator.js</code></td><td>718</td><td><span class="badge b-impl">✅</span></td><td><span class="badge b-no">❌ Not verified</span></td><td><span class="badge b-no">❌</span></td></tr>
+      <tr><td><code>comboOptimizer.js</code></td><td>395</td><td><span class="badge b-impl">✅</span></td><td><span class="badge b-no">❌ Requires external injectBenchmark()</span></td><td><span class="badge b-no">❌</span></td></tr>
+      <tr><td><code>dynamicPlanner.js</code></td><td>232</td><td><span class="badge b-impl">✅</span></td><td><span class="badge b-no">❌ Not verified</span></td><td><span class="badge b-no">❌</span></td></tr>
+      <tr><td><code>feedbackLoop.js</code></td><td>158</td><td><span class="badge b-impl">✅</span></td><td><span class="badge b-no">❌ Not verified</span></td><td><span class="badge b-no">❌</span></td></tr>
+      <tr><td><code>parallelExecutor.js</code></td><td>186</td><td><span class="badge b-impl">✅</span></td><td><span class="badge b-no">❌ Not verified</span></td><td><span class="badge b-no">❌</span></td></tr>
+      <tr><td><code>modelBenchmark.js</code></td><td>329</td><td><span class="badge b-impl">✅</span></td><td><span class="badge b-partial">🟡 Writes to JSON</span></td><td><span class="badge b-partial">🟡 2 entries (origin uncertain)</span></td></tr>
+      <tr><td><code>multimodalPipeline.js</code></td><td>~150</td><td><span class="badge b-impl">✅</span></td><td><span class="badge b-partial">🟡 Best case — imports aiConnector</span></td><td><span class="badge b-no">❌ Key invalid</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ══════════ S11 ══════════ -->
+  <h2 id="s11"><span class="sec-num">11</span>Data / Persistence State</h2>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Data Type</th><th>Schema</th><th>Data Present</th><th>Provenance</th><th>Survives Restart</th></tr></thead>
+    <tbody>
+      <tr><td class="cell-name">Users</td><td><span class="badge b-impl">✅</span></td><td>3 rows</td><td>Real (via registration)</td><td><span class="badge b-impl">✅ SQLite</span></td></tr>
+      <tr><td class="cell-name">Jobs</td><td><span class="badge b-impl">✅</span></td><td><strong style="color:var(--red)">0 rows</strong></td><td>None</td><td><span class="badge b-impl">✅ SQLite</span></td></tr>
+      <tr><td class="cell-name">Costs</td><td><span class="badge b-impl">✅</span></td><td>62 rows</td><td><strong style="color:var(--yellow)">Likely seeded</strong> (5 timestamp clusters)</td><td><span class="badge b-impl">✅ SQLite</span></td></tr>
+      <tr><td class="cell-name">Pipelines</td><td><span class="badge b-impl">✅</span></td><td>4 rows</td><td>Admin test</td><td><span class="badge b-impl">✅ SQLite</span></td></tr>
+      <tr><td class="cell-name">Audit logs</td><td><span class="badge b-impl">✅</span></td><td>Active</td><td>Real (written this session)</td><td><span class="badge b-impl">✅ SQLite</span></td></tr>
+      <tr><td class="cell-name">Model whitelist</td><td><span class="badge b-no">❌ No table</span></td><td>In-memory</td><td>Runtime default</td><td><span class="badge b-no">❌ Resets</span></td></tr>
+      <tr><td class="cell-name">API key config</td><td><span class="badge b-no">❌ No table</span></td><td>In-memory</td><td>Runtime entered</td><td><span class="badge b-no">❌ Resets</span></td></tr>
+      <tr><td class="cell-name">Task results</td><td><span class="badge b-no">❌</span></td><td>None</td><td>N/A</td><td>N/A</td></tr>
+      <tr><td class="cell-name">Benchmark scores</td><td>File-based JSON</td><td>2 entries</td><td>Uncertain</td><td><span class="badge b-partial">🟡 File-based</span></td></tr>
+      <tr><td class="cell-name">Memory (episodic)</td><td>File-based JSON</td><td>Unknown</td><td>Unknown</td><td><span class="badge b-partial">🟡 File-based</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="alert alert-red">
+    <div class="alert-title">Critical Persistence Gap</div>
+    The three most operationally important admin configurations — <strong>API keys, model whitelist, and model priority</strong> — all live exclusively in process memory. Any server restart silently resets all operator configuration with no warning.
+  </div>
+
+  <!-- ══════════ S12 ══════════ -->
+  <h2 id="s12"><span class="sec-num">12</span>Security / Operational Readiness</h2>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Control</th><th>Status</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>JWT authentication</td><td><span class="badge b-impl">✅</span></td><td>Login issues JWT; admin routes verify token</td></tr>
+      <tr><td>Admin role enforcement</td><td><span class="badge b-impl">✅</span></td><td>requireRole('admin') applied; tested live (401 confirmed)</td></tr>
+      <tr><td>Rate limiting (global + auth)</td><td><span class="badge b-impl">✅</span></td><td>globalLimiter at app.use; authLimiter on auth routes</td></tr>
+      <tr><td>Helmet (HTTP headers)</td><td><span class="badge b-impl">✅</span></td><td>Applied at app.use level</td></tr>
+      <tr><td>Audit trail</td><td><span class="badge b-impl">✅</span></td><td>Admin actions → audit_logs in SQLite</td></tr>
+      <tr><td>CORS</td><td><span class="badge b-partial">🟡</span></td><td>Configured with sandbox/localhost allowlist; ALLOWED_ORIGINS env not set</td></tr>
+      <tr><td>Tenant / workspace separation</td><td><span class="badge b-no">❌</span></td><td>No org/tenant model in any DB table</td></tr>
+      <tr><td>JWT secret</td><td><span class="badge b-risk">⚠ Risk</span></td><td>Defaults to hardcoded string if env not set</td></tr>
+      <tr><td>Input validation</td><td><span class="badge b-partial">🟡</span></td><td>Basic checks only; no Zod/Joi schema validation</td></tr>
+      <tr><td>Production safety</td><td><span class="badge b-no">❌ Not ready</span></td><td>No env-secret enforcement, no tenant, mock fallback silently active</td></tr>
+      <tr><td>Retry controls</td><td><span class="badge b-partial">🟡</span></td><td>callLLM() has retry param; tested with mock only</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ══════════ S13 ══════════ -->
+  <h2 id="s13"><span class="sec-num">13</span>Visualization / Metrics State</h2>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Visual Element</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Chart.js library (205KB)</td><td><span class="badge b-impl">✅ Present</span></td><td>Bundled in public/js/</td></tr>
+      <tr><td>Bar chart (cost by pipeline)</td><td><span class="badge b-partial">🟡 Partially populated</span></td><td>62 cost records; likely seeded data</td></tr>
+      <tr><td>Pipeline execution count chart</td><td><span class="badge b-ui">🔶 Mostly placeholder</span></td><td>0 jobs in DB</td></tr>
+      <tr><td>Real-time metrics dashboard</td><td><span class="badge b-no">❌ Not verified</span></td><td>WebSocket 502 via proxy</td></tr>
+      <tr><td>Benchmark ranking visualization</td><td><span class="badge b-no">❌ Not verified</span></td><td>2 entries in JSON; UI display not confirmed</td></tr>
+      <tr><td>Model win-rate display</td><td><span class="badge b-no">❌ Not verified</span></td><td>Fields exist; live display not confirmed</td></tr>
+      <tr><td>Cost trend (daily/monthly)</td><td><span class="badge b-partial">🟡 Partially populated</span></td><td>DB queries work; 5 timestamp clusters</td></tr>
+      <tr><td>Queue / task metrics</td><td><span class="badge b-ui">🔶 Placeholder</span></td><td>0 jobs processed</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ══════════ S14 ══════════ -->
+  <h2 id="s14"><span class="sec-num">14</span>Technical Reality Assessment</h2>
+
+  <div class="verdict">
+    <div class="verdict-label">Accurate Characterization</div>
+    <div class="verdict-text">Strong UI prototype with real server infrastructure, operating in <strong>mock mode</strong> due to an invalid API key, with partial database persistence and <strong>no verified end-to-end AI execution</strong>.</div>
+  </div>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Dimension</th><th>Honest Assessment</th></tr></thead>
+    <tbody>
+      <tr><td>Express + SQLite + JWT + Socket.IO skeleton</td><td>Real and non-trivial</td></tr>
+      <tr><td>Admin panel architecture</td><td>More complete than typical prototypes</td></tr>
+      <tr><td>Pipeline module library (11 pipelines, 426 cases)</td><td>Serious design work; largely stub-ready, not production-active</td></tr>
+      <tr><td>Orchestration layer (9 files, ~3,000 lines)</td><td>Most ambitious; least verified — no E2E execution confirmed</td></tr>
+      <tr><td>Persistence</td><td>Largest gap — critical config lost on every restart</td></tr>
+      <tr><td>Overall label</td><td><strong>Credible technical demo, not launch-ready SaaS</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ══════════ S15 ══════════ -->
+  <h2 id="s15"><span class="sec-num">15</span>What Is Real vs. What Is Demonstrative</h2>
+
+  <div class="tbl-wrap"><table>
+    <thead>
+      <tr>
+        <th>Area</th>
+        <th>Visible in UI</th>
+        <th>✅ Verified</th>
+        <th>🟡 Partial</th>
+        <th>🔶 UI/Placeholder</th>
+        <th>❌ Not Verified</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Authentication (JWT)</td><td>✅</td><td>✅</td><td></td><td></td><td></td><td>Login → token → protected routes confirmed</td></tr>
+      <tr><td>Admin route protection</td><td>✅</td><td>✅</td><td></td><td></td><td></td><td>401 on unauth access confirmed</td></tr>
+      <tr><td>Audit logging</td><td>✅</td><td>✅</td><td></td><td></td><td></td><td>Active writes confirmed this session</td></tr>
+      <tr><td>User management</td><td>✅</td><td>✅</td><td></td><td></td><td></td><td>Create, list, role-change working</td></tr>
+      <tr><td>API key registration</td><td>✅</td><td>✅</td><td></td><td></td><td></td><td>In-memory — lost on restart</td></tr>
+      <tr><td>Connection test (9 providers)</td><td>✅</td><td>✅</td><td></td><td></td><td></td><td>Detailed error messages working</td></tr>
+      <tr><td>Model whitelist toggle</td><td>✅</td><td>✅</td><td></td><td></td><td></td><td>In-memory — lost on restart</td></tr>
+      <tr><td>Rate limiting</td><td>—</td><td>✅</td><td></td><td></td><td></td><td>Applied at Express level</td></tr>
+      <tr><td>Real LLM text inference</td><td>✅</td><td></td><td></td><td>🔶</td><td></td><td>All calls → mock (isMock:true confirmed)</td></tr>
+      <tr><td>Real vision/multimodal</td><td>✅</td><td></td><td></td><td>🔶</td><td></td><td>401 on every real call</td></tr>
+      <tr><td>Pipeline execution (Phase 1–2)</td><td>✅</td><td></td><td>🟡</td><td></td><td></td><td>Routes exist; real AI output not verified</td></tr>
+      <tr><td>Cost tracking</td><td>✅</td><td></td><td>🟡</td><td></td><td></td><td>Data in DB; provenance uncertain</td></tr>
+      <tr><td>Job queue (BullMQ)</td><td>✅</td><td></td><td></td><td>🔶</td><td></td><td>In-memory Map; BullMQ not instantiated</td></tr>
+      <tr><td>MasterOrchestrator</td><td>✅</td><td></td><td></td><td>🔶</td><td></td><td>No confirmed callLLM invocation</td></tr>
+      <tr><td>ComboOptimizer</td><td>✅</td><td></td><td></td><td>🔶</td><td></td><td>Requires external benchmark injection</td></tr>
+      <tr><td>Benchmark accumulation</td><td>✅</td><td></td><td>🟡</td><td></td><td></td><td>2 entries; provenance unverified</td></tr>
+      <tr><td>EMA / win-rate learning</td><td>✅</td><td></td><td></td><td>🔶</td><td></td><td>Data fields exist; no live update</td></tr>
+      <tr><td>Real-time WebSocket metrics</td><td>✅</td><td></td><td></td><td>🔶</td><td></td><td>502 via proxy</td></tr>
+      <tr><td>Tenant / workspace separation</td><td>—</td><td></td><td></td><td></td><td>❌</td><td>Not implemented anywhere</td></tr>
+      <tr><td>Config persistence (restart)</td><td>✅</td><td></td><td></td><td>🔶</td><td></td><td>In-memory only</td></tr>
+      <tr><td>STT (Whisper)</td><td>✅</td><td></td><td></td><td>🔶</td><td></td><td>Stub: "파일 스트림 필요"</td></tr>
+      <tr><td>Email / Notification delivery</td><td>✅</td><td></td><td></td><td>🔶</td><td></td><td>live: false, missing env vars</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ══════════ S16 ══════════ -->
+  <h2 id="s16"><span class="sec-num">16</span>Evidence Interpretation by Source Type</h2>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-card-title">Service URL proves</div>
+      <ul>
+        <li>Server starts and serves HTTP</li>
+        <li>Auth flow works (login → token → admin panel)</li>
+        <li>WebSocket partially broken via proxy (502)</li>
+        <li>~11s load time via sandbox</li>
+      </ul>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-title">Code proves</div>
+      <ul>
+        <li>Express/JWT/SQLite skeleton is real</li>
+        <li>multimodalPipeline.js correctly calls aiConnector</li>
+        <li>Most other pipelines return JS objects without LLM</li>
+        <li>visionPipeline.js explicitly stubs its real API call</li>
+        <li>masterOrchestrator.js does not import aiConnector directly</li>
+      </ul>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-title">Feature list proves</div>
+      <ul>
+        <li>Significant design and planning work</li>
+        <li>Ambitious scope (11 domains, 9 providers)</li>
+        <li>Does NOT prove features execute E2E with real AI</li>
+      </ul>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-title">Where evidence is weakest</div>
+      <ul>
+        <li>E2E: request → real AI → result stored → displayed (zero instances)</li>
+        <li>Orchestration layer activation during any real user action</li>
+        <li>Cost data: likely seeded, not from real inference</li>
+        <li>Benchmark data: 2 entries of uncertain origin</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════ S17 ══════════ -->
+  <h2 id="s17"><span class="sec-num">17</span>Key Risks</h2>
+
+  <div class="risk-item">
+    <div class="risk-title">Risk 1 — UI Significantly Ahead of Backend</div>
+    <div class="risk-body">The frontend presents a fully capable AI orchestration platform. The backend falls back to mock responses for all AI calls. A user interacting with the live product may not realize they are receiving mock output.</div>
+  </div>
+  <div class="risk-item">
+    <div class="risk-title">Risk 2 — Critical Config Lost on Restart</div>
+    <div class="risk-body">API keys, model whitelist, and task priority are all in-memory. Any server restart, crash, or scaling event silently resets all operator configuration with no warning to the user.</div>
+  </div>
+  <div class="risk-item">
+    <div class="risk-title">Risk 3 — Cost Data Is Not From Real Usage</div>
+    <div class="risk-body">62 cost records appear to be seeded/test data (5 timestamp clusters, no corresponding job records). Cost dashboards may give a false impression of operational billing history.</div>
+  </div>
+  <div class="risk-item">
+    <div class="risk-title">Risk 4 — Orchestration Architecture Not Verified as Active</div>
+    <div class="risk-body">MasterOrchestrator, ComboOptimizer, DynamicPlanner (3,000+ lines) are code artifacts. No evidence was found that they are called during a normal user task execution flow.</div>
+  </div>
+  <div class="risk-item">
+    <div class="risk-title">Risk 5 — Homepage Exposes Internal Architecture</div>
+    <div class="risk-body">The homepage explicitly names "ComboOptimizer," "모델 조합," and "자동 선택" in primary navigation. This exposes implementation architecture before the capability is actually operational.</div>
+  </div>
+  <div class="risk-item">
+    <div class="risk-title">Risk 6 — Single-Provider Dependency, Currently Zero Functional</div>
+    <div class="risk-body">The operator uses only OpenAI via proxy. The current key is returning 401. Zero functional AI providers are active in the current deployment.</div>
+  </div>
+  <div class="risk-item">
+    <div class="risk-title">Risk 7 — No Production Safety Net</div>
+    <div class="risk-body">Default JWT secret is hardcoded. No env-var enforcement prevents insecure deployment. Mock fallback is silently active with no user-visible indicator.</div>
+  </div>
+
+  <!-- ══════════ S18 ══════════ -->
+  <h2 id="s18"><span class="sec-num">18</span>Minimum Requirements Before Calling This a Real SaaS</h2>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>#</th><th>Requirement</th><th>Current State</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td class="cell-name">A working AI API key</td><td>❌ All calls → mock; this is the #1 fix</td></tr>
+      <tr><td>2</td><td class="cell-name">Persistent configuration storage</td><td>❌ API keys, whitelist, priority reset on restart</td></tr>
+      <tr><td>3</td><td class="cell-name">Verified E2E execution path</td><td>❌ Not one confirmed instance</td></tr>
+      <tr><td>4</td><td class="cell-name">Jobs table with real rows</td><td>❌ 0 rows</td></tr>
+      <tr><td>5</td><td class="cell-name">Tenant / user data scoping</td><td>❌ Not implemented</td></tr>
+      <tr><td>6</td><td class="cell-name">Hardened JWT secret (no hardcoded fallback)</td><td>⚠ Defaults to hardcoded string</td></tr>
+      <tr><td>7</td><td class="cell-name">Explicit mock mode indicator to users</td><td>⚠ Mock fallback silently active</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ══════════ S19 ══════════ -->
+  <h2 id="s19"><span class="sec-num">19</span>Final Verdict</h2>
+
+  <div class="verdict">
+    <div class="verdict-label">Current Level</div>
+    <div class="verdict-text">Advanced UI prototype with real server infrastructure, operating in mock mode</div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-card-title" style="color:#86efac;">What Is Impressive</div>
+      <ul>
+        <li>Scope and consistency of frontend design</li>
+        <li>Admin panel auth architecture (JWT + role + rate-limit + audit) is production-quality</li>
+        <li>aiConnector.js multi-provider routing design is well-structured</li>
+        <li>11 pipeline modules documenting 426 use cases — serious domain analysis</li>
+        <li>API key connection testing with per-provider Korean error diagnostics is polished</li>
+      </ul>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-title" style="color:#fca5a5;">What Is Weak</div>
+      <ul>
+        <li>Zero real AI inference occurring today</li>
+        <li>3 critical operational settings reset on every server restart</li>
+        <li>Job table empty — no task execution history exists</li>
+        <li>Cost data is seeded, not from real usage</li>
+        <li>Orchestration layer has no confirmed active execution path</li>
+      </ul>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-title" style="color:#fcd34d;">What Is Unverified</div>
+      <ul>
+        <li>Whether masterOrchestrator is ever called by a user action</li>
+        <li>Whether comboOptimizer influences model selection in practice</li>
+        <li>Whether benchmark scores accumulate from real executions</li>
+        <li>Whether memory engine writes data during pipeline runs</li>
+        <li>Whether WebSocket metrics deliver any meaningful data</li>
+      </ul>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-title" style="color:#a5b4fc;">What Must Be Proven Next</div>
+      <ul>
+        <li>A real API key that produces non-mock responses</li>
+        <li>One complete task: request → real LLM → cost record → DB job entry → UI display</li>
+        <li>Server restart after configuration → configuration persists</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════ S20 ══════════ -->
+  <h2 id="s20"><span class="sec-num">20</span>Summaries</h2>
+
+  <h3>Founder Summary</h3>
+  <p>The product has a compelling concept, a professional UI, and a working server scaffold. The core value proposition — intelligent multi-model orchestration — exists as working code structure but is <strong>not operationally verified</strong>. The immediate ceiling is a broken API key, not a missing feature. With a working key and 2–3 weeks of persistence work, this could become a genuinely demonstrable system.</p>
+
+  <h3>Product Team Summary</h3>
+  <p>The feature surface area is large and well-designed. However, the gap between what the UI presents and what the backend delivers is significant. Three high-priority quick fixes would dramatically change the product's credibility: <strong>(1) a valid API key, (2) DB persistence for admin config, (3) confirmed E2E execution of at least one pipeline.</strong> Until these are done, demos should explicitly acknowledge mock mode.</p>
+
+  <h3>Engineering Summary</h3>
+  <p>The codebase is large (3,216-line server, 9-file orchestration layer, 11 pipelines) but has structural debt. Key issues: in-memory-only config that rebuilds on every restart; orchestration layer whose connection to HTTP execution path is unclear; benchmark system with 2 entries of uncertain provenance; <code>visionPipeline.js</code> with its real API call explicitly commented out. The <code>multimodalPipeline.js → aiConnector.callVision()</code> path is the cleanest and should be used as the reference for fixing other pipelines.</p>
+
+  <!-- Top 5 -->
+  <div class="top5-grid">
+    <div class="top5-card top5-real">
+      <div class="top5-title">✅ Top 5 Items Actually Real Today</div>
+      <div class="top5-item"><div class="top5-num">1</div><div class="top5-text"><strong>JWT-Guarded Admin Panel</strong><span>Auth, role enforcement, rate limiting, and audit logging all confirmed working by live test</span></div></div>
+      <div class="top5-item"><div class="top5-num">2</div><div class="top5-text"><strong>API Key Registration &amp; Connection Testing</strong><span>9 providers, detailed per-provider Korean error messages, working admin API</span></div></div>
+      <div class="top5-item"><div class="top5-num">3</div><div class="top5-text"><strong>Model Whitelist Management</strong><span>33-model toggle and budget system works (in-memory)</span></div></div>
+      <div class="top5-item"><div class="top5-num">4</div><div class="top5-text"><strong>SQLite Persistence for Users, Pipelines, Audit Logs</strong><span>Schema real, data active, audit writes confirmed this session</span></div></div>
+      <div class="top5-item"><div class="top5-num">5</div><div class="top5-text"><strong>Multi-Provider aiConnector Architecture</strong><span>Real code structure ready to function the moment a valid API key is present</span></div></div>
+    </div>
+    <div class="top5-card top5-show">
+      <div class="top5-title">⚠ Top 5 Impressive But Not Yet Proven</div>
+      <div class="top5-item"><div class="top5-num">1</div><div class="top5-text"><strong>MasterOrchestrator / Dynamic Planning / Combo Optimization</strong><span>3,000+ lines of sophisticated code with no confirmed active execution path</span></div></div>
+      <div class="top5-item"><div class="top5-num">2</div><div class="top5-text"><strong>Real-Time AI Cost Tracking</strong><span>Cost dashboard populated with seeded data, not real inference billing</span></div></div>
+      <div class="top5-item"><div class="top5-num">3</div><div class="top5-text"><strong>Model Benchmark &amp; Win-Rate Auto-Learning</strong><span>benchmark.json has 2 entries of uncertain origin; no confirmed accumulation</span></div></div>
+      <div class="top5-item"><div class="top5-num">4</div><div class="top5-text"><strong>11-Pipeline Library with 426 Use Cases</strong><span>Most pipelines are stubReady, not live; several return JS objects without LLM calls</span></div></div>
+      <div class="top5-item"><div class="top5-num">5</div><div class="top5-text"><strong>ComboOptimizer "Auto-Selects Best Model Combination"</strong><span>Primary nav item; homepage hero copy; requires external benchmark injection; no confirmed activation path</span></div></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    AI Orchestrator · Current-State Master Document · Assessment date 2026-03-10 · For internal use only
+  </div>
+
+</main>
+</div>
+
+<script>
+  // Scroll progress bar
+  window.addEventListener('scroll', () => {
+    const doc = document.documentElement;
+    const scrolled = doc.scrollTop;
+    const total = doc.scrollHeight - doc.clientHeight;
+    document.getElementById('toc-bar').style.width = (scrolled / total * 100) + '%';
+  });
+
+  // Active sidebar link
+  const sections = document.querySelectorAll('h2[id]');
+  const links = document.querySelectorAll('.sb-link');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = '#' + e.target.id;
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === id));
+      }
+    });
+  }, { rootMargin: '-52px 0px -60% 0px' });
+  sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>

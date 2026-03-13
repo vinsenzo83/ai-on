@@ -1,0 +1,348 @@
+{
+  "generated_at": "2026-03-10T12:31:07.288Z",
+  "system_state": {
+    "task_types": 41,
+    "combo_roles": 38,
+    "known_combos": 68,
+    "task_pipelines": 39,
+    "question_templates": 40,
+    "new_roles_added": 8,
+    "new_task_types_added": 9,
+    "new_combos_added": 10,
+    "new_pipelines_added": 9
+  },
+  "testcase_coverage": {
+    "total_cases": 1005,
+    "ready_to_run": 571,
+    "needs_api": 433,
+    "external_only": 1,
+    "ready_rate": "57%",
+    "api_needed_rate": "43%",
+    "external_rate": "0%"
+  },
+  "domain_breakdown": {
+    "ecommerce": 125,
+    "marketing": 120,
+    "b2b": 100,
+    "it": 120,
+    "legal_hr": 100,
+    "edu_med": 80,
+    "creative": 80,
+    "data_ai": 80,
+    "real_estate": 50,
+    "finance_invest": 50,
+    "healthcare": 50,
+    "government": 50
+  },
+  "complexity_breakdown": {
+    "low": 37,
+    "medium": 490,
+    "high": 414,
+    "extreme": 64
+  },
+  "top_roles_usage": [
+    [
+      "analyst",
+      388
+    ],
+    [
+      "writer",
+      351
+    ],
+    [
+      "researcher",
+      246
+    ],
+    [
+      "data_scientist",
+      220
+    ],
+    [
+      "coder",
+      209
+    ],
+    [
+      "automation_engineer",
+      189
+    ],
+    [
+      "financial_analyst",
+      171
+    ],
+    [
+      "legal_expert",
+      135
+    ],
+    [
+      "designer",
+      134
+    ],
+    [
+      "copywriter",
+      94
+    ],
+    [
+      "planner",
+      91
+    ],
+    [
+      "reviewer",
+      85
+    ],
+    [
+      "illustrator",
+      83
+    ],
+    [
+      "strategist",
+      80
+    ],
+    [
+      "medical_writer",
+      77
+    ]
+  ],
+  "priority_api_integrations": [
+    {
+      "rank": 1,
+      "api": "WHISPER_STT",
+      "cases_unlocked": 45,
+      "effort_days": 1,
+      "roi_score": 95,
+      "reason": "의료/B2B/마케팅 음성처리 케이스 즉시 활성화"
+    },
+    {
+      "rank": 2,
+      "api": "IMAGE_GENERATION",
+      "cases_unlocked": 76,
+      "effort_days": 2,
+      "roi_score": 92,
+      "reason": "마케팅/이커머스 이미지 자동생성 - 최다 케이스 커버"
+    },
+    {
+      "rank": 3,
+      "api": "GPT4V_VISION",
+      "cases_unlocked": 34,
+      "effort_days": 1,
+      "roi_score": 90,
+      "reason": "OCR/명함/화면분석 즉시 활성화 - 기존 모델 활용"
+    },
+    {
+      "rank": 4,
+      "api": "EMAIL_API",
+      "cases_unlocked": 30,
+      "effort_days": 1,
+      "roi_score": 88,
+      "reason": "B2B/마케팅 이메일 자동화 파이프라인 완성"
+    },
+    {
+      "rank": 5,
+      "api": "PUPPETEER_CRAWLER",
+      "cases_unlocked": 45,
+      "effort_days": 2,
+      "roi_score": 85,
+      "reason": "이커머스 가격모니터링/마케팅 트렌드 분석"
+    },
+    {
+      "rank": 6,
+      "api": "SLACK_API",
+      "cases_unlocked": 27,
+      "effort_days": 1,
+      "roi_score": 83,
+      "reason": "알림 자동화 - 모니터링/가격변동/보고서 배포"
+    },
+    {
+      "rank": 7,
+      "api": "SMS_API",
+      "cases_unlocked": 26,
+      "effort_days": 1,
+      "roi_score": 80,
+      "reason": "이커머스 CRM - 쿠폰/배송알림 자동화"
+    },
+    {
+      "rank": 8,
+      "api": "PDF_RAG",
+      "cases_unlocked": 40,
+      "effort_days": 3,
+      "roi_score": 78,
+      "reason": "법률/B2B 문서 분석 - RAG 기반 정확도 향상"
+    },
+    {
+      "rank": 9,
+      "api": "GITHUB_API",
+      "cases_unlocked": 24,
+      "effort_days": 2,
+      "roi_score": 75,
+      "reason": "IT/개발 자동화 - PR/코드리뷰 파이프라인"
+    },
+    {
+      "rank": 10,
+      "api": "ELEVENLABS_TTS",
+      "cases_unlocked": 15,
+      "effort_days": 1,
+      "roi_score": 70,
+      "reason": "마케팅 영상 성우, 팟캐스트 자동 제작"
+    }
+  ],
+  "missing_tech_roadmap": [
+    {
+      "tech": "상품페이지_스크래퍼",
+      "solution": "Puppeteer + AI 파싱",
+      "adapter": "PUPPETEER_CRAWLER",
+      "timeline": "1주"
+    },
+    {
+      "tech": "가격비교_크롤러",
+      "solution": "Puppeteer + 스케줄러",
+      "adapter": "PUPPETEER_CRAWLER",
+      "timeline": "1주"
+    },
+    {
+      "tech": "기업조사_API",
+      "solution": "LinkedIn API + Puppeteer",
+      "adapter": "PUPPETEER_CRAWLER",
+      "timeline": "2주"
+    },
+    {
+      "tech": "이탈예측_모델",
+      "solution": "ML 파이프라인 + 시계열 분석",
+      "adapter": null,
+      "timeline": "3주"
+    },
+    {
+      "tech": "급여계산_모듈",
+      "solution": "세금 계산 로직 + PDF 생성",
+      "adapter": "PDF_RAG",
+      "timeline": "1주"
+    },
+    {
+      "tech": "특허DB_API",
+      "solution": "KIPRIS API 연동",
+      "adapter": null,
+      "timeline": "2주"
+    },
+    {
+      "tech": "수식인식_OCR",
+      "solution": "GPT-4V + LaTeX 파싱",
+      "adapter": "GPT4V_VISION",
+      "timeline": "1주"
+    },
+    {
+      "tech": "3D렌더링_API",
+      "solution": "Three.js + WebGL (웹 3D)",
+      "adapter": null,
+      "timeline": "4주"
+    },
+    {
+      "tech": "캐릭터일관성_AI",
+      "solution": "Image Gen + 레퍼런스 이미지",
+      "adapter": "IMAGE_GENERATION",
+      "timeline": "2주"
+    },
+    {
+      "tech": "AR_렌더링",
+      "solution": "WebXR + AR.js",
+      "adapter": null,
+      "timeline": "4주"
+    },
+    {
+      "tech": "공간인식_AI",
+      "solution": "외부 전용 (ControlNet)",
+      "adapter": null,
+      "timeline": "외부서비스"
+    },
+    {
+      "tech": "AI영상생성",
+      "solution": "Sora API (출시 예정)",
+      "adapter": null,
+      "timeline": "미정"
+    },
+    {
+      "tech": "AI작곡_API",
+      "solution": "MusicGen + Suno API",
+      "adapter": null,
+      "timeline": "2주"
+    },
+    {
+      "tech": "NER_파이프라인",
+      "solution": "GPT-5 프롬프트 + JSON 파싱",
+      "adapter": "GPT4V_VISION",
+      "timeline": "3일"
+    },
+    {
+      "tech": "이상탐지_ML",
+      "solution": "Isolation Forest + 실시간 스트림",
+      "adapter": null,
+      "timeline": "3주"
+    }
+  ],
+  "new_additions": {
+    "roles": [
+      "ocr_specialist",
+      "stt_engineer",
+      "ml_engineer",
+      "security_expert",
+      "ux_researcher",
+      "video_editor",
+      "db_architect",
+      "compliance_officer"
+    ],
+    "task_types": [
+      "OCR",
+      "STT",
+      "SECURITY",
+      "DB_DESIGN",
+      "COMPLIANCE",
+      "ML_PIPELINE",
+      "WEB_SCRAPING",
+      "REALTIME",
+      "VIDEO_EDIT"
+    ],
+    "combos": [
+      "ocr_standard",
+      "stt_standard",
+      "security_standard",
+      "security_premium",
+      "db_standard",
+      "compliance_standard",
+      "ml_standard",
+      "scraping_standard",
+      "realtime_standard",
+      "video_edit_standard"
+    ]
+  },
+  "implementation_roadmap": [
+    {
+      "week": 1,
+      "tasks": [
+        "Whisper STT API 연동",
+        "GPT-4V Vision 파이프라인",
+        "Email API (SendGrid)"
+      ]
+    },
+    {
+      "week": 2,
+      "tasks": [
+        "Image Generation 파이프라인",
+        "Puppeteer 크롤러",
+        "Slack 알림 연동"
+      ]
+    },
+    {
+      "week": 3,
+      "tasks": [
+        "PDF RAG 파이프라인",
+        "GitHub API 자동화",
+        "SMS API 연동"
+      ]
+    },
+    {
+      "week": 4,
+      "tasks": [
+        "ElevenLabs TTS",
+        "CRM API 연동",
+        "대시보드 UI 업데이트"
+      ]
+    }
+  ]
+}

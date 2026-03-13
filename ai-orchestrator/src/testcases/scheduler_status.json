@@ -1,0 +1,11 @@
+{
+  "lastRunAt": "2026-03-11T03:20:15.167Z",
+  "totalCycles": 4,
+  "totalCasesAdded": 200,
+  "lastResult": {
+    "cycleId": "cycle_2026-03-11T03-20-15-046Z",
+    "success": true,
+    "added": 50,
+    "durationMs": 120
+  }
+}

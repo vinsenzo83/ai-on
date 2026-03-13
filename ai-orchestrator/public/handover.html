@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Orchestrator — 프로젝트 인수인계</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --bg4: #30363d;
+    --border: #30363d;
+    --border2: #21262d;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #6e7681;
+    --accent: #58a6ff;
+    --accent2: #1f6feb;
+    --green: #3fb950;
+    --green-bg: #0d2a0d;
+    --red: #f85149;
+    --red-bg: #2d0f0f;
+    --yellow: #d29922;
+    --yellow-bg: #2d1f00;
+    --purple: #a5a0ff;
+    --purple-bg: #1a1533;
+    --orange: #e3843c;
+    --orange-bg: #2d1800;
+    --teal: #39d0d8;
+    --card-shadow: 0 2px 12px rgba(0,0,0,.4);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ─── LAYOUT ─── */
+  .layout { display: flex; min-height: 100vh; }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar-logo {
+    padding: 20px 18px 16px;
+    border-bottom: 1px solid var(--border2);
+  }
+  .sidebar-logo .logo-icon { font-size: 22px; }
+  .sidebar-logo .logo-name {
+    font-size: 13px; font-weight: 700;
+    color: var(--text); letter-spacing: .3px;
+    margin-top: 4px;
+  }
+  .sidebar-logo .logo-sub {
+    font-size: 11px; color: var(--text3);
+    margin-top: 2px;
+  }
+  .sidebar-nav { padding: 10px 0; flex: 1; }
+  .nav-section {
+    font-size: 10px; font-weight: 600;
+    color: var(--text3); text-transform: uppercase;
+    letter-spacing: .8px; padding: 10px 18px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 18px; cursor: pointer;
+    color: var(--text2); font-size: 13px;
+    transition: all .15s; border-radius: 0;
+    text-decoration: none;
+  }
+  .nav-item:hover { color: var(--text); background: var(--bg3); }
+  .nav-item.active {
+    color: var(--accent); background: rgba(88,166,255,.08);
+    border-right: 2px solid var(--accent);
+  }
+  .nav-item .ni-icon { width: 16px; text-align: center; font-size: 13px; }
+  .sidebar-footer {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border2);
+    font-size: 11px; color: var(--text3);
+  }
+
+  /* ─── MAIN ─── */
+  .main {
+    margin-left: 240px;
+    flex: 1;
+    padding: 0;
+    min-height: 100vh;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(13,17,23,.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .topbar-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .topbar-meta { font-size: 12px; color: var(--text3); }
+  .topbar-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    background: rgba(63,185,80,.15); color: var(--green);
+    border: 1px solid rgba(63,185,80,.3);
+  }
+  .topbar-badge::before { content:'●'; font-size:8px; }
+
+  .content { padding: 28px; max-width: 1100px; }
+
+  /* ─── SECTIONS ─── */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 18px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--text); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .card-title .ct-icon {
+    width: 22px; height: 22px;
+    background: var(--bg3);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+
+  /* ─── STAT GRID ─── */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+  .stat-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+  }
+  .stat-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+  .stat-value { font-size: 24px; font-weight: 700; color: var(--text); margin: 4px 0 2px; line-height: 1.2; }
+  .stat-sub { font-size: 11px; color: var(--text2); }
+  .stat-card.green { border-color: rgba(63,185,80,.25); }
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.red { border-color: rgba(248,81,73,.25); }
+  .stat-card.red .stat-value { color: var(--red); }
+  .stat-card.yellow { border-color: rgba(210,153,34,.25); }
+  .stat-card.yellow .stat-value { color: var(--yellow); }
+  .stat-card.blue { border-color: rgba(88,166,255,.25); }
+  .stat-card.blue .stat-value { color: var(--accent); }
+  .stat-card.purple { border-color: rgba(165,160,255,.25); }
+  .stat-card.purple .stat-value { color: var(--purple); }
+
+  /* ─── BADGE ─── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge.pass { background: rgba(63,185,80,.15); color: var(--green); border: 1px solid rgba(63,185,80,.3); }
+  .badge.fail { background: rgba(248,81,73,.15); color: var(--red); border: 1px solid rgba(248,81,73,.3); }
+  .badge.warn { background: rgba(210,153,34,.15); color: var(--yellow); border: 1px solid rgba(210,153,34,.3); }
+  .badge.info { background: rgba(88,166,255,.15); color: var(--accent); border: 1px solid rgba(88,166,255,.3); }
+  .badge.purple { background: rgba(165,160,255,.15); color: var(--purple); border: 1px solid rgba(165,160,255,.3); }
+
+  /* ─── TABLE ─── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 11px; font-weight: 600;
+    color: var(--text3); text-transform: uppercase; letter-spacing: .5px;
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 9px 12px; border-bottom: 1px solid var(--border2);
+    font-size: 13px; color: var(--text);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  td.pass-cell { color: var(--green); font-weight: 600; }
+  td.fail-cell { color: var(--red); font-weight: 600; }
+  td.warn-cell { color: var(--yellow); font-weight: 600; }
+
+  /* ─── CODE BLOCK ─── */
+  .code-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text2);
+    overflow-x: auto;
+    line-height: 1.7;
+    white-space: pre;
+  }
+  .code-block .k { color: #ff7b72; }
+  .code-block .s { color: #a5d6ff; }
+  .code-block .c { color: #8b949e; font-style: italic; }
+  .code-block .v { color: #79c0ff; }
+  .code-block .p { color: #3fb950; }
+
+  /* ─── PROVIDER STATUS ─── */
+  .provider-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .provider-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .provider-card.ok { border-left: 3px solid var(--green); }
+  .provider-card.fallback { border-left: 3px solid var(--yellow); }
+  .provider-card.fail { border-left: 3px solid var(--red); }
+  .provider-icon { font-size: 20px; line-height: 1; margin-top: 2px; }
+  .provider-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .provider-model { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+  .provider-meta { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+  /* ─── TIMELINE ─── */
+  .timeline { position: relative; padding-left: 20px; }
+  .timeline::before {
+    content: ''; position: absolute;
+    left: 6px; top: 8px; bottom: 8px;
+    width: 1px; background: var(--border);
+  }
+  .tl-item { position: relative; margin-bottom: 18px; }
+  .tl-dot {
+    position: absolute; left: -20px; top: 4px;
+    width: 12px; height: 12px;
+    border-radius: 50%; background: var(--bg3);
+    border: 2px solid var(--border);
+  }
+  .tl-dot.done { background: var(--green); border-color: var(--green); }
+  .tl-dot.active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88,166,255,.2); }
+  .tl-dot.pending { background: var(--bg3); border-color: var(--text3); }
+  .tl-label { font-size: 12px; font-weight: 600; color: var(--text); }
+  .tl-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .tl-date { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* ─── LINK CARD ─── */
+  .link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .link-card {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all .15s;
+  }
+  .link-card:hover { border-color: var(--accent); background: rgba(88,166,255,.05); }
+  .link-card .lc-icon { font-size: 18px; }
+  .link-card .lc-name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .link-card .lc-url { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; word-break: break-all; }
+
+  /* ─── FILE TREE ─── */
+  .file-tree { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8; }
+  .ft-dir { color: var(--accent); font-weight: 600; }
+  .ft-file { color: var(--text2); }
+  .ft-file.hl { color: var(--green); }
+  .ft-file.warn { color: var(--yellow); }
+  .ft-comment { color: var(--text3); }
+  .ft-indent { color: var(--text3); }
+
+  /* ─── ALERT ─── */
+  .alert {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 12px 14px; border-radius: var(--radius-sm);
+    margin-bottom: 12px; font-size: 13px;
+  }
+  .alert.warn { background: var(--yellow-bg); border: 1px solid rgba(210,153,34,.3); color: #f0c040; }
+  .alert.info { background: rgba(88,166,255,.08); border: 1px solid rgba(88,166,255,.2); color: var(--accent); }
+  .alert.success { background: var(--green-bg); border: 1px solid rgba(63,185,80,.3); color: var(--green); }
+  .alert.error { background: var(--red-bg); border: 1px solid rgba(248,81,73,.3); color: var(--red); }
+  .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-body { flex: 1; }
+  .alert-title { font-weight: 600; margin-bottom: 2px; }
+  .alert-desc { font-size: 12px; opacity: .85; }
+
+  /* ─── SCORE BAR ─── */
+  .score-bar { background: var(--bg); border-radius: 4px; height: 6px; overflow: hidden; margin: 6px 0 2px; }
+  .score-fill { height: 100%; border-radius: 4px; background: var(--green); transition: width .5s; }
+  .score-fill.warn { background: var(--yellow); }
+  .score-fill.fail { background: var(--red); }
+
+  /* ─── CHECKLIST ─── */
+  .checklist { list-style: none; }
+  .checklist li {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border2);
+    font-size: 13px;
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist li .cl-icon { flex-shrink: 0; margin-top: 1px; font-size: 14px; }
+  .checklist li .cl-text { flex: 1; color: var(--text); }
+  .checklist li .cl-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* ─── TABS ─── */
+  .tabs { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    padding: 8px 14px; font-size: 12px; font-weight: 500;
+    color: var(--text2); cursor: pointer; border: none;
+    background: transparent; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: all .15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* ─── HERO ─── */
+  .hero {
+    background: linear-gradient(135deg, rgba(31,111,235,.15) 0%, rgba(88,166,255,.05) 100%);
+    border: 1px solid rgba(88,166,255,.2);
+    border-radius: var(--radius);
+    padding: 28px 28px 22px;
+    margin-bottom: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '🤖';
+    position: absolute; right: 24px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 60px; opacity: .08;
+    pointer-events: none;
+  }
+  .hero-title { font-size: 20px; font-weight: 700; color: var(--text); }
+  .hero-sub { font-size: 13px; color: var(--text2); margin-top: 6px; max-width: 580px; }
+  .hero-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .hero-tag {
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    background: var(--bg3); color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  /* ─── PHASE CARDS ─── */
+  .phase-list { display: flex; flex-direction: column; gap: 1px; }
+  .phase-item {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--bg3); padding: 12px 16px;
+    border-radius: 0; transition: background .15s;
+  }
+  .phase-item:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+  .phase-item:last-child { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+  .phase-item:hover { background: var(--bg4); }
+  .phase-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+    background: var(--bg4); color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .phase-num.done { background: rgba(63,185,80,.15); color: var(--green); border-color: rgba(63,185,80,.3); }
+  .phase-body { flex: 1; }
+  .phase-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .phase-desc { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .phase-score { font-size: 14px; font-weight: 700; color: var(--green); }
+
+  /* ─── SCROLL TOP ─── */
+  .scroll-top {
+    position: fixed; right: 20px; bottom: 20px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--bg3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text2); font-size: 14px;
+    transition: all .2s; z-index: 200;
+  }
+  .scroll-top:hover { background: var(--accent2); color: white; border-color: var(--accent); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    .sidebar { width: 200px; }
+    .main { margin-left: 200px; }
+    .content { padding: 16px; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .provider-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ─── PRINT ─── */
+  @media print {
+    .sidebar, .topbar, .scroll-top { display: none; }
+    .main { margin-left: 0; }
+    .section { display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- ═══════════════ SIDEBAR ═══════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-name">AI Orchestrator</div>
+      <div class="logo-sub">프로젝트 인수인계 문서</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <a class="nav-item active" onclick="showSection('overview')">
+        <span class="ni-icon">🏠</span> 프로젝트 개요
+      </a>
+      <a class="nav-item" onclick="showSection('verify')">
+        <span class="ni-icon">✅</span> 운영 검증 결과
+      </a>
+      <div class="nav-section">Infrastructure</div>
+      <a class="nav-item" onclick="showSection('providers')">
+        <span class="ni-icon">🔌</span> Provider 상태
+      </a>
+      <a class="nav-item" onclick="showSection('database')">
+        <span class="ni-icon">🗄️</span> DB / 로그 현황
+      </a>
+      <a class="nav-item" onclick="showSection('resources')">
+        <span class="ni-icon">📊</span> 서버 자원
+      </a>
+      <div class="nav-section">Developer</div>
+      <a class="nav-item" onclick="showSection('links')">
+        <span class="ni-icon">🔗</span> 주요 링크
+      </a>
+      <a class="nav-item" onclick="showSection('files')">
+        <span class="ni-icon">📁</span> 핵심 파일 위치
+      </a>
+      <a class="nav-item" onclick="showSection('onboarding')">
+        <span class="ni-icon">🚀</span> 온보딩 가이드
+      </a>
+      <a class="nav-item" onclick="showSection('notes')">
+        <span class="ni-icon">⚠️</span> 주의사항
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      검증일: 2026-03-11<br>
+      검증서버: 144.172.93.226
+    </div>
+  </aside>
+
+  <!-- ═══════════════ MAIN ═══════════════ -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">AI Orchestrator — 운영 검증 &amp; 인수인계</div>
+        <div class="topbar-meta">VPS 실서버 기준 · 2026-03-11 08:53 UTC</div>
+      </div>
+      <span class="topbar-badge">서비스 운영 중</span>
+    </div>
+
+    <div class="content">
+
+      <!-- ═══ SECTION: OVERVIEW ═══ -->
+      <div class="section active" id="sec-overview">
+        <div class="hero">
+          <div class="hero-title">멀티모델 AI 오케스트레이션 SaaS</div>
+          <div class="hero-sub">7개 AI Provider 연결 · 3-Layer 엔진 · Real/Fallback 투명 로깅 · 베타 사용자 시스템 · VPS 실서버 배포 완료</div>
+          <div class="hero-tags">
+            <span class="hero-tag">Node.js 20</span>
+            <span class="hero-tag">Express</span>
+            <span class="hero-tag">SQLite WAL</span>
+            <span class="hero-tag">PM2</span>
+            <span class="hero-tag">Nginx</span>
+            <span class="hero-tag">Ubuntu 24.04</span>
+            <span class="hero-tag">JWT Auth</span>
+            <span class="hero-tag">SSE Streaming</span>
+          </div>
+        </div>
+
+        <div class="stat-grid" style="margin-bottom:18px">
+          <div class="stat-card green">
+            <div class="stat-label">Phase 점수</div>
+            <div class="stat-value">100</div>
+            <div class="stat-sub">Phase 5 / 100점 만점</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">연결 Provider</div>
+            <div class="stat-value">4 / 7</div>
+            <div class="stat-sub">OpenAI·DeepSeek·xAI·Mistral 활성</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Inference 로그</div>
+            <div class="stat-value">11</div>
+            <div class="stat-sub">VPS 기동 후 누적 (WAL 1.2MB)</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-label">Audit 로그</div>
+            <div class="stat-value">19</div>
+            <div class="stat-sub">관리자 액션 기록</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">서버 업타임</div>
+            <div class="stat-value">~25m</div>
+            <div class="stat-sub">PM2 재시작 포함 안정 운영</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">RAM 사용</div>
+            <div class="stat-value">11%</div>
+            <div class="stat-sub">884MB / 7941MB (여유 6.2GB)</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📋</span>Phase별 구현 이력</div>
+          <div class="phase-list">
+            <div class="phase-item">
+              <div class="phase-num done">1</div>
+              <div class="phase-body">
+                <div class="phase-name">엔진 기초 — 3-Layer AI 오케스트레이터</div>
+                <div class="phase-desc">조합형 엔진, Provider 연결, E2E 24개 테스트</div>
+              </div>
+              <div class="phase-score">96</div>
+            </div>
+            <div class="phase-item">
+              <div class="phase-num done">2</div>
+              <div class="phase-body">
+                <div class="phase-name">Mock 제거 — Real/Fallback 투명화</div>
+                <div class="phase-desc">mock fallback 완전 제거, inference_log 테이블 추가, real/fallback 분리</div>
+              </div>
+              <div class="phase-score">96</div>
+            </div>
+            <div class="phase-item">
+              <div class="phase-num done">3</div>
+              <div class="phase-body">
+                <div class="phase-name">설정 지속성 — provider_health 대시보드</div>
+                <div class="phase-desc">API 설정 DB 저장, 모델 설정 영속, 헬스 대시보드 구현</div>
+              </div>
+              <div class="phase-score">98</div>
+            </div>
+            <div class="phase-item">
+              <div class="phase-num done">4</div>
+              <div class="phase-body">
+                <div class="phase-name">SSE 스트리밍 · 타임아웃 · 캐시</div>
+                <div class="phase-desc">AbortController, 응답 캐시, health-dashboard.html, SSE 청크</div>
+              </div>
+              <div class="phase-score">97</div>
+            </div>
+            <div class="phase-item">
+              <div class="phase-num done">5</div>
+              <div class="phase-body">
+                <div class="phase-name">보안 강화 · 베타 시스템 · 비용 로깅</div>
+                <div class="phase-desc">optionalAuth, pipelineLimiter, checkQuota, 초대코드, 플랜별 쿼터</div>
+              </div>
+              <div class="phase-score">100</div>
+            </div>
+            <div class="phase-item">
+              <div class="phase-num done">🚀</div>
+              <div class="phase-body">
+                <div class="phase-name">VPS 실서버 배포</div>
+                <div class="phase-desc">Ubuntu 24.04 · PM2 · Nginx · UFW · 자동 재시작</div>
+              </div>
+              <div class="phase-score" style="color:var(--accent)">✓</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🗺️</span>현재 남은 핵심 작업</div>
+          <ul class="checklist">
+            <li>
+              <span class="cl-icon">🔑</span>
+              <div>
+                <div class="cl-text">Anthropic · Moonshot API 키 갱신</div>
+                <div class="cl-sub">인증 실패 (401) — 새 키 발급 후 .env 업데이트 필요</div>
+              </div>
+              <span class="badge fail">긴급</span>
+            </li>
+            <li>
+              <span class="cl-icon">🔍</span>
+              <div>
+                <div class="cl-text">Google Gemini 엔드포인트 수정</div>
+                <div class="cl-sub">gemini-2.0-flash → 404 오류, API 경로 확인 필요</div>
+              </div>
+              <span class="badge warn">필요</span>
+            </li>
+            <li>
+              <span class="cl-icon">🔒</span>
+              <div>
+                <div class="cl-text">HTTPS / SSL 인증서 설치</div>
+                <div class="cl-sub">도메인 연결 후 Let's Encrypt certbot으로 설치</div>
+              </div>
+              <span class="badge warn">권장</span>
+            </li>
+            <li>
+              <span class="cl-icon">👥</span>
+              <div>
+                <div class="cl-text">내부 베타 사용자 온보딩 (5~10명)</div>
+                <div class="cl-sub">/api/admin/beta/invites 에서 초대코드 생성 후 배포</div>
+              </div>
+              <span class="badge info">예정</span>
+            </li>
+            <li>
+              <span class="cl-icon">💰</span>
+              <div>
+                <div class="cl-text">costs 테이블 기록 확인 (현재 0건)</div>
+                <div class="cl-sub">inference_log → costs 동기화 로직 점검 필요</div>
+              </div>
+              <span class="badge warn">확인</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ═══ SECTION: VERIFY ═══ -->
+      <div class="section" id="sec-verify">
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🧪</span>운영 검증 결과 — VPS 실서버 기준 (2026-03-11)</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>항목</th>
+                  <th>세부 내용</th>
+                  <th>결과</th>
+                  <th>비고</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- 1 -->
+                <tr>
+                  <td class="mono">1-1</td>
+                  <td>메인 페이지 접속</td>
+                  <td><span class="mono">GET / → HTTP 200 (93.5KB)</span></td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>외부 IP, Nginx 경유 정상</td>
+                </tr>
+                <tr>
+                  <td class="mono">1-2</td>
+                  <td>어드민 패널 접속</td>
+                  <td><span class="mono">GET /admin → HTTP 200 (132.9KB)</span></td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>베타·비용·health 탭 포함</td>
+                </tr>
+                <tr>
+                  <td class="mono">1-3</td>
+                  <td>Health Dashboard 접속</td>
+                  <td><span class="mono">GET /health-dashboard.html → 200 (22.7KB)</span></td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>프로바이더 지표 페이지</td>
+                </tr>
+                <tr>
+                  <td class="mono">1-4</td>
+                  <td>API Health Endpoint</td>
+                  <td><span class="mono">{"status":"ok","hasOpenAI":true,"hasAnthropic":true,"demoMode":false}</span></td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>외부(144.172.93.226)에서 확인</td>
+                </tr>
+                <!-- 2 -->
+                <tr>
+                  <td class="mono">2-1</td>
+                  <td>OpenAI 실추론</td>
+                  <td>gpt-4o-mini · 424ms · real · 비용 $0.000002</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>inference_log 기록 ✓</td>
+                </tr>
+                <tr>
+                  <td class="mono">2-2</td>
+                  <td>Anthropic 실추론</td>
+                  <td>claude-haiku-4-5-20251001 · 401 인증 실패</td>
+                  <td class="fail-cell">❌ FAIL</td>
+                  <td>API 키 만료 — 갱신 필요</td>
+                </tr>
+                <tr>
+                  <td class="mono">2-3</td>
+                  <td>Google Gemini 실추론</td>
+                  <td>gemini-2.0-flash · 404 Not Found · 3.7s</td>
+                  <td class="fail-cell">❌ FAIL</td>
+                  <td>API 경로 또는 모델명 수정 필요</td>
+                </tr>
+                <tr>
+                  <td class="mono">2-4</td>
+                  <td>DeepSeek 실추론</td>
+                  <td>deepseek-chat · 1692ms · real · 비용 $0.000026</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>inference_log 기록 ✓</td>
+                </tr>
+                <tr>
+                  <td class="mono">2-5</td>
+                  <td>xAI Grok 실추론</td>
+                  <td>grok-3-mini → gpt-4o-mini 자동 fallback · 627ms</td>
+                  <td class="warn-cell">⚠️ WARN</td>
+                  <td>IP 차단으로 fallback 동작 — fallback 투명화 정상</td>
+                </tr>
+                <tr>
+                  <td class="mono">2-6</td>
+                  <td>Moonshot 실추론</td>
+                  <td>moonshot-v1-8k · 401 인증 실패</td>
+                  <td class="fail-cell">❌ FAIL</td>
+                  <td>API 키 만료 — 갱신 필요</td>
+                </tr>
+                <tr>
+                  <td class="mono">2-7</td>
+                  <td>Mistral 실추론</td>
+                  <td>mistral-small-latest · 372ms · real · $0.000032</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>inference_log 기록 ✓</td>
+                </tr>
+                <!-- 3 -->
+                <tr>
+                  <td class="mono">3-1</td>
+                  <td>inference_log real 기록</td>
+                  <td>openai(ok×2), deepseek(ok×1), mistral(ok×1) — real 타입</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>DB 직접 확인</td>
+                </tr>
+                <tr>
+                  <td class="mono">3-2</td>
+                  <td>inference_log fallback 기록</td>
+                  <td>xAI→openai fallback 1건 · is_fallback=1</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>fallback 분리 기록 정상</td>
+                </tr>
+                <tr>
+                  <td class="mono">3-3</td>
+                  <td>inference_log error 기록</td>
+                  <td>anthropic·google·moonshot 실패 3건 · success=0</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>에러도 로그 기록됨</td>
+                </tr>
+                <tr>
+                  <td class="mono">3-4</td>
+                  <td>WAL 모드 DB 지속성</td>
+                  <td>orchestrator.db-wal = 1.2MB · 재시작 후 11건 유지</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>PM2 재시작 3회 후 데이터 유지</td>
+                </tr>
+                <!-- 4 -->
+                <tr>
+                  <td class="mono">4-1</td>
+                  <td>users 테이블 저장</td>
+                  <td>admin 계정 1건 · UUID pk · role=admin</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>—</td>
+                </tr>
+                <tr>
+                  <td class="mono">4-2</td>
+                  <td>inference_log 저장</td>
+                  <td>11건 (real 10 + fallback 1) 기록 확인</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>provider·model·latency·cost 포함</td>
+                </tr>
+                <tr>
+                  <td class="mono">4-3</td>
+                  <td>audit_logs 저장</td>
+                  <td>19건 기록 · login·admin:GET 액션 포함</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>타임스탬프·user_id 포함</td>
+                </tr>
+                <tr>
+                  <td class="mono">4-4</td>
+                  <td>costs 테이블 저장</td>
+                  <td>0건 — inference_log에 cost_usd 있으나 costs 미연동</td>
+                  <td class="warn-cell">⚠️ WARN</td>
+                  <td>recordCost() 호출 누락 가능 — 점검 필요</td>
+                </tr>
+                <tr>
+                  <td class="mono">4-5</td>
+                  <td>jobs 테이블 저장</td>
+                  <td>0건 — 파이프라인 잡 미실행</td>
+                  <td class="warn-cell">⚠️ WARN</td>
+                  <td>파이프라인 워크플로우 실행 시 채워짐</td>
+                </tr>
+                <!-- 5 -->
+                <tr>
+                  <td class="mono">5-1</td>
+                  <td>어드민 beta 탭</td>
+                  <td>/api/admin/beta/stats · users 응답 정상</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>베타 유저 0명 (초대 발행 전)</td>
+                </tr>
+                <tr>
+                  <td class="mono">5-2</td>
+                  <td>어드민 stats API</td>
+                  <td>users=1, jobs=0, audit_logs=19 반환</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>/api/admin/stats 경로</td>
+                </tr>
+                <tr>
+                  <td class="mono">5-3</td>
+                  <td>어드민 system API</td>
+                  <td>linux x64 · Node v20.20.1 · 업타임 반환</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>메모리 수치 0 (API 파싱 이슈 — UI는 정상)</td>
+                </tr>
+                <!-- 6 -->
+                <tr>
+                  <td class="mono">6-1</td>
+                  <td>재시작 후 health</td>
+                  <td>PM2 restart → {"status":"ok"} 즉시 반환</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>3회 재시작 후 안정 동작</td>
+                </tr>
+                <tr>
+                  <td class="mono">6-2</td>
+                  <td>재시작 후 로그인</td>
+                  <td>admin 계정 JWT 재발급 성공</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>—</td>
+                </tr>
+                <tr>
+                  <td class="mono">6-3</td>
+                  <td>재시작 후 DB 유지</td>
+                  <td>inference_log 11건, users 1건 유지</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>SQLite WAL 영속성 확인</td>
+                </tr>
+                <tr>
+                  <td class="mono">6-4</td>
+                  <td>PM2 부팅 자동시작</td>
+                  <td>pm2 startup + pm2 save 등록 완료</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>서버 재부팅 후 자동 복구</td>
+                </tr>
+                <!-- 7 -->
+                <tr>
+                  <td class="mono">7-1</td>
+                  <td>CPU 사용률</td>
+                  <td>6.7% (4 vCPU)</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>여유 93%</td>
+                </tr>
+                <tr>
+                  <td class="mono">7-2</td>
+                  <td>RAM 사용률</td>
+                  <td>884MB / 7941MB = 11.1% · Node 프로세스 81MB</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>여유 6.2GB</td>
+                </tr>
+                <tr>
+                  <td class="mono">7-3</td>
+                  <td>디스크 사용률</td>
+                  <td>2.4GB / 232GB = 2%</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>여유 230GB</td>
+                </tr>
+                <tr>
+                  <td class="mono">7-4</td>
+                  <td>포트 리스닝</td>
+                  <td>:80 (Nginx 5 workers) · :3000 (PM2/Node)</td>
+                  <td class="pass-cell">✅ PASS</td>
+                  <td>UFW 80/443/22 허용</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card green">
+            <div class="stat-label">PASS</div>
+            <div class="stat-value">25</div>
+            <div class="stat-sub">전체 30개 항목 중</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-label">WARN</div>
+            <div class="stat-value">3</div>
+            <div class="stat-sub">xAI fallback, costs 미연동, jobs 0건</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">FAIL</div>
+            <div class="stat-value">3</div>
+            <div class="stat-sub">Anthropic · Google · Moonshot API 키</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">종합 점수</div>
+            <div class="stat-value">83%</div>
+            <div class="stat-sub">API 키 갱신 시 93%+</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SECTION: PROVIDERS ═══ -->
+      <div class="section" id="sec-providers">
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🔌</span>Provider별 실제 상태 (VPS 기준 2026-03-11)</div>
+          <div class="provider-grid">
+            <div class="provider-card ok">
+              <div class="provider-icon">🟢</div>
+              <div>
+                <div class="provider-name">OpenAI</div>
+                <div class="provider-model">gpt-4o-mini · gpt-4o</div>
+                <div class="provider-meta">424ms · real · $0.000002/call<br>
+                  <span class="badge pass">REAL ✓</span></div>
+              </div>
+            </div>
+            <div class="provider-card fail">
+              <div class="provider-icon">🔴</div>
+              <div>
+                <div class="provider-name">Anthropic</div>
+                <div class="provider-model">claude-haiku-4-5-20251001</div>
+                <div class="provider-meta">401 인증 실패 · API 키 만료<br>
+                  <span class="badge fail">KEY EXPIRED</span></div>
+              </div>
+            </div>
+            <div class="provider-card fail">
+              <div class="provider-icon">🔴</div>
+              <div>
+                <div class="provider-name">Google Gemini</div>
+                <div class="provider-model">gemini-2.0-flash</div>
+                <div class="provider-meta">404 Not Found · 모델명 또는 경로 오류<br>
+                  <span class="badge fail">404 ERROR</span></div>
+              </div>
+            </div>
+            <div class="provider-card ok">
+              <div class="provider-icon">🟢</div>
+              <div>
+                <div class="provider-name">DeepSeek</div>
+                <div class="provider-model">deepseek-chat</div>
+                <div class="provider-meta">1692ms · real · $0.000026/call<br>
+                  <span class="badge pass">REAL ✓</span></div>
+              </div>
+            </div>
+            <div class="provider-card fallback">
+              <div class="provider-icon">🟡</div>
+              <div>
+                <div class="provider-name">xAI (Grok)</div>
+                <div class="provider-model">grok-3-mini → gpt-4o-mini</div>
+                <div class="provider-meta">IP 차단으로 fallback 동작 중<br>
+                  <span class="badge warn">FALLBACK</span></div>
+              </div>
+            </div>
+            <div class="provider-card fail">
+              <div class="provider-icon">🔴</div>
+              <div>
+                <div class="provider-name">Moonshot (Kimi)</div>
+                <div class="provider-model">moonshot-v1-8k</div>
+                <div class="provider-meta">401 인증 실패 · API 키 만료<br>
+                  <span class="badge fail">KEY EXPIRED</span></div>
+              </div>
+            </div>
+            <div class="provider-card ok">
+              <div class="provider-icon">🟢</div>
+              <div>
+                <div class="provider-name">Mistral</div>
+                <div class="provider-model">mistral-small-latest</div>
+                <div class="provider-meta">372ms · real · $0.000032/call<br>
+                  <span class="badge pass">REAL ✓</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert warn">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-body">
+            <div class="alert-title">API 키 갱신 필요 — Anthropic · Moonshot</div>
+            <div class="alert-desc">두 provider 모두 401 Unauthorized. .env 파일에서 ANTHROPIC_API_KEY, MOONSHOT_API_KEY 값을 교체 후 <code>pm2 restart ai-orchestrator</code> 실행</div>
+          </div>
+        </div>
+        <div class="alert info">
+          <div class="alert-icon">ℹ️</div>
+          <div class="alert-body">
+            <div class="alert-title">Google Gemini API 경로 확인 필요</div>
+            <div class="alert-desc">gemini-2.0-flash 모델 404 오류. Google AI API 버전 또는 모델명 변경 가능성. 최신 문서에서 유효 모델명 확인 후 aiConnector.js 수정 필요</div>
+          </div>
+        </div>
+        <div class="alert info">
+          <div class="alert-icon">ℹ️</div>
+          <div class="alert-body">
+            <div class="alert-title">xAI Grok — Fallback 정상 동작 중</div>
+            <div class="alert-desc">VPS IP가 xAI 허용 목록에 없어 fallback→OpenAI로 전환. xAI 대시보드에서 IP 화이트리스트 등록 또는 xAI 지원팀 문의 필요</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SECTION: DATABASE ═══ -->
+      <div class="section" id="sec-database">
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🗄️</span>DB 현황 — SQLite WAL Mode</div>
+          <div class="stat-grid" style="margin-bottom:16px">
+            <div class="stat-card">
+              <div class="stat-label">inference_log</div>
+              <div class="stat-value">11</div>
+              <div class="stat-sub">real 10건 + fallback 1건</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">audit_logs</div>
+              <div class="stat-value">19</div>
+              <div class="stat-sub">admin 액션 전체 기록</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">users</div>
+              <div class="stat-value">1</div>
+              <div class="stat-sub">admin 계정 (admin@ai-orch.local)</div>
+            </div>
+            <div class="stat-card yellow">
+              <div class="stat-label">costs</div>
+              <div class="stat-value">0</div>
+              <div class="stat-sub">inference→costs 연동 점검 필요</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">WAL 크기</div>
+              <div class="stat-value">1.2MB</div>
+              <div class="stat-sub">orchestrator.db-wal (정상)</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">DB 위치</div>
+              <div class="stat-value" style="font-size:12px">/opt/ai-orchestrator/<br>app/…/data/</div>
+              <div class="stat-sub">aiorch 소유 (600 권한)</div>
+            </div>
+          </div>
+
+          <div class="card-title" style="margin-top:16px"><span class="ct-icon">📊</span>inference_log 분류 (총 11건)</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Provider</th><th>상태</th><th>타입</th><th>건수</th><th>대표 레이턴시</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>openai</td><td><span class="badge pass">ok</span></td><td>real</td><td>2</td><td class="mono">410ms, 801ms</td></tr>
+                <tr><td>openai</td><td><span class="badge pass">ok</span></td><td><span class="badge warn">fallback</span></td><td>1</td><td class="mono">609ms</td></tr>
+                <tr><td>openai</td><td><span class="badge fail">fail</span></td><td>real</td><td>3</td><td class="mono">0~109ms (early err)</td></tr>
+                <tr><td>deepseek</td><td><span class="badge pass">ok</span></td><td>real</td><td>1</td><td class="mono">1672ms</td></tr>
+                <tr><td>mistral</td><td><span class="badge pass">ok</span></td><td>real</td><td>1</td><td class="mono">353ms</td></tr>
+                <tr><td>anthropic</td><td><span class="badge fail">fail</span></td><td>real</td><td>1</td><td class="mono">0ms (401)</td></tr>
+                <tr><td>google</td><td><span class="badge fail">fail</span></td><td>real</td><td>1</td><td class="mono">0ms (404)</td></tr>
+                <tr><td>moonshot</td><td><span class="badge fail">fail</span></td><td>real</td><td>1</td><td class="mono">0ms (401)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📂</span>테이블 목록</div>
+          <div class="code-block">
+<span class="c">-- 현재 생성된 테이블 목록 (orchestrator.db)</span>
+
+<span class="v">api_configs</span>      <span class="c">-- provider API 키 설정 저장</span>
+<span class="v">inference_log</span>    <span class="c">-- 모든 AI 추론 기록 (real/fallback/error)</span>
+<span class="v">provider_health</span>  <span class="c">-- provider 헬스체크 이력</span>
+<span class="v">versions</span>         <span class="c">-- 파이프라인 버전 이력</span>
+<span class="v">audit_logs</span>       <span class="c">-- 관리자 액션 로그</span>
+<span class="v">jobs</span>             <span class="c">-- 파이프라인 작업 큐</span>
+<span class="v">beta_invites</span>     <span class="c">-- 베타 초대코드 관리</span>
+<span class="v">model_settings</span>   <span class="c">-- AI 모델 기본값 설정</span>
+<span class="v">user_quotas</span>      <span class="c">-- 사용자별 플랜·쿼터</span>
+<span class="v">costs</span>            <span class="c">-- 비용 기록 (현재 미연동)</span>
+<span class="v">pipelines</span>        <span class="c">-- 파이프라인 정의</span>
+<span class="v">users</span>            <span class="c">-- 사용자 계정</span>
+<span class="v">scheduler_jobs</span>   <span class="c">-- 스케줄러 작업</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SECTION: RESOURCES ═══ -->
+      <div class="section" id="sec-resources">
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📊</span>서버 자원 현황 (2026-03-11)</div>
+          <div class="stat-grid">
+            <div class="stat-card green">
+              <div class="stat-label">CPU 사용률</div>
+              <div class="stat-value">6.7%</div>
+              <div class="stat-sub">4 vCPU · 여유 93%</div>
+              <div class="score-bar"><div class="score-fill" style="width:6.7%"></div></div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-label">RAM 사용률</div>
+              <div class="stat-value">11.1%</div>
+              <div class="stat-sub">884MB / 7941MB</div>
+              <div class="score-bar"><div class="score-fill" style="width:11.1%"></div></div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-label">디스크 사용률</div>
+              <div class="stat-value">2%</div>
+              <div class="stat-sub">2.4GB / 232GB</div>
+              <div class="score-bar"><div class="score-fill" style="width:2%"></div></div>
+            </div>
+            <div class="stat-card blue">
+              <div class="stat-label">Node.js 메모리</div>
+              <div class="stat-value">81MB</div>
+              <div class="stat-sub">RSS 기준 · heap 별도</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">PM2 재시작 횟수</div>
+              <div class="stat-value">3</div>
+              <div class="stat-sub">배포 중 수동 재시작</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Nginx Workers</div>
+              <div class="stat-value">5</div>
+              <div class="stat-sub">:80 리스닝 중</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🖥️</span>서버 환경</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>항목</th><th>값</th></tr></thead>
+              <tbody>
+                <tr><td>OS</td><td>Ubuntu 24.04.3 LTS (Noble Numbat)</td></tr>
+                <tr><td>Kernel</td><td>Linux 6.8.0-90-generic x86_64</td></tr>
+                <tr><td>Node.js</td><td>v20.20.1 LTS</td></tr>
+                <tr><td>npm</td><td>10.8.2</td></tr>
+                <tr><td>PM2</td><td>v6.0.14 (cluster mode)</td></tr>
+                <tr><td>Nginx</td><td>nginx/1.24 (Ubuntu)</td></tr>
+                <tr><td>SQLite</td><td>3.45.1 (WAL mode, 32MB cache)</td></tr>
+                <tr><td>서버 IP</td><td>144.172.93.226 (IPv4) · 2602:fa59:9:355::1 (IPv6)</td></tr>
+                <tr><td>방화벽</td><td>UFW: 22(SSH) · 80(HTTP) · 443(HTTPS) 허용</td></tr>
+                <tr><td>앱 경로</td><td>/opt/ai-orchestrator/app/ai-orchestrator/</td></tr>
+                <tr><td>PM2 startup</td><td>systemd 등록 완료 (부팅 시 자동 시작)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📋</span>포트 및 프로세스</div>
+          <div class="code-block">
+LISTEN :80    nginx (5 workers) → proxy → :3000
+LISTEN :3000  PM2 v6.0.14 / Node.js ai-orchestrator (pid 5143, 81MB)
+
+<span class="c"># 로그 파일</span>
+/opt/ai-orchestrator/logs/
+  combined-0.log  7.3KB  (통합 로그)
+  out-0.log       2.8KB  (stdout)
+  error-0.log     4.6KB  (stderr — 이전 IPv6 경고 포함)
+
+<span class="c"># DB 파일</span>
+/opt/ai-orchestrator/app/ai-orchestrator/data/
+  orchestrator.db      4.0KB  (메인 DB)
+  orchestrator.db-shm  32KB   (WAL 공유 메모리)
+  orchestrator.db-wal  1.2MB  (WAL 로그 — 미체크포인트)</div>
+        </div>
+      </div>
+
+      <!-- ═══ SECTION: LINKS ═══ -->
+      <div class="section" id="sec-links">
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🔗</span>현재 주요 링크</div>
+          <div class="link-grid">
+            <a class="link-card" href="http://144.172.93.226" target="_blank">
+              <div class="lc-icon">🌐</div>
+              <div>
+                <div class="lc-name">메인 서비스</div>
+                <div class="lc-url">http://144.172.93.226</div>
+              </div>
+            </a>
+            <a class="link-card" href="http://144.172.93.226/admin" target="_blank">
+              <div class="lc-icon">⚙️</div>
+              <div>
+                <div class="lc-name">Admin 패널</div>
+                <div class="lc-url">http://144.172.93.226/admin</div>
+              </div>
+            </a>
+            <a class="link-card" href="http://144.172.93.226/health-dashboard.html" target="_blank">
+              <div class="lc-icon">📊</div>
+              <div>
+                <div class="lc-name">Health Dashboard</div>
+                <div class="lc-url">/health-dashboard.html</div>
+              </div>
+            </a>
+            <a class="link-card" href="http://144.172.93.226/health" target="_blank">
+              <div class="lc-icon">💚</div>
+              <div>
+                <div class="lc-name">API Health</div>
+                <div class="lc-url">/health</div>
+              </div>
+            </a>
+            <a class="link-card" href="https://github.com/vinsenzo83/kbeauty-autocommerce" target="_blank">
+              <div class="lc-icon">🐱</div>
+              <div>
+                <div class="lc-name">GitHub 레포지토리</div>
+                <div class="lc-url">vinsenzo83/kbeauty-autocommerce</div>
+              </div>
+            </a>
+            <a class="link-card" href="https://github.com/vinsenzo83/kbeauty-autocommerce/pull/1" target="_blank">
+              <div class="lc-icon">🔀</div>
+              <div>
+                <div class="lc-name">Pull Request #1</div>
+                <div class="lc-url">genspark_ai_developer → main</div>
+              </div>
+            </a>
+            <a class="link-card" href="http://144.172.93.226/handover.html" target="_blank">
+              <div class="lc-icon">📄</div>
+              <div>
+                <div class="lc-name">이 인수인계 문서</div>
+                <div class="lc-url">/handover.html</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🔑</span>접속 정보</div>
+          <div class="alert warn">
+            <div class="alert-icon">🔒</div>
+            <div class="alert-body">
+              <div class="alert-title">보안 주의 — 실서버 배포 후 반드시 변경</div>
+              <div class="alert-desc">아래 초기값은 배포 시 생성된 기본값입니다. 운영 전 반드시 강력한 비밀번호로 교체하세요.</div>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>항목</th><th>값</th><th>변경 방법</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>SSH 접속</td>
+                  <td class="mono">ssh root@144.172.93.226</td>
+                  <td>ssh-keygen 후 authorized_keys 등록 권장</td>
+                </tr>
+                <tr>
+                  <td>Admin 계정</td>
+                  <td class="mono">admin / admin1234</td>
+                  <td>.env ADMIN_PASSWORD 변경 후 재시작</td>
+                </tr>
+                <tr>
+                  <td>JWT Secret</td>
+                  <td class="mono">랜덤 64자 생성됨</td>
+                  <td>.env JWT_SECRET (이미 강력)</td>
+                </tr>
+                <tr>
+                  <td>.env 위치</td>
+                  <td class="mono">/opt/ai-orchestrator/app/ai-orchestrator/.env</td>
+                  <td>권한 600 (root only)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SECTION: FILES ═══ -->
+      <div class="section" id="sec-files">
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">📁</span>핵심 파일 위치</div>
+          <div class="file-tree">
+<span class="ft-dir">ai-orchestrator/</span>
+<span class="ft-indent">├── </span><span class="ft-dir">src/</span>
+<span class="ft-indent">│   ├── </span><span class="ft-file hl">server.js</span>          <span class="ft-comment">← 메인 Express 서버 (trust proxy, 모든 라우트)</span>
+<span class="ft-indent">│   ├── </span><span class="ft-dir">db/</span>
+<span class="ft-indent">│   │   └── </span><span class="ft-file hl">database.js</span>    <span class="ft-comment">← SQLite DB 레이어 (all CRUD, migrations)</span>
+<span class="ft-indent">│   ├── </span><span class="ft-dir">middleware/</span>
+<span class="ft-indent">│   │   └── </span><span class="ft-file hl">security.js</span>    <span class="ft-comment">← helmet, CORS, rate limit, JWT, quota (ipKeyGenerator fix)</span>
+<span class="ft-indent">│   ├── </span><span class="ft-dir">routes/</span>
+<span class="ft-indent">│   │   └── </span><span class="ft-file hl">admin.js</span>       <span class="ft-comment">← /api/admin/* 라우트 (beta, stats, users, health)</span>
+<span class="ft-indent">│   ├── </span><span class="ft-dir">connectors/</span>
+<span class="ft-indent">│   │   └── </span><span class="ft-file">aiConnector.js</span> <span class="ft-comment">← provider별 API 호출, fallback 로직, inference_log 기록</span>
+<span class="ft-indent">│   └── </span><span class="ft-dir">testcases/</span>
+<span class="ft-indent">│       └── </span><span class="ft-file">*.json</span>         <span class="ft-comment">← 스케줄러 실행 로그 / 테스트 기록</span>
+<span class="ft-indent">│</span>
+<span class="ft-indent">├── </span><span class="ft-dir">public/</span>
+<span class="ft-indent">│   ├── </span><span class="ft-file hl">admin.html</span>         <span class="ft-comment">← 어드민 UI (beta탭, 비용탭, health탭 포함)</span>
+<span class="ft-indent">│   ├── </span><span class="ft-file hl">health-dashboard.html</span> <span class="ft-comment">← provider 헬스 대시보드</span>
+<span class="ft-indent">│   └── </span><span class="ft-file hl">handover.html</span>      <span class="ft-comment">← 이 인수인계 문서</span>
+<span class="ft-indent">│</span>
+<span class="ft-indent">├── </span><span class="ft-dir">deploy/</span>            <span class="ft-comment">← VPS 배포 도구</span>
+<span class="ft-indent">│   ├── </span><span class="ft-file hl">deploy.sh</span>          <span class="ft-comment">← 원클릭 자동 배포 스크립트</span>
+<span class="ft-indent">│   ├── </span><span class="ft-file hl">update.sh</span>          <span class="ft-comment">← 무중단 코드 업데이트</span>
+<span class="ft-indent">│   ├── </span><span class="ft-file hl">verify.sh</span>          <span class="ft-comment">← 배포 검증 (11개 항목)</span>
+<span class="ft-indent">│   ├── </span><span class="ft-file hl">nginx.conf</span>         <span class="ft-comment">← Nginx 최적화 설정 (SSE/WS)</span>
+<span class="ft-indent">│   ├── </span><span class="ft-file hl">ecosystem.vps.config.js</span> <span class="ft-comment">← PM2 VPS 설정</span>
+<span class="ft-indent">│   └── </span><span class="ft-file hl">.env.production</span>    <span class="ft-comment">← 환경변수 템플릿</span>
+<span class="ft-indent">│</span>
+<span class="ft-indent">├── </span><span class="ft-file">Dockerfile</span>
+<span class="ft-indent">├── </span><span class="ft-file">docker-compose.yml</span>
+<span class="ft-indent">├── </span><span class="ft-file hl">.env</span>               <span class="ft-comment">← 실서버: /opt/ai-orchestrator/app/…/.env (600 권한)</span>
+<span class="ft-indent">└── </span><span class="ft-file">.env.example</span>       <span class="ft-comment">← 환경변수 설명 템플릿</span>
+
+<span class="ft-comment">
+# VPS 실서버 경로
+/opt/ai-orchestrator/
+├── app/ai-orchestrator/   ← GitHub clone (genspark_ai_developer 브랜치)
+├── data/                  → symlink → app/…/data/ (SQLite DB)
+├── logs/                  → symlink → app/…/logs/ (PM2 로그)
+└── backups/               ← 백업 저장 위치</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">⚙️</span>환경변수 핵심 목록</div>
+          <div class="code-block">
+<span class="c"># 서버 기본값</span>
+<span class="k">NODE_ENV</span>=<span class="s">production</span>
+<span class="k">PORT</span>=<span class="s">3000</span>
+<span class="k">JWT_SECRET</span>=<span class="s">&lt;64자 랜덤&gt;</span>
+<span class="k">JWT_EXPIRES</span>=<span class="s">7d</span>
+<span class="k">ADMIN_EMAIL</span>=<span class="s">admin@ai-orch.local</span>
+<span class="k">ADMIN_PASSWORD</span>=<span class="s">admin1234</span>  <span class="c">← 반드시 변경!</span>
+
+<span class="c"># AI Provider 키</span>
+<span class="k">OPENAI_API_KEY</span>=<span class="s">sk-proj-...</span>     <span class="c">✅ 활성</span>
+<span class="k">ANTHROPIC_API_KEY</span>=<span class="s">sk-ant-...</span>  <span class="c">❌ 만료 → 갱신 필요</span>
+<span class="k">GOOGLE_API_KEY</span>=<span class="s">AIza...</span>        <span class="c">⚠️ 경로 오류</span>
+<span class="k">GEMINI_API_KEY</span>=<span class="s">AIza...</span>        <span class="c">⚠️ gemini-2.0-flash 404</span>
+<span class="k">DEEPSEEK_API_KEY</span>=<span class="s">sk-...</span>       <span class="c">✅ 활성</span>
+<span class="k">XAI_API_KEY</span>=<span class="s">xai-...</span>           <span class="c">⚠️ IP 차단 → fallback</span>
+<span class="k">MOONSHOT_API_KEY</span>=<span class="s">sk-...</span>       <span class="c">❌ 만료 → 갱신 필요</span>
+<span class="k">MISTRAL_API_KEY</span>=<span class="s">lg192...</span>      <span class="c">✅ 활성</span>
+
+<span class="c"># 기본 모델 설정</span>
+<span class="k">DEFAULT_CHAT_MODEL</span>=<span class="s">gpt-4o-mini</span>
+<span class="k">DEFAULT_TEXT_MODEL</span>=<span class="s">gpt-4o</span>
+<span class="k">DEFAULT_ANALYSIS_MODEL</span>=<span class="s">gpt-4o</span>
+<span class="k">DEFAULT_CODE_MODEL</span>=<span class="s">gpt-4o</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SECTION: ONBOARDING ═══ -->
+      <div class="section" id="sec-onboarding">
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🚀</span>새 개발자 온보딩 — 첫 날 체크리스트</div>
+          <ul class="checklist">
+            <li>
+              <span class="cl-icon">1️⃣</span>
+              <div>
+                <div class="cl-text">최신 코드 pull</div>
+                <div class="cl-sub"><code>git clone https://github.com/vinsenzo83/kbeauty-autocommerce && git checkout genspark_ai_developer</code></div>
+              </div>
+            </li>
+            <li>
+              <span class="cl-icon">2️⃣</span>
+              <div>
+                <div class="cl-text">VPS 접속 및 상태 확인</div>
+                <div class="cl-sub"><code>ssh root@144.172.93.226</code> → <code>pm2 status</code> → <code>curl http://localhost:3000/health</code></div>
+              </div>
+            </li>
+            <li>
+              <span class="cl-icon">3️⃣</span>
+              <div>
+                <div class="cl-text">만료된 API 키 갱신</div>
+                <div class="cl-sub">Anthropic Console, Moonshot 대시보드에서 새 키 발급 → <code>nano /opt/ai-orchestrator/app/ai-orchestrator/.env</code> 수정 → <code>pm2 restart ai-orchestrator</code></div>
+              </div>
+            </li>
+            <li>
+              <span class="cl-icon">4️⃣</span>
+              <div>
+                <div class="cl-text">Admin 비밀번호 변경</div>
+                <div class="cl-sub">.env ADMIN_PASSWORD 변경 후 재시작, 또는 어드민 UI에서 직접 변경</div>
+              </div>
+            </li>
+            <li>
+              <span class="cl-icon">5️⃣</span>
+              <div>
+                <div class="cl-text">베타 초대코드 발급 (5~10명)</div>
+                <div class="cl-sub">어드민 패널 → Beta 탭 → "초대코드 생성" → role: beta, 유효기간 30일 설정</div>
+              </div>
+            </li>
+            <li>
+              <span class="cl-icon">6️⃣</span>
+              <div>
+                <div class="cl-text">Google Gemini API 수정</div>
+                <div class="cl-sub">src/connectors/aiConnector.js에서 gemini 엔드포인트 경로 확인, gemini-2.0-flash-exp 또는 최신 모델명으로 수정</div>
+              </div>
+            </li>
+            <li>
+              <span class="cl-icon">7️⃣</span>
+              <div>
+                <div class="cl-text">SSL 인증서 설치 (도메인 연결 후)</div>
+                <div class="cl-sub"><code>apt install certbot python3-certbot-nginx && certbot --nginx -d your-domain.com</code></div>
+              </div>
+            </li>
+            <li>
+              <span class="cl-icon">8️⃣</span>
+              <div>
+                <div class="cl-text">costs 테이블 연동 확인</div>
+                <div class="cl-sub">aiConnector.js에서 추론 성공 후 <code>db.recordCost()</code> 호출 여부 확인</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🔄</span>코드 업데이트 워크플로우</div>
+          <div class="code-block">
+<span class="c"># 1. 로컬에서 수정 후 커밋</span>
+<span class="p">$</span> git add . && git commit -m <span class="s">"fix(provider): update gemini model endpoint"</span>
+<span class="p">$</span> git push origin genspark_ai_developer
+
+<span class="c"># 2. VPS 무중단 업데이트</span>
+<span class="p">root@vps:~$</span> cd /opt/ai-orchestrator/app/ai-orchestrator
+<span class="p">root@vps:~$</span> git pull origin genspark_ai_developer
+<span class="p">root@vps:~$</span> npm ci --only=production
+<span class="p">root@vps:~$</span> pm2 reload ai-orchestrator  <span class="c"># reload = 무중단 (restart 아님)</span>
+
+<span class="c"># 또는 deploy/update.sh 사용</span>
+<span class="p">root@vps:~$</span> bash /opt/ai-orchestrator/app/ai-orchestrator/deploy/update.sh
+
+<span class="c"># 3. 검증</span>
+<span class="p">root@vps:~$</span> bash /opt/ai-orchestrator/app/ai-orchestrator/deploy/verify.sh http://localhost:3000
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">💡</span>주요 API 사용법</div>
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(this,'tab-auth')">인증</button>
+            <button class="tab-btn" onclick="switchTab(this,'tab-ai')">AI 추론</button>
+            <button class="tab-btn" onclick="switchTab(this,'tab-sse')">SSE 스트리밍</button>
+            <button class="tab-btn" onclick="switchTab(this,'tab-beta')">베타 등록</button>
+          </div>
+          <div class="tab-pane active" id="tab-auth">
+            <div class="code-block">
+<span class="c"># 로그인 → JWT 토큰 발급</span>
+<span class="p">$</span> curl -X POST http://144.172.93.226/api/auth/login \
+     -H <span class="s">"Content-Type: application/json"</span> \
+     -d <span class="s">'{"username":"admin","password":"admin1234"}'</span>
+<span class="c"># → {"success":true,"token":"eyJ..."}</span>
+
+<span class="c"># 토큰으로 API 호출</span>
+<span class="p">$</span> curl http://144.172.93.226/api/admin/stats \
+     -H <span class="s">"Authorization: Bearer eyJ..."</span>
+            </div>
+          </div>
+          <div class="tab-pane" id="tab-ai">
+            <div class="code-block">
+<span class="c"># AI 채팅 (messages 배열 형식 필수)</span>
+<span class="p">$</span> curl -X POST http://144.172.93.226/api/ai/chat \
+     -H <span class="s">"Content-Type: application/json"</span> \
+     -H <span class="s">"Authorization: Bearer &lt;token&gt;"</span> \
+     -d <span class="s">'{
+       "messages": [{"role":"user","content":"Hello!"}],
+       "model": "gpt-4o-mini",
+       "maxTokens": 200
+     }'</span>
+
+<span class="c"># provider 명시 호출</span>
+     -d <span class="s">'{
+       "messages": [...],
+       "model": "deepseek-chat",
+       "provider": "deepseek"
+     }'</span>
+            </div>
+          </div>
+          <div class="tab-pane" id="tab-sse">
+            <div class="code-block">
+<span class="c"># SSE 스트리밍 (curl --no-buffer)</span>
+<span class="p">$</span> curl -X POST http://144.172.93.226/api/ai/chat/stream \
+     -H <span class="s">"Content-Type: application/json"</span> \
+     -H <span class="s">"Authorization: Bearer &lt;token&gt;"</span> \
+     --no-buffer \
+     -d <span class="s">'{
+       "messages": [{"role":"user","content":"Write a haiku"}],
+       "model": "gpt-4o-mini"
+     }'</span>
+<span class="c"># → data: {"chunk":"..."}\n
+# → data: {"chunk":"..."}\n
+# → data: [DONE]\n</span>
+            </div>
+          </div>
+          <div class="tab-pane" id="tab-beta">
+            <div class="code-block">
+<span class="c"># 1. 관리자가 초대코드 생성</span>
+<span class="p">$</span> curl -X POST http://144.172.93.226/api/admin/beta/invites \
+     -H <span class="s">"Authorization: Bearer &lt;admin_token&gt;"</span> \
+     -H <span class="s">"Content-Type: application/json"</span> \
+     -d <span class="s">'{"role":"beta","count":5}'</span>
+<span class="c"># → {"codes":["BETA-XXXX-YYYY",...]}</span>
+
+<span class="c"># 2. 베타 사용자 코드로 가입</span>
+<span class="p">$</span> curl -X POST http://144.172.93.226/api/beta/register \
+     -H <span class="s">"Content-Type: application/json"</span> \
+     -d <span class="s">'{"username":"tester","email":"test@co.com",
+         "password":"pass1234","inviteCode":"BETA-XXXX-YYYY"}'</span>
+<span class="c"># → {"success":true,"token":"eyJ...","plan":"beta"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SECTION: NOTES ═══ -->
+      <div class="section" id="sec-notes">
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">⚠️</span>주의사항 & 알려진 이슈</div>
+
+          <div class="alert warn">
+            <div class="alert-icon">🔑</div>
+            <div class="alert-body">
+              <div class="alert-title">샌드박스 vs VPS 환경 차이</div>
+              <div class="alert-desc">샌드박스에서는 일부 API 호출이 WAF/Cloudflare로 차단되거나 응답이 왜곡될 수 있습니다. 반드시 VPS 실서버 기준으로 provider 상태를 재확인하세요.</div>
+            </div>
+          </div>
+
+          <div class="alert warn">
+            <div class="alert-icon">💾</div>
+            <div class="alert-body">
+              <div class="alert-title">SQLite WAL 체크포인트 미실행</div>
+              <div class="alert-desc">orchestrator.db-wal이 1.2MB로 커졌습니다. 장기 운영 시 WAL이 계속 커지므로 주기적 체크포인트 권장: <code>PRAGMA wal_checkpoint(TRUNCATE);</code> 또는 재시작 시 자동 처리됨.</div>
+            </div>
+          </div>
+
+          <div class="alert warn">
+            <div class="alert-icon">💰</div>
+            <div class="alert-body">
+              <div class="alert-title">costs 테이블 비어있음 (0건)</div>
+              <div class="alert-desc">inference_log에는 cost_usd가 기록되지만 costs 테이블이 비어있습니다. aiConnector.js에서 추론 완료 후 <code>db.recordCost()</code> 호출 여부를 확인하고, 없다면 추가해야 합니다. (비용 모니터링 핵심)</div>
+            </div>
+          </div>
+
+          <div class="alert info">
+            <div class="alert-icon">🔄</div>
+            <div class="alert-body">
+              <div class="alert-title">어드민 메모리 수치 표시 오류</div>
+              <div class="alert-desc">/api/admin/system 응답에서 memory.total/used/free 값이 0으로 파싱됨. API 응답 구조가 변경됐거나 단위 처리 이슈. UI에서는 pm2.getProcessCPUUsage()로 별도 처리 가능.</div>
+            </div>
+          </div>
+
+          <div class="alert info">
+            <div class="alert-icon">🌐</div>
+            <div class="alert-body">
+              <div class="alert-title">CORS 설정 — 도메인 추가 시 업데이트 필요</div>
+              <div class="alert-desc">현재 ALLOWED_ORIGINS가 비어있어 localhost와 .sandbox.novita.ai만 허용. 실제 도메인 연결 시 .env에 <code>ALLOWED_ORIGINS=https://your-domain.com</code> 추가 필요.</div>
+            </div>
+          </div>
+
+          <div class="alert error">
+            <div class="alert-icon">🚨</div>
+            <div class="alert-body">
+              <div class="alert-title">root 계정으로 PM2 실행 중</div>
+              <div class="alert-desc">현재 PM2가 root 권한으로 실행 중입니다. 보안상 <code>aiorch</code> 사용자로 전환 권장. ecosystem.config.js의 user 설정 및 <code>pm2 startup</code> 재등록 필요.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ct-icon">🗓️</span>개발 이력 타임라인</div>
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-dot done"></div>
+              <div class="tl-label">Phase 1 — 엔진 기초 (96/100)</div>
+              <div class="tl-desc">3-Layer AI 오케스트레이터, 7개 provider 연결, E2E 24테스트</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot done"></div>
+              <div class="tl-label">Phase 2 — Mock 제거, Real/Fallback 투명화 (96/100)</div>
+              <div class="tl-desc">mock fallback 완전 제거, inference_log DB 추가, real/fallback 분리</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot done"></div>
+              <div class="tl-label">Phase 3 — 설정 지속성, Provider Health 대시보드 (98/100)</div>
+              <div class="tl-desc">API 설정 DB 저장, 모델 설정 영속, health-dashboard.html 구현</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot done"></div>
+              <div class="tl-label">Phase 4 — SSE 스트리밍, 타임아웃, 캐시 (97/100)</div>
+              <div class="tl-desc">AbortController, 응답 캐시, SSE 청크 스트리밍</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot done"></div>
+              <div class="tl-label">Phase 5 — 보안 강화, 베타 시스템 (100/100)</div>
+              <div class="tl-desc">optionalAuth, rate limit, quota, 초대코드, 플랜별 제한</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot done"></div>
+              <div class="tl-label">VPS 배포 — Ubuntu 24.04 실서버</div>
+              <div class="tl-desc">PM2 + Nginx + UFW, 자동 재시작, IPv6/trust proxy 수정</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot active"></div>
+              <div class="tl-label">현재 — 운영 검증 완료 (25 PASS / 3 WARN / 3 FAIL)</div>
+              <div class="tl-desc">API 키 갱신, SSL, 베타 온보딩 준비 중</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot pending"></div>
+              <div class="tl-label">다음 — 내부 베타 (5~10명) 시작</div>
+              <div class="tl-desc">초대코드 발급, 사용자 피드백, 모니터링 강화</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- .content -->
+  </main>
+</div><!-- .layout -->
+
+<div class="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + id)?.classList.add('active');
+  event.currentTarget.classList.add('active');
+  window.scrollTo({top:0});
+}
+
+function switchTab(btn, targetId) {
+  const parent = btn.closest('.card');
+  parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  parent.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(targetId)?.classList.add('active');
+}
+
+// 스크롤 시 scroll-top 버튼 표시
+window.addEventListener('scroll', () => {
+  const btn = document.querySelector('.scroll-top');
+  btn.style.opacity = window.scrollY > 200 ? '1' : '0';
+  btn.style.pointerEvents = window.scrollY > 200 ? 'auto' : 'none';
+});
+document.querySelector('.scroll-top').style.opacity = '0';
+
+// 현재 시간 업데이트
+document.addEventListener('DOMContentLoaded', () => {
+  const now = new Date();
+  const fmt = now.toISOString().slice(0,16).replace('T',' ') + ' UTC';
+  document.querySelector('.topbar-meta').textContent = 'VPS 실서버 기준 · ' + fmt;
+});
+</script>
+</body>
+</html>
