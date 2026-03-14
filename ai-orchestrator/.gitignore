@@ -14,3 +14,15 @@ nginx/ssl/
 
 # 테스트 임시 파일
 *.tmp
+
+# 생성된 PPTX 파일
+*.pptx
+
+# 런타임 데이터
+data/tool_observability.jsonl
+data/tool_stats.json
+data/budget_stats.json
+data/search_stats.json
+
+# PM2 설정 (API 키 포함)
+ecosystem.config.js

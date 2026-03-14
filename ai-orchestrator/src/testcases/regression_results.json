@@ -1,0 +1,52 @@
+{
+  "timestamp": "2026-03-13T19:37:23.571Z",
+  "url": "http://localhost:3000",
+  "mode": "group-N",
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "passRate": 100,
+    "avgMs": 145,
+    "kpiMet": true,
+    "slowCount": 0
+  },
+  "results": [
+    {
+      "id": "N1",
+      "category": "Search Engine",
+      "desc": "GET /api/search/providers — 활성 프로바이더 목록 반환",
+      "pass": true,
+      "failures": [],
+      "latency": 32,
+      "latencyWarn": null,
+      "strategy": null,
+      "model": null,
+      "taskType": null
+    },
+    {
+      "id": "N2",
+      "category": "Search Engine",
+      "desc": "GET /api/search/test?q=Python — 실시간 검색 결과 반환",
+      "pass": true,
+      "failures": [],
+      "latency": 398,
+      "latencyWarn": null,
+      "strategy": null,
+      "model": null,
+      "taskType": null
+    },
+    {
+      "id": "N3",
+      "category": "Search Engine",
+      "desc": "GET /api/kpi — search KPI 필드 포함 확인",
+      "pass": true,
+      "failures": [],
+      "latency": 6,
+      "latencyWarn": null,
+      "strategy": null,
+      "model": null,
+      "taskType": null
+    }
+  ]
+}

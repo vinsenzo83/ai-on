@@ -23,7 +23,7 @@ NO_SSL=false
 APP_DIR="/opt/ai-orchestrator"
 APP_USER="aiorch"
 NODE_VERSION="20"
-REPO_URL="https://github.com/vinsenzo83/kbeauty-autocommerce.git"
+REPO_URL="https://github.com/vinsenzo83/ai-on.git"
 BRANCH="genspark_ai_developer"
 APP_SUBDIR="ai-orchestrator"
 APP_PORT=3000
@@ -168,6 +168,36 @@ sudo -u "${APP_USER}" npm ci --only=production --quiet
 success "npm 의존성 설치 완료"
 
 # ══════════════════════════════════════════════════════════════
+# 5-1단계: Playwright Chromium 설치 (PPT PNG 캡처용)
+# ══════════════════════════════════════════════════════════════
+step "5-1단계: Playwright Chromium 설치 (PPT 생성 필수)"
+
+# Chromium 의존 시스템 라이브러리 설치
+if [[ "$PKG_MGR" == "apt" ]]; then
+  apt-get install -y -qq \
+    libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libxkbcommon0 \
+    libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
+    libpangocairo-1.0-0 libpango-1.0-0 libcairo2 libgdk-pixbuf2.0-0 \
+    fonts-liberation fonts-noto-cjk 2>/dev/null || true
+fi
+
+# Playwright Chromium 설치 (aiorch 사용자 홈)
+CHROMIUM_PATH=$(sudo -u "${APP_USER}" bash -c '
+  export HOME=/opt/ai-orchestrator
+  cd /opt/ai-orchestrator/app/ai-orchestrator
+  npx playwright install chromium 2>&1 | tail -3
+  find $HOME/.cache/ms-playwright -name "chrome" -type f 2>/dev/null | head -1
+')
+
+if [[ -n "$CHROMIUM_PATH" ]]; then
+  success "Chromium 설치 완료: $CHROMIUM_PATH"
+else
+  # 대안: /root 기준 설치
+  npx playwright install chromium 2>/dev/null || true
+  warn "Chromium 설치 확인 필요 — PPT PNG 캡처 기능에 필요합니다"
+fi
+
+# ══════════════════════════════════════════════════════════════
 # 6단계: 환경변수 설정
 # ══════════════════════════════════════════════════════════════
 step "6단계: 환경변수 설정"
@@ -195,12 +225,29 @@ ADMIN_PASSWORD=$(openssl rand -base64 16)
 
 # ─── AI 공급자 키 (아래에 입력) ───
 OPENAI_API_KEY=
+REAL_OPENAI_API_KEY=
+OPENAI_BASE_URL=https://api.openai.com/v1
 ANTHROPIC_API_KEY=
 GOOGLE_API_KEY=
+GEMINI_API_KEY=
 DEEPSEEK_API_KEY=
 XAI_API_KEY=
 MOONSHOT_API_KEY=
 MISTRAL_API_KEY=
+
+# ─── 검색 공급자 키 (아래에 입력) ───
+TAVILY_API_KEY=
+BRAVE_SEARCH_API_KEY=
+SERPAPI_API_KEY=
+SERPER_API_KEY=
+
+# ─── 기본 모델 설정 ───
+DEFAULT_TEXT_MODEL=gpt-4o
+DEFAULT_ANALYSIS_MODEL=gpt-4o
+DEFAULT_CHAT_MODEL=gpt-4o-mini
+DEFAULT_CODE_MODEL=gpt-4o
+DEFAULT_CREATIVE_MODEL=gpt-4o
+DEFAULT_FAST_MODEL=gpt-4o-mini
 EOF
     chown "${APP_USER}:${APP_USER}" "$ENV_FILE"
     chmod 600 "$ENV_FILE"

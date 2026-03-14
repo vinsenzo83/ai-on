@@ -96,17 +96,17 @@ const LATENCY_WINDOW = 20;
 
 // 초기 기본값 (과거 데이터 기반)
 const PROVIDER_DEFAULT_TIMEOUT = {
-  openai:    20_000,
-  anthropic: 25_000,
-  google:    15_000,
-  mistral:   20_000,
-  moonshot:  25_000,
-  deepseek:  12_000, // 낮춤 (실패율 35%, 빠른 포기)
-  xai:        5_000, // P2: xAI 최대 5초 후 즉시 폴백 (429/403 대비)
-  groq:      10_000,
-  meta:      20_000,
-  alibaba:   20_000,
-  default:   20_000,
+  openai:     60_000, // [FIX v3] 20s→60s: PPT/보고서 등 긴 요청 지원
+  anthropic:  60_000, // 25s→60s
+  google:     45_000, // 20s→45s: gemini-2.5-flash
+  mistral:    30_000,
+  moonshot:   30_000,
+  deepseek:   30_000,
+  xai:        20_000,
+  groq:       15_000,
+  meta:       30_000,
+  alibaba:    30_000,
+  default:    30_000,
 };
 
 function _recordLatency(provider, ms) {
@@ -120,19 +120,17 @@ function _recordLatency(provider, ms) {
 function _getAdaptiveTimeout(provider, model, strategy, explicitMs) {
   if (explicitMs > 0) return explicitMs;
 
-  // 샘플 있으면 P95 × 1.3 사용
+  // 샘플 있으면 P95 × 1.3 사용 (최대 60s)
   const samples = _latencySamples[provider];
   if (samples && samples.length >= 5) {
     const sorted = [...samples].sort((a, b) => a - b);
     const p95 = sorted[Math.floor(sorted.length * 0.95)];
-    return Math.min(Math.max(p95 * 1.3, 5_000), 30_000); // 5s~30s 클램프
+    return Math.min(Math.max(p95 * 1.3, 10_000), 60_000); // 10s~60s 클램프
   }
 
-  // fast 모델이면 기본값의 60%
-  const isFast = strategy === 'fast' ||
-    (model && (model.includes('mini') || model.includes('haiku') || model.includes('flash') || model.includes('nano')));
+  // 항상 기본값 그대로 사용 (fast 전략도 감소 없음)
   const base = PROVIDER_DEFAULT_TIMEOUT[provider] || PROVIDER_DEFAULT_TIMEOUT.default;
-  return isFast ? Math.floor(base * 0.6) : base;
+  return base;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -221,14 +219,15 @@ const PROVIDER_BASE_URL = {
   openrouter: 'https://openrouter.ai/api/v1',
   deepseek:   'https://api.deepseek.com/v1',
   xai:        'https://api.x.ai/v1',
-  moonshot:   'https://api.moonshot.ai/v1',
+  moonshot:   'https://api.moonshot.cn/v1',
   mistral:    'https://api.mistral.ai/v1',
   alibaba:    'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
   meta:       'https://api.together.xyz/v1',
 };
 
-// 폴백 우선순위 체인 (프로바이더 다운 시 순서대로 시도)
-const FALLBACK_CHAIN = ['openai', 'google', 'mistral', 'anthropic', 'moonshot', 'deepseek']; // P1: google/mistral 상위 배치
+// [FIX v2] 폴백 우선순위 체인 — Google 복원 (gemini-2.5-flash 정상), xai/groq 추가
+// 순서: google → anthropic → deepseek → mistral → moonshot → openai
+const FALLBACK_CHAIN = ['google', 'anthropic', 'deepseek', 'mistral', 'moonshot', 'openai'];
 
 // ── 런타임 클라이언트 캐시 ─────────────────────────────────────
 const _clients = {};
@@ -276,7 +275,9 @@ function _getClient(provider) {
   }
 
   try {
-    const client = new OpenAI({ apiKey, baseURL, defaultHeaders: _getProviderHeaders(provider) });
+    // SDK 레벨 timeout 설정 (AbortController 충돌 방지)
+    const sdkTimeout = PROVIDER_DEFAULT_TIMEOUT[provider] || PROVIDER_DEFAULT_TIMEOUT.default;
+    const client = new OpenAI({ apiKey, baseURL, timeout: sdkTimeout, maxRetries: 0, defaultHeaders: _getProviderHeaders(provider) });
     _clients[provider] = client;
     return client;
   } catch { return null; }
@@ -293,8 +294,9 @@ function refreshClient(provider, apiKey, baseUrl) {
   delete _clients[provider];
   if (!apiKey) return;
   const bURL = baseUrl || PROVIDER_BASE_URL[provider] || 'https://api.openai.com/v1';
+  const sdkTimeout = PROVIDER_DEFAULT_TIMEOUT[provider] || PROVIDER_DEFAULT_TIMEOUT.default;
   try {
-    _clients[provider] = new OpenAI({ apiKey, baseURL: bURL, defaultHeaders: _getProviderHeaders(provider) });
+    _clients[provider] = new OpenAI({ apiKey, baseURL: bURL, timeout: sdkTimeout, maxRetries: 0, defaultHeaders: _getProviderHeaders(provider) });
   } catch(e) {
     console.warn('[aiConnector] 클라이언트 생성 실패:', provider, e.message);
   }
@@ -330,32 +332,100 @@ function refreshAnthropicClient(apiKey) {
 }
 
 // ── MODEL_STRATEGY ────────────────────────────────────────────
-// P1 개선: fast 전략에 google/mistral 우선 규칙 추가 (라우팅 정확도 90%+ 목표)
+// STEP 1 (Strategy Routing 정상화):
+//   fast     → 경량 모델 (gpt-4o-mini / gemini-flash)
+//   balanced → 표준 모델 (gpt-4o / gemini-2.5-pro)
+//   deep     → 최고 성능 모델 (claude-3-5-sonnet / gpt-4.1)
+//   powerful / vision / code / creative — 하위 호환 유지
 const MODEL_STRATEGY = {
-  fast:     { openai: 'gpt-4o-mini', anthropic: 'claude-haiku-4-5-20251001',
-              google: 'gemini-2.5-flash', mistral: 'mistral-small-latest' },
-  balanced: { openai: 'gpt-4o',      anthropic: 'claude-sonnet-4-5-20250929',
-              google: 'gemini-2.5-flash', mistral: 'mistral-small-latest' },
-  powerful: { openai: 'gpt-4o',      anthropic: 'claude-sonnet-4-6' },
-  vision:   { openai: 'gpt-4o',      anthropic: 'claude-sonnet-4-6' },
-  code:     { openai: 'gpt-4o',      anthropic: 'claude-sonnet-4-5-20250929' },
-  creative: { openai: 'gpt-4o',      anthropic: 'claude-sonnet-4-6',
-              mistral: 'mistral-small-latest', google: 'gemini-2.5-flash' },
+  // ── 신규: 복잡도 기반 3단계 ───────────────────────────────
+  fast: {
+    openai:    'gpt-4o-mini',
+    anthropic: 'claude-haiku-4-5-20251001',
+    google:    'gemini-2.5-flash',
+    mistral:   'mistral-small-latest',
+    deepseek:  'deepseek-chat',
+    moonshot:  'moonshot-v1-8k',
+  },
+  balanced: {
+    openai:    'gpt-4o',
+    anthropic: 'claude-sonnet-4-5-20250929',
+    google:    'gemini-2.5-flash',
+    mistral:   'mistral-small-latest',
+    deepseek:  'deepseek-chat',
+    moonshot:  'moonshot-v1-32k',
+  },
+  deep: {
+    openai:    'gpt-4o',                        // MODEL_REGISTRY 등록 최고 OpenAI 모델
+    anthropic: 'claude-sonnet-4-5-20250929',    // 코드·분석 — Claude Sonnet 4.5
+    google:    'gemini-2.5-flash',
+    deepseek:  'deepseek-chat',
+    moonshot:  'moonshot-v1-128k',
+  },
+  // ── 기존 키 (하위 호환) ──────────────────────────────────
+  powerful: {
+    openai:    'gpt-4o',
+    anthropic: 'claude-sonnet-4-6',
+    google:    'gemini-2.5-flash',
+    deepseek:  'deepseek-chat',
+  },
+  vision: {
+    openai:    'gpt-4o',
+    anthropic: 'claude-sonnet-4-6',
+  },
+  code: {
+    openai:    'gpt-4o',
+    anthropic: 'claude-sonnet-4-5-20250929',
+    deepseek:  'deepseek-chat',
+  },
+  creative: {
+    openai:    'gpt-4o',
+    anthropic: 'claude-sonnet-4-6',
+    mistral:   'mistral-small-latest',
+    google:    'gemini-2.5-flash',
+  },
 };
 
-// P1: 태스크 유형별 우선 프로바이더 매핑 (fast 전략 라우팅 정확도 향상)
-// Phase 13.1 – text/creative/summarization 추가로 라우팅 히트율 ≥90% 달성
+// ── TASK_PROVIDER_PRIORITY ────────────────────────────────────
+// 태스크 유형별 우선 프로바이더 매핑
+// deep 전략에서는 callLLM 내부에서 selectModel()이 먼저 모델을 확정하므로
+// 여기서는 balanced/fast 폴백 순서를 정의함
 const TASK_PROVIDER_PRIORITY = {
-  classification:  ['google', 'mistral', 'openai'],   // 초경량 분류: Google/Mistral 우선
-  translation:     ['google', 'mistral', 'openai'],   // 번역/QA: Google/Mistral 우선
-  summarization:   ['google', 'mistral', 'openai'],   // 요약: Google/Mistral 우선
-  fast:            ['google', 'mistral', 'openai'],   // 빠른 응답: Google/Mistral 우선
-  chat:            ['google', 'mistral', 'openai'],   // 채팅: Google/Mistral 우선
-  text:            ['google', 'mistral', 'openai'],   // 텍스트 생성: Google/Mistral 우선
-  creative:        ['mistral', 'google', 'openai'],   // 창의적 작성: Mistral/Google 우선
-  analysis:        ['openai', 'google', 'anthropic'], // 분석: OpenAI 우선
-  code:            ['openai', 'anthropic'],            // 코드: OpenAI/Anthropic 우선
-  reasoning:       ['openai', 'anthropic'],            // 추론: OpenAI/Anthropic 우선
+  // ── 기존 키 (하위 호환) ──────────────────────────────────────
+  classification:  ['google', 'openai', 'anthropic'],
+  translation:     ['deepseek', 'moonshot', 'openai'],
+  summarization:   ['moonshot', 'deepseek', 'openai'],
+
+  // ── 실제 taskType 키 (intentAnalyzer 반환값과 일치) ─────────
+  // 멀티AI 최적 배분 — 각 AI 특기 활용
+  unknown:    ['openai', 'google', 'anthropic'],       // 일반 질문: OpenAI 우선
+  text:       ['openai', 'google', 'anthropic'],       // 텍스트: OpenAI 우선
+  chat:       ['openai', 'anthropic', 'google'],       // 채팅: OpenAI 우선
+  fast:       ['openai', 'mistral', 'google'],         // 빠른 응답: OpenAI 우선 (안정적)
+
+  summarize:  ['moonshot', 'deepseek', 'google'],      // 요약: Moonshot 우선
+  summarise:  ['moonshot', 'deepseek', 'google'],
+  translate:  ['deepseek', 'moonshot', 'google'],      // 번역: DeepSeek 우선
+  analysis:   ['anthropic', 'openai', 'google'],       // 분석: Claude 우선
+  analyse:    ['anthropic', 'openai', 'google'],
+  analyze:    ['anthropic', 'openai', 'google'],
+  extract:    ['google', 'openai', 'anthropic'],       // 추출: Gemini 우선
+  classify:   ['google', 'openai', 'anthropic'],       // 분류: Gemini 우선
+
+  creative:   ['anthropic', 'openai', 'mistral'],      // 창의적: Claude 우선 (deep)
+  code:       ['openai', 'anthropic', 'deepseek'],     // 코드: OpenAI 우선
+  reasoning:  ['openai', 'anthropic', 'google'],       // 추론: OpenAI 우선
+
+  ppt:        ['openai', 'anthropic', 'deepseek'],       // PPT: OpenAI 우선 (안정적)
+  blog:       ['openai', 'anthropic', 'deepseek'],     // 블로그: OpenAI 우선
+  email:      ['openai', 'anthropic', 'mistral'],      // 이메일: OpenAI 우선
+  resume:     ['anthropic', 'openai', 'deepseek'],     // 자소서: Claude 우선
+  website:    ['openai', 'anthropic', 'deepseek'],     // 웹사이트: OpenAI 우선 (deep)
+  report:     ['anthropic', 'openai', 'google'],       // 리포트: Claude 우선
+  ppt_file:   ['anthropic', 'openai', 'google'],       // PPT 파일: Claude 우선
+  research:   ['openai', 'google', 'anthropic'],       // 리서치: OpenAI 우선
+  document:   ['anthropic', 'openai', 'deepseek'],     // 문서: Claude 우선
+  image:      ['openai', 'google', 'anthropic'],       // 이미지: OpenAI 우선 (DALL-E)
 };
 
 /** 모델 ID → 공급자 추측 */
@@ -431,8 +501,9 @@ async function callLLM({
 
   if (!resolvedModel) {
     if (task) {
-      // P1: 태스크 유형별 우선 프로바이더로 라우팅 (google/mistral 우선)
-      const taskProviders = TASK_PROVIDER_PRIORITY[task] || TASK_PROVIDER_PRIORITY.analysis;
+      // P1: 태스크 유형별 우선 프로바이더로 라우팅
+      // TASK_PROVIDER_PRIORITY에 없는 task는 unknown(google 우선) 사용
+      const taskProviders = TASK_PROVIDER_PRIORITY[task] || TASK_PROVIDER_PRIORITY.unknown || TASK_PROVIDER_PRIORITY.fast;
       const strat = MODEL_STRATEGY[strategy] || MODEL_STRATEGY.fast;
       let picked = null;
       for (const prov of taskProviders) {
@@ -485,7 +556,8 @@ async function callLLM({
   if (_isCBOpen(provider)) {
     console.warn(`[CB] ${provider} 차단됨 → 즉시 폴백`);
     const fbProvider = _pickFallbackProvider([provider]);
-    if (!fbProvider || _fallbackDepth > 0) {
+    // [FIX] fallbackDepth 제한 3으로 확대 (기존 >0 이면 throw → 연쇄 폴백 불가)
+    if (!fbProvider || _fallbackDepth >= 3) {
       const err = new AIError(`${provider} 회로차단 중, 대체 프로바이더 없음`, { code: 'CB_OPEN', provider, model: resolvedModel });
       _logToDB({ ...logBase, usedModel: resolvedModel, provider, success: false, errorCode: 'CB_OPEN', latencyMs: 0 });
       throw err;
@@ -654,13 +726,11 @@ async function _callOpenAI({ oai, messages, system, model, maxTokens, temperatur
   const opts = { model, messages: msgs, max_tokens: safeMaxTokens, temperature };
   if (responseFormat === 'json') opts.response_format = { type: 'json_object' };
 
-  const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  // SDK 클라이언트에 이미 timeout 설정됨 — AbortController 불필요 (충돌 방지)
   try {
     const start = Date.now();
-    const res   = await oai.chat.completions.create(opts, { signal: ac.signal });
+    const res   = await oai.chat.completions.create(opts, { timeout: timeoutMs });
     const ms    = Date.now() - start;
-    clearTimeout(timer);
     const usage = res.usage || {};
     costTracker.record({ userId, pipeline, model, inputTokens: usage.prompt_tokens || 0, outputTokens: usage.completion_tokens || 0, metadata: { ms, finishReason: res.choices[0]?.finish_reason } });
     return {
@@ -669,20 +739,17 @@ async function _callOpenAI({ oai, messages, system, model, maxTokens, temperatur
       provider: _guessProvider(model),
       finishReason: res.choices[0]?.finish_reason,
     };
-  } catch(e) { clearTimeout(timer); throw e; }
+  } catch(e) { throw e; }
 }
 
 // ── _callAnthropic ────────────────────────────────────────────
 async function _callAnthropic({ ant, messages, system, model, maxTokens, temperature, userId, pipeline, timeoutMs = 25_000 }) {
   const opts = { model, messages, max_tokens: maxTokens, temperature };
   if (system) opts.system = system;
-  const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), timeoutMs);
   try {
     const start = Date.now();
-    const res   = await ant.messages.create(opts, { signal: ac.signal });
+    const res   = await ant.messages.create(opts, { timeout: timeoutMs });
     const ms    = Date.now() - start;
-    clearTimeout(timer);
     const inputTokens  = res.usage?.input_tokens  || 0;
     const outputTokens = res.usage?.output_tokens || 0;
     costTracker.record({ userId, pipeline, model, inputTokens, outputTokens, metadata: { ms } });
@@ -693,7 +760,7 @@ async function _callAnthropic({ ant, messages, system, model, maxTokens, tempera
       ms,
       provider: 'anthropic',
     };
-  } catch(e) { clearTimeout(timer); throw e; }
+  } catch(e) { throw e; }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -727,36 +794,26 @@ async function callLLMStream({
     if (provider === 'anthropic') {
       const ant = _getAnthropic();
       if (!ant) throw new AIError('Anthropic 키 없음', { code: 'NO_API_KEY', provider: 'anthropic' });
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), effectiveTimeout);
       const opts = { model: resolvedModel, messages, max_tokens: maxTokens, temperature, stream: true };
       if (system) opts.system = system;
-      try {
-        const stream = await ant.messages.stream(opts, { signal: ac.signal });
-        for await (const chunk of stream) {
-          if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-            fullContent += chunk.delta.text; onChunk(chunk.delta.text);
-          }
+      const stream = await ant.messages.stream(opts);
+      for await (const chunk of stream) {
+        if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+          fullContent += chunk.delta.text; onChunk(chunk.delta.text);
         }
-        clearTimeout(timer);
-      } catch(e) { clearTimeout(timer); throw e; }
+      }
     } else {
       const client = _getClient(provider) || _getClient('openai');
       if (!client) throw new AIError(`${provider} 클라이언트 없음`, { code: 'NO_API_KEY', provider });
       const msgs = system ? [{ role: 'system', content: system }, ...messages] : messages;
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), effectiveTimeout);
-      try {
-        const stream = await client.chat.completions.create(
-          { model: resolvedModel, messages: msgs, max_tokens: maxTokens, temperature, stream: true },
-          { signal: ac.signal }
-        );
-        for await (const chunk of stream) {
-          const text = chunk.choices[0]?.delta?.content || '';
-          if (text) { fullContent += text; onChunk(text); }
-        }
-        clearTimeout(timer);
-      } catch(e) { clearTimeout(timer); throw e; }
+      const stream = await client.chat.completions.create(
+        { model: resolvedModel, messages: msgs, max_tokens: maxTokens, temperature, stream: true },
+        { timeout: effectiveTimeout }
+      );
+      for await (const chunk of stream) {
+        const text = chunk.choices[0]?.delta?.content || '';
+        if (text) { fullContent += text; onChunk(text); }
+      }
     }
 
     const ms = Date.now() - start;

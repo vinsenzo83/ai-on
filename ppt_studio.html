@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>PPT Studio</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+/* ═══ RESET & TOKENS ══════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:     #080810;
+  --panel:  #0e0e1a;
+  --panel2: #12121f;
+  --panel3: #161624;
+  --border: #1c1c2e;
+  --bord2:  #252538;
+  --text:   #e8e8f8;
+  --sub:    #7070a8;
+  --accent: #7c3aed;
+  --acc2:   #06b6d4;
+  --green:  #10b981;
+  --red:    #ef4444;
+  --gold:   #f59e0b;
+  /* layout */
+  --hdr:    52px;
+  --nav:    56px;  /* mobile bottom nav */
+  --sb:     260px; /* desktop sidebar */
+  --rp:     260px; /* desktop right panel */
+  /* safe areas */
+  --safe-t: env(safe-area-inset-top,0px);
+  --safe-b: env(safe-area-inset-bottom,0px);
+}
+
+html{ height:100%; }
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:14px;
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+  /* desktop: lock scroll; mobile: allow */
+  overflow:hidden;
+}
+
+/* ═══ SCROLLBARS ══════════════════════════════════════════════ */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bord2);border-radius:4px;}
+
+/* ═══ HEADER ══════════════════════════════════════════════════ */
+header{
+  height:var(--hdr);
+  padding-top:var(--safe-t);
+  background:var(--panel);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  padding-left:14px;padding-right:14px;
+  gap:10px;flex-shrink:0;z-index:20;
+}
+.logo{
+  display:flex;align-items:center;gap:8px;
+  font-size:15px;font-weight:800;white-space:nowrap;
+}
+.logo-icon{
+  width:28px;height:28px;border-radius:7px;
+  background:linear-gradient(135deg,var(--accent),var(--acc2));
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+  flex-shrink:0;
+}
+.logo-text{ color:var(--text); }
+.logo-badge{
+  padding:1px 6px;border-radius:20px;
+  background:var(--accent)22;border:1px solid var(--accent)44;
+  color:var(--acc2);font-size:9px;font-weight:700;letter-spacing:.5px;
+}
+
+/* desktop tabs in header */
+.hdr-tabs{
+  display:flex;gap:2px;margin-left:10px;
+}
+.htab{
+  padding:5px 12px;border-radius:7px;cursor:pointer;
+  font-size:12px;font-weight:500;color:var(--sub);
+  transition:all .15s;border:1px solid transparent;user-select:none;
+}
+.htab:hover{color:var(--text);background:var(--border);}
+.htab.active{color:var(--text);background:var(--panel3);border-color:var(--bord2);}
+
+.hdr-right{
+  display:flex;align-items:center;gap:8px;margin-left:auto;
+}
+.pill{
+  display:flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:20px;
+  background:var(--panel3);border:1px solid var(--bord2);
+  font-size:11px;color:var(--sub);white-space:nowrap;
+}
+.pill strong{color:var(--text);font-weight:700;}
+.btn{
+  padding:7px 14px;border-radius:8px;border:none;cursor:pointer;
+  font-size:12px;font-weight:600;font-family:inherit;
+  transition:all .15s;user-select:none;white-space:nowrap;
+  -webkit-appearance:none;
+}
+.btn-ghost{background:var(--panel3);color:var(--sub);border:1px solid var(--bord2);}
+.btn-ghost:hover,
+.btn-ghost:active{color:var(--text);background:var(--panel2);}
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent),var(--acc2));color:#fff;
+}
+.btn-primary:hover,.btn-primary:active{opacity:.88;transform:translateY(-1px);}
+
+/* mobile: hide pills, compress header */
+@media(max-width:600px){
+  .logo-badge,.hdr-tabs,.pill{display:none;}
+  .hdr-right{gap:6px;}
+  header{padding-left:12px;padding-right:12px;}
+  .btn{padding:6px 11px;font-size:11px;}
+}
+
+/* ═══ MAIN LAYOUT ═════════════════════════════════════════════ */
+main{
+  flex:1;display:flex;overflow:hidden;
+  /* account for mobile nav bar */
+}
+
+/* ═══ LEFT SIDEBAR ════════════════════════════════════════════ */
+.sidebar{
+  width:var(--sb);
+  background:var(--panel);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;flex-shrink:0;
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+}
+.sec-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 14px 7px;
+}
+.sec-title{
+  font-size:9px;font-weight:700;letter-spacing:1.4px;
+  text-transform:uppercase;color:var(--sub);
+}
+.sec-badge{
+  padding:1px 7px;border-radius:20px;
+  background:var(--accent)22;color:var(--accent);
+  font-size:9px;font-weight:700;
+}
+
+/* theme grid */
+.theme-scroll{overflow-y:auto;flex:1;min-height:0;}
+.theme-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:7px;padding:3px 10px 10px;
+}
+.theme-card{
+  position:relative;border-radius:9px;overflow:hidden;
+  cursor:pointer;border:2px solid transparent;
+  transition:all .18s;aspect-ratio:16/9;
+}
+.theme-card:hover{border-color:var(--accent)55;transform:translateY(-1px);}
+.theme-card.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)33;}
+.tp{width:100%;height:100%;display:flex;flex-direction:column;padding:5px;gap:2px;}
+.tp-bar{height:2px;border-radius:1px;width:100%;background:rgba(255,255,255,.55);}
+.tp-title{height:4px;border-radius:2px;width:65%;background:rgba(255,255,255,.4);}
+.tp-sub{height:3px;border-radius:2px;width:45%;background:rgba(255,255,255,.25);}
+.tp-cards{display:flex;gap:2px;margin-top:2px;flex:1;}
+.tp-card{flex:1;border-radius:2px;background:rgba(255,255,255,.18);}
+.theme-label{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:3px 5px;
+  background:linear-gradient(transparent,rgba(0,0,0,.75));
+}
+.theme-name{font-size:8px;font-weight:700;color:#fff;line-height:1.1;}
+.theme-emoji{position:absolute;top:3px;right:4px;font-size:10px;line-height:1;}
+.theme-check{
+  position:absolute;top:3px;left:3px;
+  width:13px;height:13px;border-radius:50%;
+  background:var(--accent);
+  display:none;align-items:center;justify-content:center;
+  font-size:8px;color:#fff;font-weight:700;
+}
+.theme-card.active .theme-check{display:flex;}
+
+/* font list */
+.font-list{overflow-y:auto;}
+.font-item{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 12px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+  transition:background .12s;
+  border-left:3px solid transparent;
+}
+.font-item:hover,.font-item:active{background:var(--panel3);}
+.font-item.active{background:var(--panel3);border-left-color:var(--accent);}
+.fsample{font-size:17px;font-weight:700;width:50px;flex-shrink:0;text-align:center;}
+.fmeta{flex:1;min-width:0;}
+.fname{font-size:12px;font-weight:600;color:var(--text);margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.flabel{font-size:10px;color:var(--sub);}
+.fcheck{
+  width:15px;height:15px;border-radius:50%;background:var(--accent);
+  flex-shrink:0;display:none;align-items:center;justify-content:center;font-size:8px;color:#fff;
+}
+.font-item.active .fcheck{display:flex;}
+.sep{height:1px;background:var(--border);margin:0 12px;}
+
+/* ═══ PREVIEW AREA ════════════════════════════════════════════ */
+.preview-area{
+  flex:1;display:flex;flex-direction:column;
+  background:var(--bg);overflow:hidden;min-width:0;
+}
+.preview-toolbar{
+  height:40px;
+  background:var(--panel2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 10px;gap:8px;flex-shrink:0;
+}
+.nav-btn{
+  width:28px;height:28px;border-radius:6px;border:1px solid var(--bord2);
+  background:var(--panel);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--sub);font-size:15px;transition:all .12s;
+  user-select:none;-webkit-appearance:none;
+  /* bigger touch target on mobile */
+  min-width:36px;min-height:36px;
+}
+.nav-btn:hover,.nav-btn:active{color:var(--text);background:var(--panel3);}
+.slide-indicator{
+  font-size:12px;color:var(--sub);font-weight:500;
+  padding:0 4px;white-space:nowrap;
+}
+.slide-indicator strong{color:var(--text);}
+.dots-wrap{
+  flex:1;display:flex;align-items:center;
+  gap:5px;overflow-x:auto;padding:2px 0;
+}
+.dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--bord2);cursor:pointer;flex-shrink:0;
+  transition:all .18s;
+}
+.dot.active{background:var(--accent);transform:scale(1.5);}
+.zoom-grp{display:flex;align-items:center;gap:4px;margin-left:auto;}
+.zoom-val{font-size:10px;color:var(--sub);width:30px;text-align:center;}
+
+/* hide zoom on small mobile (use auto-fit) */
+@media(max-width:480px){
+  .zoom-grp{display:none;}
+  .dots-wrap{gap:4px;}
+}
+
+/* slide frame */
+.slide-frame{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:16px;overflow:hidden;position:relative;
+}
+.slide-box{
+  position:relative;
+  transition:transform .25s;
+  transform-origin:center center;
+}
+.slide-box iframe{
+  width:1280px;height:720px;
+  border:none;border-radius:10px;
+  box-shadow:0 20px 60px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.04);
+  display:block;background:var(--panel2);
+}
+
+/* ═══ RIGHT PANEL ═════════════════════════════════════════════ */
+.right-panel{
+  width:var(--rp);
+  background:var(--panel);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;flex-shrink:0;
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+}
+.rp-hdr{
+  padding:12px 14px 8px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+  font-size:9px;font-weight:700;letter-spacing:1.4px;
+  text-transform:uppercase;color:var(--sub);
+}
+.rp-body{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px;}
+.lbl{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--sub);margin-bottom:4px;}
+textarea.prompt{
+  width:100%;background:var(--bg);border:1px solid var(--bord2);
+  border-radius:9px;color:var(--text);font-family:inherit;
+  font-size:12px;line-height:1.6;padding:10px;resize:none;outline:none;
+  transition:border-color .15s;min-height:90px;
+  -webkit-appearance:none;
+}
+textarea.prompt:focus{border-color:var(--accent)66;}
+.chips{display:flex;flex-direction:column;gap:5px;}
+.chip-hdr{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--sub);}
+.chip{
+  padding:7px 10px;border-radius:7px;
+  background:var(--panel3);border:1px solid var(--bord2);
+  font-size:11px;color:var(--sub);cursor:pointer;
+  transition:all .13s;line-height:1.4;
+}
+.chip:hover,.chip:active{color:var(--text);border-color:var(--accent)44;}
+
+/* current selection mini cards */
+.sel-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.sel-card{
+  background:var(--panel3);border:1px solid var(--bord2);
+  border-radius:8px;padding:7px;text-align:center;
+}
+.sel-key{font-size:8px;color:var(--sub);margin-bottom:3px;}
+.sel-val{font-size:10px;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* status bar at bottom of right panel */
+.status-wrap{
+  padding:9px 12px;background:var(--panel3);
+  border-top:1px solid var(--border);flex-shrink:0;
+}
+.status-msg{font-size:11px;color:var(--sub);line-height:1.5;}
+.status-msg.ok{color:var(--green);}
+.status-msg.err{color:var(--red);}
+.prog-bar{height:2px;background:var(--bord2);border-radius:1px;margin-top:5px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--acc2));border-radius:1px;width:0;transition:width .3s;}
+.dl-link{
+  display:flex;align-items:center;gap:7px;
+  padding:8px 10px;border-radius:8px;
+  background:var(--green)18;border:1px solid var(--green)44;
+  color:var(--green);font-size:11px;font-weight:600;
+  text-decoration:none;margin-top:6px;transition:all .13s;
+}
+.dl-link:hover,.dl-link:active{background:var(--green)28;}
+
+/* ═══ CHAT UI ═════════════════════════════════════════════════ */
+.chat-messages{
+  flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:10px;
+  scroll-behavior:smooth;
+}
+.chat-msg{display:flex;gap:8px;animation:msgIn .2s ease;}
+.chat-msg.user{flex-direction:row-reverse;}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.msg-avatar{
+  width:26px;height:26px;border-radius:50%;
+  background:var(--panel3);border:1px solid var(--bord2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;flex-shrink:0;margin-top:2px;
+}
+.chat-msg.user .msg-avatar{background:var(--accent)22;border-color:var(--accent)44;}
+.msg-bubble{
+  max-width:calc(100% - 38px);
+  background:var(--panel2);border:1px solid var(--bord2);
+  border-radius:12px 12px 12px 4px;
+  padding:8px 10px;font-size:12px;line-height:1.6;color:var(--text);
+}
+.chat-msg.user .msg-bubble{
+  background:var(--accent)18;border-color:var(--accent)44;
+  border-radius:12px 12px 4px 12px;color:var(--text);
+}
+.msg-bubble.typing{
+  display:flex;align-items:center;gap:4px;padding:12px 14px;
+}
+.typing-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--sub);
+  animation:typingPulse 1.2s infinite;
+}
+.typing-dot:nth-child(2){animation-delay:.2s;}
+.typing-dot:nth-child(3){animation-delay:.4s;}
+@keyframes typingPulse{0%,60%,100%{transform:scale(1);opacity:.4;}30%{transform:scale(1.3);opacity:1;}}
+
+.chat-chips-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px;}
+.chat-chip{
+  padding:5px 7px;border-radius:7px;
+  background:var(--panel3);border:1px solid var(--bord2);
+  font-size:10px;color:var(--sub);cursor:pointer;text-align:center;
+  transition:all .13s;line-height:1.4;
+}
+.chat-chip:hover{color:var(--text);border-color:var(--accent)44;background:var(--accent)11;}
+
+.chat-input-area{
+  border-top:1px solid var(--border);background:var(--panel2);flex-shrink:0;
+}
+.chat-textarea{
+  flex:1;background:var(--bg);border:1px solid var(--bord2);
+  border-radius:10px;color:var(--text);font-family:inherit;
+  font-size:12px;line-height:1.5;padding:8px 10px;resize:none;outline:none;
+  transition:border-color .15s;min-height:54px;max-height:120px;
+  -webkit-appearance:none;overflow-y:auto;
+}
+.chat-textarea:focus{border-color:var(--accent)66;}
+.chat-send-btn{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--acc2));
+  border:none;cursor:pointer;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:opacity .15s;align-self:flex-end;
+}
+.chat-send-btn:hover{opacity:.85;}
+.chat-send-btn:disabled{opacity:.4;cursor:not-allowed;}
+.quick-chip{
+  padding:3px 8px;border-radius:20px;
+  background:var(--panel3);border:1px solid var(--bord2);
+  font-size:10px;color:var(--sub);cursor:pointer;
+  transition:all .13s;white-space:nowrap;
+}
+.quick-chip:hover{color:var(--text);border-color:var(--accent)44;}
+
+/* AI progress cards */
+.ai-progress-card{
+  display:flex;flex-direction:column;gap:4px;
+  background:var(--panel3);border:1px solid var(--bord2);
+  border-radius:10px;padding:8px 10px;margin-top:6px;
+}
+.ai-step{display:flex;align-items:center;gap:6px;font-size:11px;}
+.ai-step-icon{font-size:12px;width:18px;text-align:center;}
+.ai-step-label{flex:1;color:var(--sub);}
+.ai-step.active .ai-step-label{color:var(--text);}
+.ai-step.done .ai-step-label{color:var(--green);}
+.ai-step.err .ai-step-label{color:var(--red);}
+
+/* ═══ COMBOS TAB ══════════════════════════════════════════════ */
+.combos-pane{
+  flex:1;display:none;flex-direction:column;overflow:hidden;
+}
+.combos-pane.active{display:flex;}
+.combos-toolbar{
+  padding:12px 14px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;gap:8px;flex-wrap:wrap;
+}
+.combos-title{font-size:14px;font-weight:700;}
+.combos-sub{font-size:11px;color:var(--sub);}
+.combo-filters{display:flex;gap:6px;flex-wrap:wrap;}
+select.csel{
+  background:var(--panel3);border:1px solid var(--bord2);color:var(--text);
+  padding:5px 8px;border-radius:7px;font-family:inherit;font-size:11px;
+  cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237070a8'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;
+  padding-right:24px;
+}
+.combos-grid{
+  flex:1;overflow-y:auto;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:10px;padding:12px;
+  align-content:start;
+}
+.combo-card{
+  border-radius:9px;overflow:hidden;cursor:pointer;
+  border:2px solid var(--border);transition:all .18s;
+}
+.combo-card:hover,.combo-card:active{border-color:var(--accent)55;transform:translateY(-2px);}
+.combo-preview{aspect-ratio:16/9;position:relative;}
+.combo-info{padding:5px 7px;background:var(--panel2);}
+.combo-name{font-size:10px;font-weight:600;color:var(--text);}
+.combo-font{font-size:9px;color:var(--sub);}
+
+/* ═══ MOBILE BOTTOM NAV ═══════════════════════════════════════ */
+.mobile-nav{
+  display:none;
+  height:calc(var(--nav) + var(--safe-b));
+  padding-bottom:var(--safe-b);
+  background:var(--panel);
+  border-top:1px solid var(--border);
+  flex-shrink:0;z-index:20;
+}
+.mobile-nav-inner{
+  height:var(--nav);
+  display:flex;align-items:stretch;
+}
+.mnav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;cursor:pointer;
+  font-size:9px;font-weight:600;color:var(--sub);
+  transition:color .15s;border:none;background:none;
+  font-family:inherit;-webkit-appearance:none;
+}
+.mnav-item.active{color:var(--accent);}
+.mnav-icon{font-size:20px;line-height:1;}
+
+/* ═══ MOBILE SHEET (bottom drawer) ═══════════════════════════ */
+.sheet-backdrop{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.6);z-index:40;
+  opacity:0;transition:opacity .25s;
+}
+.sheet-backdrop.open{display:block;opacity:1;}
+.sheet{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--panel);border-radius:18px 18px 0 0;
+  border-top:1px solid var(--bord2);
+  z-index:50;
+  transform:translateY(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  max-height:88vh;display:flex;flex-direction:column;
+  padding-bottom:var(--safe-b);
+}
+.sheet.open{transform:translateY(0);}
+.sheet-handle{
+  width:36px;height:4px;border-radius:2px;
+  background:var(--bord2);margin:10px auto 6px;flex-shrink:0;
+}
+.sheet-title{
+  font-size:13px;font-weight:700;padding:0 16px 10px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sheet-close{
+  width:28px;height:28px;border-radius:50%;background:var(--panel3);
+  border:1px solid var(--bord2);cursor:pointer;display:flex;
+  align-items:center;justify-content:center;font-size:14px;
+  color:var(--sub);-webkit-appearance:none;
+}
+.sheet-body{flex:1;overflow-y:auto;padding:10px 14px 14px;}
+
+/* ═══ OVERLAY / LOADING ════════════════════════════════════════ */
+.overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(8,8,16,.88);backdrop-filter:blur(10px);
+  z-index:100;align-items:center;justify-content:center;
+}
+.overlay.show{display:flex;}
+.ov-box{
+  background:var(--panel);border:1px solid var(--bord2);
+  border-radius:18px;padding:32px 36px;text-align:center;
+  width:min(340px,90vw);
+}
+.ov-spin{
+  width:44px;height:44px;border:3px solid var(--bord2);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin .7s linear infinite;margin:0 auto 16px;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.ov-title{font-size:16px;font-weight:700;margin-bottom:6px;}
+.ov-sub{font-size:12px;color:var(--sub);margin-bottom:16px;word-break:break-word;}
+.ov-prog{height:3px;background:var(--bord2);border-radius:2px;overflow:hidden;}
+.ov-prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--acc2));border-radius:2px;animation:pgloop 2s ease-in-out infinite;}
+@keyframes pgloop{0%{width:0;margin-left:0}50%{width:65%;margin-left:10%}100%{width:0;margin-left:100%}}
+.ov-steps{display:flex;flex-direction:column;gap:7px;margin-top:16px;text-align:left;}
+.ov-step{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--sub);}
+.ov-step.done{color:var(--green);}
+.ov-step.cur{color:var(--text);}
+.ov-si{width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;}
+.ov-step.done .ov-si{background:var(--green)22;color:var(--green);}
+.ov-step.cur .ov-si{background:var(--accent)22;color:var(--accent);}
+.ov-step.pend .ov-si{background:var(--bord2);color:var(--sub);}
+
+/* ═══ MOBILE BREAKPOINTS ══════════════════════════════════════ */
+
+/* TABLET: hide right panel, keep sidebar */
+@media(max-width:900px){
+  :root{--rp:0px;}
+  .right-panel{display:none;}
+  #chatPanelBtn{display:flex!important;}
+}
+
+/* MOBILE: hide both panels → bottom nav + sheets */
+@media(max-width:640px){
+  :root{--sb:0px;}
+  body{overflow:auto;}
+
+  /* main becomes scrollable column */
+  main{
+    flex-direction:column;
+    overflow:visible;
+    padding-bottom:0;
+  }
+
+  /* sidebar becomes off-canvas */
+  .sidebar{
+    position:fixed;
+    top:0;left:0;bottom:0;
+    width:min(300px,85vw);
+    z-index:60;
+    transform:translateX(-100%);
+    border-right:none;
+    box-shadow:4px 0 24px rgba(0,0,0,.6);
+  }
+  .sidebar.open{transform:translateX(0);}
+
+  /* preview area fills viewport */
+  .preview-area{
+    min-height:0;
+    height:calc(100vh - var(--hdr) - var(--nav) - var(--safe-t) - var(--safe-b));
+  }
+
+  /* right panel: off-canvas from right */
+  .right-panel{
+    display:flex;
+    position:fixed;
+    top:0;right:0;bottom:0;
+    width:min(290px,88vw);
+    z-index:60;
+    transform:translateX(110%);
+    border-left:none;
+    box-shadow:-4px 0 24px rgba(0,0,0,.6);
+  }
+  .right-panel.open{transform:translateX(0);}
+
+  /* hide desktop tabs */
+  .hdr-tabs{display:none;}
+
+  /* show mobile nav */
+  .mobile-nav{display:flex;flex-direction:column;}
+
+  /* combos pane: full page scroll */
+  .combos-pane.active{
+    position:fixed;
+    inset:var(--hdr) 0 calc(var(--nav) + var(--safe-b)) 0;
+    overflow-y:auto;
+    z-index:10;
+    background:var(--bg);
+  }
+  .combos-grid{
+    grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+    gap:8px;padding:10px;
+  }
+}
+
+@media(max-width:380px){
+  .combos-grid{grid-template-columns:1fr 1fr;}
+  .dots-wrap{gap:3px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ══════════════════════════════════════════════ -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🎨</div>
+    <span class="logo-text">PPT Studio</span>
+    <span class="logo-badge">BETA</span>
+  </div>
+
+  <!-- desktop tabs -->
+  <div class="hdr-tabs">
+    <div class="htab active" data-tab="design">🎨 디자인</div>
+    <div class="htab" data-tab="combos">🗂 조합</div>
+  </div>
+
+  <div class="hdr-right">
+    <div class="pill"><strong id="comboCnt">300</strong> 조합</div>
+    <div class="pill"><strong id="themeCnt">30</strong> 테마</div>
+    <div class="pill"><strong id="fontCnt">10</strong> 폰트</div>
+    <button class="btn btn-ghost" onclick="quickPreview()">👁</button>
+    <button class="btn btn-ghost" onclick="openChatPanel()" title="AI 채팅 패널 열기" id="chatPanelBtn" style="display:none;">🤖 AI</button>
+    <button class="btn btn-primary" onclick="applyAll()">⚡ 생성</button>
+  </div>
+</header>
+
+<!-- ═══ MAIN ════════════════════════════════════════════════ -->
+<main id="mainArea">
+
+  <!-- ── DESIGN TAB ─────────────────────────────────────── -->
+  <div id="designPane" style="display:flex;flex:1;overflow:hidden;min-width:0;">
+
+    <!-- Left sidebar -->
+    <div class="sidebar" id="sidebar">
+      <!-- close btn (mobile) -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 12px 0;flex-shrink:0;">
+        <span style="font-size:11px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;">디자인</span>
+        <button onclick="closeSidebar()" style="width:28px;height:28px;border-radius:50%;background:var(--panel3);border:1px solid var(--bord2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--sub);-webkit-appearance:none;" id="sidebarCloseBtn">✕</button>
+      </div>
+
+      <!-- Themes -->
+      <div class="theme-scroll" style="flex:1;min-height:0;overflow-y:auto;">
+        <div class="sec-hdr">
+          <span class="sec-title">🎨 색상 테마</span>
+          <span class="sec-badge" id="themeCount">30</span>
+        </div>
+        <div class="theme-grid" id="themeGrid"></div>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- Fonts -->
+      <div style="flex-shrink:0;max-height:290px;display:flex;flex-direction:column;">
+        <div class="sec-hdr">
+          <span class="sec-title">✏️ 폰트</span>
+          <span class="sec-badge" id="fontCount">10</span>
+        </div>
+        <div class="font-list" id="fontList" style="overflow-y:auto;flex:1;"></div>
+      </div>
+    </div>
+
+    <!-- Preview center -->
+    <div class="preview-area">
+      <div class="preview-toolbar">
+        <button class="nav-btn" onclick="navigate(-1)" title="이전">‹</button>
+        <div class="slide-indicator"><strong id="curSlide">1</strong><span style="margin:0 3px;">/</span><span id="totSlide">11</span></div>
+        <button class="nav-btn" onclick="navigate(1)" title="다음">›</button>
+        <div class="dots-wrap" id="slideDots"></div>
+        <div class="zoom-grp">
+          <button class="nav-btn" onclick="setZoom(-0.1)">−</button>
+          <span class="zoom-val" id="zoomVal">50%</span>
+          <button class="nav-btn" onclick="setZoom(+0.1)">+</button>
+        </div>
+      </div>
+
+      <div class="slide-frame" id="slideFrame">
+        <div class="slide-box" id="slideBox">
+          <iframe id="slideIframe" title="슬라이드 미리보기"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right panel - AI Chat -->
+    <div class="right-panel" id="rightPanel">
+      <!-- Chat Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>
+          <span style="font-size:11px;font-weight:700;color:var(--text);">🤖 AI 어시스턴트</span>
+          <span style="font-size:9px;color:var(--sub);" id="aiProviderBadge">GPT+Claude+Gemini</span>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button onclick="clearChat()" title="대화 초기화" style="width:24px;height:24px;border-radius:6px;background:var(--panel3);border:1px solid var(--bord2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--sub);">🗑</button>
+          <button onclick="closeRightPanel()" style="width:24px;height:24px;border-radius:6px;background:var(--panel3);border:1px solid var(--bord2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--sub);" id="rpCloseBtn">✕</button>
+        </div>
+      </div>
+
+      <!-- Current Selection Bar -->
+      <div style="display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--panel2);">
+        <div style="flex:1;background:var(--panel3);border-radius:6px;padding:4px 8px;font-size:10px;">
+          <span style="color:var(--sub);">테마 </span><span style="color:var(--accent);font-weight:600;" id="selThemeName">🌌 Dark Cosmos</span>
+        </div>
+        <div style="flex:1;background:var(--panel3);border-radius:6px;padding:4px 8px;font-size:10px;">
+          <span style="color:var(--sub);">폰트 </span><span style="color:var(--acc2);font-weight:600;" id="selFontName">Noto Sans KR</span>
+        </div>
+      </div>
+
+      <!-- Chat Messages -->
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg ai">
+          <div class="msg-avatar">🤖</div>
+          <div class="msg-bubble">
+            <div style="font-size:12px;line-height:1.6;">
+              안녕하세요! PPT AI 어시스턴트입니다 👋<br>
+              다음과 같은 방법으로 PPT를 만들 수 있어요:
+            </div>
+            <div class="chat-chips-grid">
+              <div class="chat-chip" onclick="chatQuick('삼성전자 2025 실적 분석 PPT 만들어줘')">📊 기업 분석</div>
+              <div class="chat-chip" onclick="chatQuick('URL을 분석해서 PPT 만들어줘')">🔗 URL 분석</div>
+              <div class="chat-chip" onclick="chatFileUpload()">📎 파일 첨부</div>
+              <div class="chat-chip" onclick="chatImageUpload()">🖼 이미지 OCR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Preview Area -->
+      <div id="uploadPreview" style="display:none;padding:6px 10px;background:var(--panel2);border-top:1px solid var(--border);flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:8px;background:var(--panel3);border-radius:8px;padding:6px 10px;border:1px solid var(--bord2);">
+          <span id="uploadPreviewIcon" style="font-size:18px;">📎</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="uploadPreviewName">파일명</div>
+            <div style="font-size:10px;color:var(--sub);" id="uploadPreviewSize">0 KB</div>
+          </div>
+          <button onclick="clearUpload()" style="width:20px;height:20px;border-radius:50%;background:var(--red)22;border:1px solid var(--red)44;color:var(--red);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+      </div>
+
+      <!-- Chat Input -->
+      <div class="chat-input-area" id="chatInputArea">
+        <!-- URL Detection -->
+        <div id="urlDetectedBar" style="display:none;padding:4px 10px 0;font-size:10px;color:var(--green);">
+          🔗 URL 감지됨 — 자동으로 분석합니다
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:6px;padding:8px 8px 6px;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <button onclick="chatFileUpload()" title="파일 첨부 (PDF/DOCX/TXT)" style="width:30px;height:30px;border-radius:8px;background:var(--panel3);border:1px solid var(--bord2);cursor:pointer;font-size:14px;color:var(--sub);display:flex;align-items:center;justify-content:center;">📎</button>
+            <button onclick="chatImageUpload()" title="이미지 OCR" style="width:30px;height:30px;border-radius:8px;background:var(--panel3);border:1px solid var(--bord2);cursor:pointer;font-size:14px;color:var(--sub);display:flex;align-items:center;justify-content:center;">🖼</button>
+          </div>
+          <textarea id="chatInput" class="chat-textarea" placeholder="주제를 입력하거나 URL을 붙여넣으세요..." rows="2" onkeydown="chatKeyDown(event)" oninput="chatInputHandler(this)" maxlength="2000"></textarea>
+          <button onclick="sendChatMessage()" id="chatSendBtn" class="chat-send-btn" title="전송 (Enter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+        <div style="display:flex;gap:4px;padding:0 8px 8px;flex-wrap:wrap;">
+          <div class="quick-chip" onclick="chatQuick('삼성전자 2025 실적 분석 PPT')">📊 삼성 분석</div>
+          <div class="quick-chip" onclick="chatQuick('AI 트렌드 2025 프레젠테이션')">🤖 AI 트렌드</div>
+          <div class="quick-chip" onclick="chatQuick('투자 제안서 만들어줘')">💰 투자제안서</div>
+          <div class="quick-chip" onclick="chatQuick('마케팅 전략 PPT')">📢 마케팅</div>
+        </div>
+        <!-- Hidden file inputs -->
+        <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt,.pptx,.xlsx,.csv" style="display:none" onchange="handleFileUpload(event)">
+        <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
+      </div>
+
+      <!-- Status Bar -->
+      <div class="status-wrap">
+        <div class="status-msg" id="statusMsg">👋 AI와 대화하거나 주제를 입력해 PPT를 만드세요</div>
+        <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+        <div id="dlArea"></div>
+      </div>
+    </div>
+
+  </div><!-- /designPane -->
+
+  <!-- ── COMBOS TAB ──────────────────────────────────────── -->
+  <div class="combos-pane" id="combosPane">
+    <div class="combos-toolbar">
+      <div>
+        <div class="combos-title">🗂 전체 조합</div>
+        <div class="combos-sub"><strong id="comboFilterCount" style="color:var(--accent)">300</strong>가지 조합</div>
+      </div>
+      <div class="combo-filters">
+        <select class="csel" id="filterFont" onchange="filterCombos()">
+          <option value="">모든 폰트</option>
+        </select>
+        <select class="csel" id="filterDark" onchange="filterCombos()">
+          <option value="">전체</option>
+          <option value="dark">다크</option>
+          <option value="light">라이트</option>
+        </select>
+      </div>
+    </div>
+    <div class="combos-grid" id="comboList"></div>
+  </div>
+
+</main>
+
+<!-- ═══ MOBILE BOTTOM NAV ════════════════════════════════════ -->
+<nav class="mobile-nav" id="mobileNav">
+  <div class="mobile-nav-inner">
+    <button class="mnav-item active" id="mntb-design" onclick="mobileTab('design')">
+      <span class="mnav-icon">🎨</span>디자인
+    </button>
+    <button class="mnav-item" id="mntb-theme" onclick="openSheet('theme')">
+      <span class="mnav-icon">🎨</span>테마
+    </button>
+    <button class="mnav-item" id="mntb-font" onclick="openSheet('font')">
+      <span class="mnav-icon">✏️</span>폰트
+    </button>
+    <button class="mnav-item" id="mntb-prompt" onclick="openChatPanel()">
+      <span class="mnav-icon">🤖</span>AI채팅
+    </button>
+    <button class="mnav-item" id="mntb-combos" onclick="mobileTab('combos')">
+      <span class="mnav-icon">🗂</span>조합
+    </button>
+  </div>
+</nav>
+
+<!-- ═══ MOBILE SHEETS ════════════════════════════════════════ -->
+<!-- Backdrop -->
+<div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSheet()"></div>
+
+<!-- Theme Sheet -->
+<div class="sheet" id="sheetTheme">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">
+    🎨 색상 테마 <span id="sheetThemeCount" style="font-size:11px;color:var(--sub);font-weight:400;"></span>
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="theme-grid" id="themeGridMobile" style="grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+  </div>
+</div>
+
+<!-- Font Sheet -->
+<div class="sheet" id="sheetFont">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">
+    ✏️ 폰트 선택
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+  </div>
+  <div class="sheet-body" style="padding:0;">
+    <div id="fontListMobile"></div>
+  </div>
+</div>
+
+<!-- Prompt Sheet -->
+<div class="sheet" id="sheetPrompt">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">
+    💬 슬라이드 수정
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <div class="lbl">현재 선택</div>
+        <div class="sel-row" style="margin-top:5px;">
+          <div class="sel-card"><div class="sel-key">테마</div><div class="sel-val" id="selThemeNameM">🌌 Dark Cosmos</div></div>
+          <div class="sel-card"><div class="sel-key">폰트</div><div class="sel-val" id="selFontNameM">Noto Sans KR</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="lbl">수정 내용</div>
+        <textarea class="prompt" id="promptInputMobile" rows="5"
+          placeholder="예) 매출을 350조로 수정해줘&#10;투자의견을 HOLD로 변경"></textarea>
+      </div>
+      <div class="chips">
+        <div class="chip-hdr">빠른 예시</div>
+        <div class="chip" onclick="setChipM(this)">📊 매출을 350조로 수정해줘</div>
+        <div class="chip" onclick="setChipM(this)">📝 제목을 '2026 반도체 전망'으로</div>
+        <div class="chip" onclick="setChipM(this)">💹 투자의견을 HOLD로 변경</div>
+        <div class="chip" onclick="setChipM(this)">🚀 결론 슬라이드 추가</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:11px;font-size:13px;" onclick="applyAllM()">⚡ 생성 &amp; 다운로드</button>
+      <div class="status-wrap" style="border-radius:8px;">
+        <div class="status-msg" id="statusMsgM">👋 테마·폰트를 선택하고 생성하세요</div>
+        <div class="prog-bar"><div class="prog-fill" id="progFillM"></div></div>
+        <div id="dlAreaM"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ OVERLAY ══════════════════════════════════════════════ -->
+<div class="overlay" id="overlay">
+  <div class="ov-box">
+    <div class="ov-spin"></div>
+    <div class="ov-title">슬라이드 생성 중</div>
+    <div class="ov-sub" id="ovSub">잠시만 기다려 주세요...</div>
+    <div class="ov-prog"><div class="ov-prog-fill"></div></div>
+    <div class="ov-steps">
+      <div class="ov-step pend" id="step1"><div class="ov-si">1</div><span>HTML 슬라이드 생성</span></div>
+      <div class="ov-step pend" id="step2"><div class="ov-si">2</div><span>Playwright 캡처</span></div>
+      <div class="ov-step pend" id="step3"><div class="ov-si">3</div><span>PPTX 빌드</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCRIPT ══════════════════════════════════════════════ -->
+<script>
+const API = '';
+let themes = [], fonts = [];
+let curTheme = 'dark_cosmos', curFont = 'noto_sans_kr';
+let curSlide = 0, totSlide = 11, zoom = 0.5;
+let allCombos = [];
+
+const isMobile = () => window.innerWidth <= 640;
+
+// ── INIT ──────────────────────────────────────────────────
+async function init() {
+  try {
+    const [tr, fr, sr] = await Promise.all([
+      fetch('/api/themes'), fetch('/api/fonts'), fetch('/api/status')
+    ]);
+    themes = await tr.json();
+    fonts  = await fr.json();
+    const st = await sr.json();
+    totSlide = st.slides;
+
+    // Update counts
+    ['comboCnt','fontCnt','themeCnt'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = id==='comboCnt'?st.combos : id==='fontCnt'?st.fonts:st.themes;
+    });
+    document.getElementById('themeCount').textContent = st.themes;
+    document.getElementById('fontCount').textContent  = st.fonts;
+    document.getElementById('totSlide').textContent   = st.slides;
+
+    renderThemes();
+    renderFonts();
+    renderDots();
+    buildCombos();
+    updatePreview();
+    autoFit();
+  } catch(e) {
+    setStatus('⚠️ API 연결 실패. 새로고침 해주세요.','err');
+  }
+}
+
+// ── THEME THUMBNAIL SVGs — 30개 전부 다른 레이아웃 ───────────
+// 각 테마의 실제 bg/accent/accent2 색상으로 완전히 다른 미니 슬라이드 렌더링
+// W=160 H=90 (16:9)
+const THUMB_SVGS = {
+
+  // 1. dark_cosmos — 커버 스타일: 중앙 큰 제목 + 배경 원형 글로우
+  dark_cosmos: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <circle cx="80" cy="45" r="55" fill="${t.accent}" opacity=".08"/>
+    <circle cx="30" cy="20" r="30" fill="${t.accent2}" opacity=".06"/>
+    <rect x="0" y="0" width="160" height="3" fill="${t.accent}"/>
+    <rect x="45" y="28" width="70" height="8" rx="2" fill="${t.accent}" opacity=".9"/>
+    <rect x="55" y="40" width="50" height="5" rx="2" fill="${t.accent2}" opacity=".7"/>
+    <rect x="60" y="49" width="40" height="3" rx="1" fill="white" opacity=".25"/>
+    <rect x="65" y="55" width="30" height="2" rx="1" fill="white" opacity=".15"/>`,
+
+  // 2. midnight_blue — KPI 4카드 그리드
+  midnight_blue: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="3" fill="${t.accent}"/>
+    <rect x="8" y="8" width="50" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="8" y="14" width="35" height="3" rx="1" fill="white" opacity=".25"/>
+    ${[0,1,2,3].map(i=>`
+      <rect x="${8+i*37}" y="24" width="33" height="32" rx="3" fill="${t.accent}" opacity=".1" stroke="${t.accent}" stroke-width=".5" stroke-opacity=".3"/>
+      <rect x="${14+i*37}" y="30" width="20" height="7" rx="1" fill="${t.accent}" opacity=".9"/>
+      <rect x="${14+i*37}" y="40" width="15" height="2.5" rx="1" fill="white" opacity=".3"/>
+      <rect x="${14+i*37}" y="45" width="12" height="2" rx="1" fill="${t.accent2}" opacity=".5"/>`).join('')}
+    <rect x="8" y="62" width="144" height="2" rx="1" fill="${t.accent2}" opacity=".3"/>
+    <rect x="8" y="67" width="100" height="2.5" rx="1" fill="white" opacity=".15"/>`,
+
+  // 3. emerald_dark — 바 차트
+  emerald_dark: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="3" fill="${t.accent}"/>
+    <rect x="8" y="8" width="40" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="8" y="15" width="60" height="3" rx="1" fill="white" opacity=".2"/>
+    <rect x="8" y="76" width="144" height="1" fill="white" opacity=".15"/>
+    ${[
+      {x:15,h:25,c:t.accent,o:.5},{x:30,h:38,c:t.accent,o:.6},{x:45,h:30,c:t.accent,o:.5},
+      {x:60,h:22,c:t.accent,o:.5},{x:75,h:26,c:t.accent,o:.6},{x:90,h:37,c:t.accent,o:.6},
+      {x:105,h:29,c:t.accent,o:.5},{x:120,h:55,c:t.accent2,o:.95}
+    ].map(b=>`
+      <rect x="${b.x}" y="${77-b.h}" width="11" height="${b.h}" rx="2" fill="${b.c}" opacity="${b.o}"/>
+      <rect x="${b.x+1}" y="${77-b.h}" width="9" height="3" rx="1" fill="white" opacity=".15"/>`).join('')}`,
+
+  // 4. crimson_night — 3분할 사업부 카드
+  crimson_night: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="3" fill="${t.accent}"/>
+    <rect x="8" y="8" width="45" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    ${[0,1,2].map(i=>`
+      <rect x="8" y="${22+i*20}" width="144" height="16" rx="3" fill="${t.accent}" opacity="${.07+i*.02}" stroke="${t.accent}" stroke-width=".5" stroke-opacity=".25"/>
+      <circle cx="18" cy="${30+i*20}" r="5" fill="${t.accent}" opacity=".6"/>
+      <rect x="27" y="${26+i*20}" width="30" height="3" rx="1" fill="${t.accent}" opacity=".8"/>
+      <rect x="27" y="${31+i*20}" width="22" height="2" rx="1" fill="white" opacity=".2"/>
+      <rect x="105" y="${26+i*20}" width="20" height="3" rx="1" fill="${t.accent2}" opacity=".7"/>
+      <rect x="105" y="${31+i*20}" width="14" height="2" rx="1" fill="white" opacity=".2"/>
+      <rect x="130" y="${26+i*20}" width="${[60,40,15][i]}%" height="4" rx="2" fill="${t.accent}" opacity=".4"/>`).join('')}`,
+
+  // 5. golden_hour — HBM 2열 포인트 + 우측 stat박스
+  golden_hour: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="3" fill="${t.accent}"/>
+    <rect x="8" y="8" width="35" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="8" y="15" width="55" height="3" rx="1" fill="white" opacity=".2"/>
+    ${[0,1,2].map(i=>`
+      <rect x="8" y="${24+i*13}" width="72" height="10" rx="2" fill="white" opacity=".04" stroke="${t.accent}" stroke-width=".4" stroke-opacity=".3"/>
+      <rect x="12" y="${27+i*13}" width="4" height="4" rx="1" fill="${t.accent}" opacity=".7"/>
+      <rect x="18" y="${27+i*13}" width="40" height="2.5" rx="1" fill="white" opacity=".3"/>
+      <rect x="18" y="${31+i*13}" width="28" height="2" rx="1" fill="white" opacity=".15"/>`).join('')}
+    ${[0,1,2].map(i=>`
+      <rect x="85" y="${24+i*13}" width="67" height="10" rx="2" fill="white" opacity=".04" stroke="${t.accent}" stroke-width=".4" stroke-opacity=".3"/>
+      <rect x="89" y="${27+i*13}" width="4" height="4" rx="1" fill="${t.accent2}" opacity=".7"/>
+      <rect x="95" y="${27+i*13}" width="38" height="2.5" rx="1" fill="white" opacity=".3"/>
+      <rect x="95" y="${31+i*13}" width="26" height="2" rx="1" fill="white" opacity=".15"/>`).join('')}
+    <rect x="8" y="66" width="144" height="16" rx="3" fill="${t.accent}" opacity=".12" stroke="${t.accent}" stroke-width=".8"/>
+    <rect x="55" y="70" width="50" height="5" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="60" y="77" width="40" height="2.5" rx="1" fill="${t.accent2}" opacity=".5"/>`,
+
+  // 6. rose_quartz — VS 비교 레이아웃
+  rose_quartz: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="3" fill="${t.accent}"/>
+    <rect x="8" y="8" width="40" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="8" y="20" width="68" height="62" rx="3" fill="${t.accent}" opacity=".07" stroke="${t.accent}" stroke-width=".5" stroke-opacity=".4"/>
+    <rect x="84" y="20" width="68" height="62" rx="3" fill="${t.accent2}" opacity=".07" stroke="${t.accent2}" stroke-width=".5" stroke-opacity=".4"/>
+    <rect x="12" y="25" width="35" height="4" rx="1" fill="${t.accent}" opacity=".9"/>
+    ${[0,1,2,3,4].map(i=>`<rect x="12" y="${33+i*9}" width="${25+Math.random()*15|0}" height="3" rx="1" fill="white" opacity=".2"/>`).join('')}
+    <rect x="88" y="25" width="30" height="4" rx="1" fill="${t.accent2}" opacity=".9"/>
+    ${[0,1,2,3,4].map(i=>`<rect x="88" y="${33+i*9}" width="${20+Math.random()*20|0}" height="3" rx="1" fill="white" opacity=".2"/>`).join('')}
+    <rect x="75" y="42" width="10" height="10" rx="2" fill="${t.accent}" opacity=".5"/>
+    <rect x="77" y="45" width="6" height="4" rx="1" fill="white" opacity=".5"/>`,
+
+  // 7. neon_cyber — 네온 글로우 커버
+  neon_cyber: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="2" fill="${t.accent}"/>
+    <rect x="0" y="88" width="160" height="2" fill="${t.accent2}"/>
+    <line x1="0" y1="0" x2="160" y2="90" stroke="${t.accent}" stroke-width=".3" opacity=".12"/>
+    <line x1="160" y1="0" x2="0" y2="90" stroke="${t.accent2}" stroke-width=".3" opacity=".12"/>
+    <rect x="20" y="15" width="120" height="60" rx="4" fill="none" stroke="${t.accent}" stroke-width=".6" opacity=".4"/>
+    <rect x="45" y="28" width="70" height="6" rx="1" fill="${t.accent}" opacity=".85"/>
+    <rect x="50" y="38" width="60" height="4" rx="1" fill="${t.accent2}" opacity=".7"/>
+    <rect x="55" y="46" width="50" height="3" rx="1" fill="${t.accent}" opacity=".4"/>
+    <circle cx="20" cy="15" r="3" fill="${t.accent}" opacity=".8"/>
+    <circle cx="140" cy="15" r="3" fill="${t.accent2}" opacity=".8"/>
+    <circle cx="20" cy="75" r="3" fill="${t.accent2}" opacity=".8"/>
+    <circle cx="140" cy="75" r="3" fill="${t.accent}" opacity=".8"/>`,
+
+  // 8. aurora_borealis — 물결 그라디언트 + 타이틀
+  aurora_borealis: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <path d="M0,60 Q40,30 80,50 Q120,70 160,40 L160,90 L0,90 Z" fill="${t.accent}" opacity=".12"/>
+    <path d="M0,70 Q40,50 80,65 Q120,80 160,55 L160,90 L0,90 Z" fill="${t.accent2}" opacity=".1"/>
+    <rect x="0" y="0" width="160" height="2.5" fill="url(#ab_grad)"/>
+    <defs><linearGradient id="ab_grad" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="${t.accent}"/><stop offset="100%" stop-color="${t.accent2}"/></linearGradient></defs>
+    <rect x="30" y="20" width="100" height="7" rx="2" fill="${t.accent}" opacity=".8"/>
+    <rect x="40" y="31" width="80" height="4" rx="1" fill="${t.accent2}" opacity=".6"/>
+    <rect x="50" y="39" width="60" height="3" rx="1" fill="white" opacity=".2"/>
+    <rect x="60" y="46" width="40" height="2.5" rx="1" fill="white" opacity=".12"/>`,
+
+  // 9. void_purple — 딥퍼플 파티클 효과
+  void_purple: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    ${Array.from({length:18},(_,i)=>`<circle cx="${(i*23+7)%155}" cy="${(i*17+5)%85}" r="${.8+i*.15}" fill="${i%2?t.accent:t.accent2}" opacity="${.3+i*.03}"/>`).join('')}
+    <rect x="0" y="0" width="160" height="2" fill="${t.accent}"/>
+    <rect x="20" y="25" width="120" height="8" rx="2" fill="${t.accent}" opacity=".85"/>
+    <rect x="30" y="37" width="100" height="5" rx="1" fill="${t.accent2}" opacity=".65"/>
+    <rect x="40" y="46" width="80" height="3" rx="1" fill="white" opacity=".2"/>
+    <rect x="55" y="53" width="50" height="2.5" rx="1" fill="white" opacity=".12"/>
+    <circle cx="80" cy="70" r="8" fill="${t.accent}" opacity=".2"/>
+    <circle cx="80" cy="70" r="4" fill="${t.accent2}" opacity=".4"/>`,
+
+  // 10. obsidian — 미니멀 흑백 라인
+  obsidian: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="1" fill="${t.accent}"/>
+    <rect x="0" y="89" width="160" height="1" fill="${t.accent}" opacity=".3"/>
+    <rect x="8" y="12" width="3" height="66" fill="${t.accent}" opacity=".4"/>
+    <rect x="16" y="18" width="80" height="6" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="16" y="28" width="55" height="3.5" rx="1" fill="${t.accent}" opacity=".5"/>
+    <rect x="16" y="36" width="40" height="2.5" rx="1" fill="${t.accent}" opacity=".3"/>
+    ${[0,1,2,3].map(i=>`
+      <rect x="16" y="${44+i*10}" width="120" height="8" rx="1" fill="${t.accent}" opacity=".05" stroke="${t.accent}" stroke-width=".4" stroke-opacity=".2"/>
+      <rect x="20" y="${47+i*10}" width="${30+i*12}" height="2" rx="1" fill="${t.accent2}" opacity=".5"/>`).join('')}`,
+
+  // 11. deep_ocean — 깊이감 있는 수평 레이어
+  deep_ocean: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="60" width="160" height="30" fill="${t.accent}" opacity=".06"/>
+    <rect x="0" y="70" width="160" height="20" fill="${t.accent2}" opacity=".05"/>
+    <rect x="0" y="0" width="160" height="2.5" fill="${t.accent}"/>
+    <rect x="8" y="8" width="40" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    ${[0,1,2,3,4].map(i=>`
+      <rect x="8" y="${18+i*8}" width="${140-i*5}" height="5" rx="1" fill="${t.accent}" opacity="${.06-.005*i}" stroke="${t.accent}" stroke-width=".4" stroke-opacity=".3"/>
+      <rect x="${145-i*5}" y="${18+i*8}" width="${28+i*8}" height="5" rx="1" fill="${t.accent}" opacity=".25"/>
+      <rect x="12" y="${20+i*8}" width="${20+i*8}" height="2" rx="1" fill="${t.accent2}" opacity=".6"/>`).join('')}`,
+
+  // 12. sunset_glow — 그라디언트 바 차트 (따뜻한 색)
+  sunset_glow: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${t.accent}"/><stop offset="100%" stop-color="${t.accent2}"/></linearGradient></defs>
+    <rect x="0" y="0" width="160" height="2.5" fill="url(#sg)"/>
+    <rect x="8" y="8" width="38" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="8" y="76" width="144" height="1" fill="white" opacity=".12"/>
+    ${[
+      {x:12,h:20},{x:27,h:35},{x:42,h:28},{x:57,h:18},{x:72,h:24},
+      {x:87,h:32},{x:102,h:26},{x:117,h:48}
+    ].map((b,i)=>`
+      <rect x="${b.x}" y="${77-b.h}" width="12" height="${b.h}" rx="2" fill="url(#sg)" opacity="${.5+i*.06}"/>
+      <rect x="${b.x+1}" y="${77-b.h}" width="10" height="3" rx="1" fill="white" opacity=".12"/>`).join('')}`,
+
+  // 13. forest_night — 리스트 + 우측 원형
+  forest_night: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="2.5" fill="${t.accent}"/>
+    <rect x="8" y="8" width="42" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    ${[0,1,2,3,4].map(i=>`
+      <circle cx="16" cy="${22+i*11}" r="3" fill="${i%2?t.accent:t.accent2}" opacity=".7"/>
+      <rect x="23" y="${20+i*11}" width="${50+i*3}" height="3" rx="1" fill="white" opacity=".3"/>
+      <rect x="23" y="${25+i*11}" width="${35+i*2}" height="2" rx="1" fill="white" opacity=".15"/>`).join('')}
+    <circle cx="126" cy="52" r="26" fill="none" stroke="${t.accent}" stroke-width="8" opacity=".18"/>
+    <circle cx="126" cy="52" r="26" fill="none" stroke="${t.accent2}" stroke-width="5" stroke-dasharray="35 130" opacity=".6" stroke-linecap="round"/>
+    <rect x="116" y="48" width="20" height="5" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="118" y="55" width="16" height="3" rx="1" fill="white" opacity=".3"/>`,
+
+  // 14. electric_indigo — 전기 그리드 패턴
+  electric_indigo: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    ${Array.from({length:9},(_,i)=>`<line x1="${i*20}" y1="0" x2="${i*20}" y2="90" stroke="${t.accent}" stroke-width=".3" opacity=".08"/>`).join('')}
+    ${Array.from({length:5},(_,i)=>`<line x1="0" y1="${i*22}" x2="160" y2="${i*22}" stroke="${t.accent}" stroke-width=".3" opacity=".08"/>`).join('')}
+    <rect x="0" y="0" width="160" height="2" fill="${t.accent}"/>
+    <rect x="20" y="18" width="120" height="8" rx="2" fill="${t.accent}" opacity=".85"/>
+    <rect x="28" y="30" width="50" height="4" rx="1" fill="${t.accent2}" opacity=".7"/>
+    <rect x="28" y="38" width="38" height="3" rx="1" fill="white" opacity=".2"/>
+    <rect x="28" y="48" width="104" height="30" rx="3" fill="${t.accent}" opacity=".07" stroke="${t.accent}" stroke-width=".5" stroke-opacity=".4"/>
+    ${[0,1,2].map(i=>`<rect x="${34+i*36}" y="${54+0}" width="28" height="18" rx="2" fill="${t.accent}" opacity=".12"/>
+      <rect x="${38+i*36}" y="${58}" width="18" height="4" rx="1" fill="${t.accent}" opacity=".7"/>
+      <rect x="${38+i*36}" y="${64}" width="12" height="2.5" rx="1" fill="white" opacity=".2"/>`).join('')}`,
+
+  // 15. copper_dark — 따뜻한 구리빛 인포그래픽
+  copper_dark: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="2.5" fill="${t.accent}"/>
+    <rect x="8" y="8" width="42" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="8" y="20" width="90" height="62" rx="3" fill="${t.accent}" opacity=".06" stroke="${t.accent}" stroke-width=".5" stroke-opacity=".3"/>
+    ${[0,1,2,3].map(i=>`
+      <rect x="12" y="${24+i*14}" width="82" height="11" rx="2" fill="${t.accent}" opacity="${.04+i*.01}" stroke="${t.accent}" stroke-width=".3" stroke-opacity=".25"/>
+      <rect x="15" y="${27+i*14}" width="35" height="3" rx="1" fill="${t.accent}" opacity=".7"/>
+      <rect x="15" y="${32+i*14}" width="${60-i*5}%" height="2" rx="1" fill="${t.accent2}" opacity=".4"/>`).join('')}
+    <rect x="104" y="20" width="48" height="62" rx="3" fill="${t.accent2}" opacity=".1" stroke="${t.accent2}" stroke-width=".5" stroke-opacity=".4"/>
+    <rect x="108" y="35" width="40" height="8" rx="1" fill="${t.accent2}" opacity=".7"/>
+    <rect x="112" y="47" width="32" height="4" rx="1" fill="white" opacity=".25"/>
+    <rect x="112" y="54" width="24" height="3" rx="1" fill="white" opacity=".15"/>`,
+
+  // 16. corporate_white — 밝은 프로 레이아웃
+  corporate_white: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="4" fill="${t.accent}"/>
+    <rect x="8" y="10" width="50" height="5" rx="1" fill="${t.accent}" opacity=".85"/>
+    <rect x="8" y="18" width="35" height="3" rx="1" fill="${t.accent}" opacity=".4"/>
+    <rect x="8" y="28" width="144" height="1" fill="${t.accent}" opacity=".15"/>
+    ${[0,1,2,3].map(i=>`
+      <rect x="${8+i*37}" y="32" width="33" height="32" rx="3" fill="${t.accent}" opacity=".06" stroke="${t.accent}" stroke-width=".7" stroke-opacity=".2"/>
+      <rect x="${13+i*37}" y="37" width="22" height="7" rx="1" fill="${t.accent}" opacity=".8"/>
+      <rect x="${13+i*37}" y="48" width="15" height="2.5" rx="1" fill="${t.accent}" opacity=".4"/>
+      <rect x="${13+i*37}" y="53" width="18" height="2" rx="1" fill="${t.accent2}" opacity=".5"/>`).join('')}
+    <rect x="8" y="70" width="144" height="12" rx="2" fill="${t.accent2}" opacity=".08" stroke="${t.accent2}" stroke-width=".5" stroke-opacity=".3"/>
+    <rect x="12" y="74" width="55" height="3" rx="1" fill="${t.accent2}" opacity=".7"/>`,
+
+  // 17. sky_light — 하늘색 카드 레이아웃
+  sky_light: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="4" fill="${t.accent}"/>
+    <circle cx="140" cy="15" r="25" fill="${t.accent2}" opacity=".15"/>
+    <rect x="8" y="10" width="55" height="5" rx="1" fill="${t.accent}" opacity=".9"/>
+    <rect x="8" y="18" width="38" height="3" rx="1" fill="${t.accent}" opacity=".45"/>
+    ${[0,1].map(row=>[0,1,2].map(col=>`
+      <rect x="${8+col*52}" y="${28+row*28}" width="46" height="23" rx="3" fill="${t.accent}" opacity=".07" stroke="${t.accent}" stroke-width=".6" stroke-opacity=".25"/>
+      <rect x="${13+col*52}" y="${33+row*28}" width="30" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+      <rect x="${13+col*52}" y="${40+row*28}" width="20" height="3" rx="1" fill="${t.accent2}" opacity=".6"/>`).join('')).join('')}`,
+
+  // 18. mint_fresh — 자연스러운 리스트
+  mint_fresh: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="5" height="90" fill="${t.accent}"/>
+    <rect x="12" y="8" width="50" height="5" rx="1" fill="${t.accent}" opacity=".85"/>
+    <rect x="12" y="16" width="38" height="3" rx="1" fill="${t.accent}" opacity=".4"/>
+    ${[0,1,2,3,4].map(i=>`
+      <rect x="12" y="${24+i*12}" width="140" height="10" rx="2" fill="${t.accent}" opacity="${.04+i*.01}" stroke="${t.accent}" stroke-width=".5" stroke-opacity=".25"/>
+      <rect x="15" y="${27+i*12}" width="4" height="4" rx="1" fill="${t.accent}" opacity=".7"/>
+      <rect x="22" y="${27+i*12}" width="${45+i*4}" height="2.5" rx="1" fill="${t.text}" opacity=".5"/>
+      <rect x="${120}" y="${27+i*12}" width="28" height="4" rx="1" fill="${t.accent2}" opacity=".6"/>`).join('')}`,
+
+  // 19. warm_sand — 따뜻한 노트 스타일
+  warm_sand: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="4" fill="${t.accent}"/>
+    ${Array.from({length:7},(_,i)=>`<line x1="8" y1="${20+i*10}" x2="152" y2="${20+i*10}" stroke="${t.accent}" stroke-width=".4" opacity=".2"/>`).join('')}
+    <rect x="8" y="8" width="45" height="5" rx="1" fill="${t.accent}" opacity=".85"/>
+    <rect x="8" y="22" width="85" height="3.5" rx="1" fill="${t.accent}" opacity=".6"/>
+    <rect x="8" y="32" width="70" height="3.5" rx="1" fill="${t.accent}" opacity=".45"/>
+    <rect x="8" y="42" width="90" height="3.5" rx="1" fill="${t.accent}" opacity=".5"/>
+    <rect x="8" y="52" width="65" height="3.5" rx="1" fill="${t.accent}" opacity=".4"/>
+    <rect x="110" y="20" width="42" height="55" rx="3" fill="${t.accent}" opacity=".08" stroke="${t.accent}" stroke-width=".8" stroke-opacity=".35"/>
+    <rect x="115" y="35" width="32" height="6" rx="1" fill="${t.accent}" opacity=".7"/>
+    <rect x="118" y="44" width="26" height="4" rx="1" fill="${t.accent2}" opacity=".6"/>
+    <rect x="120" y="51" width="20" height="3" rx="1" fill="${t.text}" opacity=".3"/>`,
+
+  // 20. rose_light — 밝은 분홍 그리드
+  rose_light: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="4" fill="${t.accent}"/>
+    <circle cx="130" cy="55" r="28" fill="${t.accent}" opacity=".07"/>
+    <rect x="8" y="10" width="55" height="5" rx="1" fill="${t.accent}" opacity=".85"/>
+    <rect x="8" y="18" width="40" height="3" rx="1" fill="${t.accent}" opacity=".4"/>
+    ${[0,1].map(r=>[0,1].map(c=>`
+      <rect x="${8+c*77}" y="${26+r*30}" width="70" height="25" rx="3" fill="${t.accent}" opacity=".06" stroke="${t.accent}" stroke-width=".6" stroke-opacity=".3"/>
+      <rect x="${13+c*77}" y="${31+r*30}" width="${28+c*5}" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+      <rect x="${13+c*77}" y="${38+r*30}" width="${18+c*3}" height="3" rx="1" fill="${t.accent2}" opacity=".6"/>
+      <rect x="${13+c*77}" y="${44+r*30}" width="${22+c*4}" height="2" rx="1" fill="${t.text}" opacity=".2"/>`).join('')).join('')}`,
+
+  // 21. samsung_blue — 삼성 느낌 슬라이드
+  samsung_blue: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <defs><linearGradient id="sbg" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="${t.accent}"/><stop offset="100%" stop-color="${t.accent2}"/></linearGradient></defs>
+    <rect x="0" y="0" width="160" height="3" fill="url(#sbg)"/>
+    <rect x="0" y="0" width="40" height="90" fill="${t.accent}" opacity=".04"/>
+    <rect x="8" y="10" width="22" height="22" rx="3" fill="${t.accent}" opacity=".2" stroke="${t.accent}" stroke-width=".8"/>
+    <rect x="12" y="15" width="14" height="3" rx="1" fill="${t.accent2}" opacity=".8"/>
+    <rect x="12" y="20" width="10" height="2" rx="1" fill="white" opacity=".3"/>
+    <rect x="48" y="8" width="60" height="6" rx="1" fill="${t.accent2}" opacity=".8"/>
+    <rect x="48" y="17" width="90" height="3.5" rx="1" fill="white" opacity=".25"/>
+    <rect x="48" y="24" width="75" height="3" rx="1" fill="white" opacity=".15"/>
+    ${[0,1,2].map(i=>`
+      <rect x="8" y="${38+i*16}" width="24" height="12" rx="2" fill="${t.accent2}" opacity=".12" stroke="${t.accent2}" stroke-width=".4" stroke-opacity=".4"/>
+      <rect x="40" y="${41+i*16}" width="112" height="3" rx="1" fill="white" opacity=".25"/>
+      <rect x="40" y="${47+i*16}" width="80" height="2" rx="1" fill="white" opacity=".12"/>`).join('')}`,
+
+  // 22. galaxy_dark — 별자리 느낌
+  galaxy_dark: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    ${Array.from({length:25},(_,i)=>`<circle cx="${(i*37+11)%158}" cy="${(i*29+7)%88}" r="${.6+i%3*.4}" fill="white" opacity="${.1+i%4*.08}"/>`).join('')}
+    <rect x="0" y="0" width="160" height="2.5" fill="${t.accent}"/>
+    <circle cx="80" cy="45" r="30" fill="${t.accent}" opacity=".07"/>
+    <circle cx="80" cy="45" r="20" fill="${t.accent}" opacity=".07"/>
+    <rect x="45" y="30" width="70" height="7" rx="2" fill="${t.accent}" opacity=".85"/>
+    <rect x="52" y="41" width="56" height="4" rx="1" fill="${t.accent2}" opacity=".7"/>
+    <rect x="57" y="49" width="46" height="3" rx="1" fill="white" opacity=".2"/>
+    <rect x="65" y="56" width="30" height="2.5" rx="1" fill="white" opacity=".12"/>`,
+
+  // 23. finance_dark — 금융 대시보드
+  finance_dark: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="2.5" fill="${t.accent}"/>
+    <rect x="8" y="8" width="42" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    <polyline points="10,75 25,60 40,65 55,45 70,50 85,35 100,42 115,25 130,30 145,15 155,18" fill="none" stroke="${t.accent}" stroke-width="1.5" opacity=".7"/>
+    <polyline points="10,75 25,60 40,65 55,45 70,50 85,35 100,42 115,25 130,30 145,15 155,18 155,75" fill="${t.accent}" opacity=".08"/>
+    ${[85,115,145].map(x=>`<circle cx="${x}" cy="${[35,25,15][Math.floor((x-85)/30)]}" r="2.5" fill="${t.accent2}" opacity=".9"/>`).join('')}
+    <rect x="8" y="20" width="60" height="4" rx="1" fill="white" opacity=".15"/>
+    <rect x="110" y="8" width="42" height="16" rx="2" fill="${t.accent}" opacity=".1" stroke="${t.accent}" stroke-width=".5" stroke-opacity=".4"/>
+    <rect x="114" y="11" width="20" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="114" y="17" width="28" height="3" rx="1" fill="${t.accent2}" opacity=".6"/>`,
+
+  // 24. tech_teal — 테크 인터페이스
+  tech_teal: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="2.5" height="90" fill="${t.accent}"/>
+    <rect x="0" y="0" width="160" height="2" fill="${t.accent}" opacity=".4"/>
+    <rect x="8" y="8" width="50" height="5" rx="1" fill="${t.accent}" opacity=".85"/>
+    ${[0,1,2,3].map(i=>`
+      <rect x="8" y="${18+i*16}" width="144" height="13" rx="2" fill="${t.accent}" opacity=".05" stroke="${t.accent}" stroke-width=".4" stroke-opacity=".3"/>
+      <rect x="12" y="${21+i*16}" width="28" height="3" rx="1" fill="${t.accent}" opacity=".7"/>
+      <rect x="12" y="${26+i*16}" width="${100+i*5}%" height="2.5" rx="1" fill="${t.accent2}" opacity="${.3+i*.05}"/>
+      <rect x="130" y="${21+i*16}" width="18" height="7" rx="1" fill="${t.accent}" opacity=".15"/>
+      <rect x="132" y="${23+i*16}" width="14" height="3" rx="1" fill="${t.accent}" opacity=".6"/>`).join('')}`,
+
+  // 25. luxury_gold — 고급 골드 레이아웃
+  luxury_gold: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <defs><linearGradient id="lg" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="${t.accent}"/><stop offset="100%" stop-color="${t.accent2}"/></linearGradient></defs>
+    <rect x="0" y="0" width="160" height="2" fill="url(#lg)"/>
+    <rect x="0" y="88" width="160" height="2" fill="url(#lg)" opacity=".4"/>
+    <rect x="15" y="10" width="130" height="70" rx="4" fill="none" stroke="${t.accent}" stroke-width=".5" opacity=".25"/>
+    <rect x="20" y="16" width="120" height="1" fill="${t.accent}" opacity=".4"/>
+    <rect x="45" y="25" width="70" height="8" rx="1" fill="url(#lg)" opacity=".8"/>
+    <rect x="50" y="37" width="60" height="4" rx="1" fill="${t.accent}" opacity=".5"/>
+    <rect x="55" y="45" width="50" height="3" rx="1" fill="white" opacity=".2"/>
+    <rect x="60" y="52" width="40" height="3" rx="1" fill="${t.accent2}" opacity=".4"/>
+    <rect x="20" y="68" width="120" height="1" fill="${t.accent}" opacity=".4"/>
+    <rect x="55" y="73" width="50" height="3" rx="1" fill="${t.accent}" opacity=".3"/>`,
+
+  // 26. steel_blue — 산업적 청사진
+  steel_blue: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    ${Array.from({length:9},(_,i)=>`<line x1="${i*20}" y1="0" x2="${i*20}" y2="90" stroke="${t.accent}" stroke-width=".3" opacity=".07"/>`).join('')}
+    ${Array.from({length:5},(_,i)=>`<line x1="0" y1="${i*22}" x2="160" y2="${i*22}" stroke="${t.accent}" stroke-width=".3" opacity=".07"/>`).join('')}
+    <rect x="0" y="0" width="160" height="2.5" fill="${t.accent}"/>
+    <rect x="8" y="8" width="45" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+    <rect x="8" y="20" width="68" height="50" rx="2" fill="${t.accent}" opacity=".06" stroke="${t.accent}" stroke-width=".6" stroke-opacity=".4"/>
+    <rect x="82" y="20" width="70" height="50" rx="2" fill="${t.accent2}" opacity=".05" stroke="${t.accent2}" stroke-width=".6" stroke-opacity=".3"/>
+    ${[0,1,2,3].map(i=>`
+      <rect x="12" y="${24+i*11}" width="60" height="8" rx="1" fill="${t.accent}" opacity=".06"/>
+      <rect x="15" y="${27+i*11}" width="${32+i*4}" height="2.5" rx="1" fill="${t.accent}" opacity=".6"/>
+      <rect x="86" y="${24+i*11}" width="62" height="8" rx="1" fill="${t.accent2}" opacity=".05"/>
+      <rect x="89" y="${27+i*11}" width="${28+i*5}" height="2.5" rx="1" fill="${t.accent2}" opacity=".55"/>`).join('')}`,
+
+  // 27. ice_crystal — 얼음 결정 패턴
+  ice_crystal: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <rect x="0" y="0" width="160" height="4" fill="${t.accent}"/>
+    ${[[80,10],[30,45],[130,45],[55,75],[105,75]].map(([cx,cy])=>`
+      <line x1="${cx}" y1="${cy-8}" x2="${cx}" y2="${cy+8}" stroke="${t.accent}" stroke-width=".8" opacity=".25"/>
+      <line x1="${cx-7}" y1="${cy-4}" x2="${cx+7}" y2="${cy+4}" stroke="${t.accent}" stroke-width=".8" opacity=".25"/>
+      <line x1="${cx-7}" y1="${cy+4}" x2="${cx+7}" y2="${cy-4}" stroke="${t.accent}" stroke-width=".8" opacity=".25"/>
+      <circle cx="${cx}" cy="${cy}" r="2" fill="${t.accent}" opacity=".5"/>`).join('')}
+    <rect x="30" y="20" width="100" height="7" rx="2" fill="${t.accent}" opacity=".8"/>
+    <rect x="38" y="31" width="84" height="4" rx="1" fill="${t.accent2}" opacity=".65"/>
+    <rect x="45" y="39" width="70" height="3" rx="1" fill="${t.text}" opacity=".3"/>`,
+
+  // 28. molten_lava — 마그마 레이어
+  molten_lava: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <defs><radialGradient id="ml" cx="50%" cy="80%" r="60%"><stop offset="0%" stop-color="${t.accent}" stop-opacity=".3"/><stop offset="100%" stop-color="${t.bg1}" stop-opacity="0"/></radialGradient></defs>
+    <rect width="160" height="90" fill="url(#ml)"/>
+    <path d="M0,70 Q20,55 40,65 Q60,75 80,60 Q100,45 120,58 Q140,70 160,55 L160,90 L0,90Z" fill="${t.accent}" opacity=".2"/>
+    <path d="M0,80 Q30,65 60,75 Q90,85 120,70 Q140,60 160,68 L160,90 L0,90Z" fill="${t.accent2}" opacity=".15"/>
+    <rect x="0" y="0" width="160" height="2.5" fill="${t.accent}"/>
+    <rect x="8" y="8" width="42" height="5" rx="1" fill="${t.accent}" opacity=".9"/>
+    <rect x="8" y="18" width="60" height="4" rx="1" fill="${t.accent2}" opacity=".7"/>
+    ${[0,1,2].map(i=>`<rect x="8" y="${28+i*11}" width="${90-i*10}" height="8" rx="2" fill="${t.accent}" opacity=".08" stroke="${t.accent}" stroke-width=".5" stroke-opacity=".4"/>
+      <rect x="12" y="${31+i*11}" width="${40+i*8}" height="2.5" rx="1" fill="${t.accent}" opacity=".6"/>`).join('')}`,
+
+  // 29. carbon_fiber — 탄소 섬유 격자
+  carbon_fiber: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    ${Array.from({length:20},(_,i)=>`
+      <rect x="${(i%10)*16}" y="${Math.floor(i/10)*45}" width="8" height="22" fill="white" opacity=".015"/>
+      <rect x="${(i%10)*16+8}" y="${Math.floor(i/10)*45+22}" width="8" height="22" fill="white" opacity=".025"/>`).join('')}
+    <rect x="0" y="0" width="160" height="2" fill="${t.accent}"/>
+    <rect x="8" y="8" width="42" height="4" rx="1" fill="${t.accent}" opacity=".85"/>
+    ${[0,1,2,3].map(i=>`
+      <rect x="${8+i*38}" y="20" width="34" height="50" rx="2" fill="${t.accent}" opacity=".07" stroke="${t.accent}" stroke-width=".4" stroke-opacity=".3"/>
+      <rect x="${12+i*38}" y="25" width="22" height="7" rx="1" fill="${t.accent}" opacity=".7"/>
+      <rect x="${12+i*38}" y="35" width="16" height="3" rx="1" fill="${t.accent2}" opacity=".5"/>
+      <rect x="${12+i*38}" y="41" width="20" height="2.5" rx="1" fill="white" opacity=".2"/>
+      <rect x="${12+i*38}" y="46" width="${10+i*3}" height="10" rx="1" fill="${t.accent}" opacity=".2"/>`).join('')}`,
+
+  // 30. ocean_breeze — 물결 + 밝은 카드
+  ocean_breeze: (t) => `
+    <rect width="160" height="90" fill="${t.bg1}"/>
+    <defs><linearGradient id="ob" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${t.accent2}" stop-opacity=".12"/><stop offset="100%" stop-color="${t.accent}" stop-opacity=".05"/></linearGradient></defs>
+    <rect width="160" height="90" fill="url(#ob)"/>
+    <path d="M0,60 Q20,50 40,55 Q60,60 80,52 Q100,44 120,50 Q140,56 160,48 L160,90 L0,90Z" fill="${t.accent}" opacity=".1"/>
+    <rect x="0" y="0" width="160" height="4" fill="${t.accent}"/>
+    <rect x="8" y="10" width="55" height="5" rx="1" fill="${t.accent}" opacity=".85"/>
+    <rect x="8" y="18" width="38" height="3" rx="1" fill="${t.accent}" opacity=".4"/>
+    ${[0,1,2].map(i=>`
+      <rect x="${8+i*52}" y="26" width="46" height="28" rx="3" fill="${t.accent}" opacity=".06" stroke="${t.accent}" stroke-width=".6" stroke-opacity=".3"/>
+      <rect x="${13+i*52}" y="31" width="30" height="4" rx="1" fill="${t.accent}" opacity=".8"/>
+      <rect x="${13+i*52}" y="39" width="22" height="3" rx="1" fill="${t.accent2}" opacity=".6"/>
+      <rect x="${13+i*52}" y="45" width="28" height="2" rx="1" fill="${t.text}" opacity=".2"/>`).join('')}`,
+};
+
+// ── THEME RENDER ──────────────────────────────────────────
+function themeCardHTML(t) {
+  const svgFn = THUMB_SVGS[t.key];
+  const svgContent = svgFn
+    ? svgFn(t)
+    : `<rect width="160" height="90" fill="${t.bg1}"/>
+       <rect x="0" y="0" width="160" height="3" fill="${t.accent}"/>
+       <rect x="10" y="15" width="80" height="7" rx="2" fill="${t.accent}" opacity=".8"/>
+       <rect x="10" y="26" width="55" height="4" rx="1" fill="${t.accent2}" opacity=".6"/>`;
+  return `<div class="theme-card ${t.key===curTheme?'active':''}"
+    onclick="selectTheme('${t.key}')" title="${t.name}">
+    <svg viewBox="0 0 160 90" xmlns="http://www.w3.org/2000/svg"
+      style="width:100%;height:100%;display:block;">${svgContent}</svg>
+    <div class="theme-label"><div class="theme-name">${t.name}</div></div>
+    <div class="theme-emoji">${t.emoji}</div>
+    <div class="theme-check">✓</div>
+  </div>`;
+}
+function renderThemes() {
+  const h = themes.map(t=>themeCardHTML(t)).join('');
+  document.getElementById('themeGrid').innerHTML = h;
+  // mobile grid
+  const mg = document.getElementById('themeGridMobile');
+  if(mg) {
+    mg.innerHTML = themes.map(t=>themeCardHTML(t)).join('');
+    const sc = document.getElementById('sheetThemeCount');
+    if(sc) sc.textContent = `(${themes.length}개)`;
+  }
+}
+
+// ── FONT RENDER ───────────────────────────────────────────
+function fontItemHTML(f) {
+  return `<div class="font-item ${f.key===curFont?'active':''}" onclick="selectFont('${f.key}')">
+    <div class="fsample" style="font-family:${f.family}">${f.sample}</div>
+    <div class="fmeta">
+      <div class="fname">${f.name}</div>
+      <div class="flabel">${f.label}</div>
+    </div>
+    <div class="fcheck">✓</div>
+  </div>`;
+}
+function renderFonts() {
+  const h = fonts.map(f=>fontItemHTML(f)).join('');
+  document.getElementById('fontList').innerHTML = h;
+  const fm = document.getElementById('fontListMobile');
+  if(fm) fm.innerHTML = h;
+}
+
+// ── DOTS ──────────────────────────────────────────────────
+function renderDots() {
+  const labels = ['표지','KPI','차트','사업부','HBM','파운드리','모바일','지역','리스크','전망','결론'];
+  document.getElementById('slideDots').innerHTML =
+    Array.from({length:totSlide},(_,i)=>
+      `<div class="dot ${i===curSlide?'active':''}" onclick="goSlide(${i})" title="${labels[i]||'슬라이드'+(i+1)}"></div>`
+    ).join('');
+}
+
+// ── SELECT ────────────────────────────────────────────────
+function selectTheme(key) {
+  curTheme = key;
+  const t = themes.find(x=>x.key===key);
+  if(t) {
+    const name = t.emoji+' '+t.name;
+    document.getElementById('selThemeName').textContent = name;
+    const sm = document.getElementById('selThemeNameM');
+    if(sm) sm.textContent = name;
+  }
+  renderThemes();
+  updatePreview();
+  if(isMobile()) closeSheet();
+}
+function selectFont(key) {
+  curFont = key;
+  const f = fonts.find(x=>x.key===key);
+  if(f) {
+    document.getElementById('selFontName').textContent = f.name;
+    const sm = document.getElementById('selFontNameM');
+    if(sm) sm.textContent = f.name;
+  }
+  renderFonts();
+  updatePreview();
+  if(isMobile()) closeSheet();
+}
+
+// ── PREVIEW ───────────────────────────────────────────────
+function updatePreview() {
+  const iframe = document.getElementById('slideIframe');
+  iframe.src = `/api/preview/${curTheme}/${curFont}/${curSlide}`;
+  document.getElementById('curSlide').textContent = curSlide+1;
+  renderDots();
+  autoFit();
+}
+function navigate(dir) {
+  const n = curSlide+dir;
+  if(n>=0 && n<totSlide){ curSlide=n; updatePreview(); }
+}
+function goSlide(idx){ curSlide=idx; updatePreview(); }
+function quickPreview(){ window.open(`/api/preview/${curTheme}/${curFont}/${curSlide}`,'_blank'); }
+
+// ── ZOOM ──────────────────────────────────────────────────
+function autoFit() {
+  const frame = document.getElementById('slideFrame');
+  const sw = frame.clientWidth - 32;
+  const sh = frame.clientHeight - 32;
+  zoom = Math.min(sw/1280, sh/720, 1);
+  applyZoom();
+}
+function applyZoom() {
+  const box = document.getElementById('slideBox');
+  box.style.transform = `scale(${zoom})`;
+  const zv = document.getElementById('zoomVal');
+  if(zv) zv.textContent = Math.round(zoom*100)+'%';
+  // adjust container height to avoid whitespace
+  box.style.marginTop = `-${(720*(1-zoom))/2}px`;
+  box.style.marginBottom = `-${(720*(1-zoom))/2}px`;
+}
+function setZoom(d){ zoom=Math.min(1,Math.max(.15,zoom+d)); applyZoom(); }
+
+// ── APPLY ─────────────────────────────────────────────────
+function getPrompt() {
+  const desktop = document.getElementById('promptInput').value.trim();
+  const mobile  = document.getElementById('promptInputMobile')?.value.trim()||'';
+  return desktop || mobile;
+}
+async function applyAll() { await _doApply(); }
+async function applyAllM() { closeSheet(); await _doApply(); }
+
+async function _doApply() {
+  const prompt = getPrompt();
+  const ov = document.getElementById('overlay');
+  ov.classList.add('show');
+  setStepUI(1);
+  document.getElementById('ovSub').textContent = `테마: ${curTheme}  폰트: ${curFont}`;
+  try {
+    const res = await fetch('/api/regenerate',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({theme:curTheme,font:curFont,prompt})
+    });
+    setStepUI(2);
+    await new Promise(r=>setTimeout(r,600));
+    setStepUI(3);
+    const data = await res.json();
+    ov.classList.remove('show');
+    if(data.ok){
+      setStatus(`✅ ${data.msg}`,'ok');
+      showDl();
+      updatePreview();
+    } else { setStatus('❌ '+data.error,'err'); }
+  } catch(e){
+    ov.classList.remove('show');
+    setStatus('❌ 서버 오류: '+e.message,'err');
+  }
+}
+function setStepUI(n){
+  for(let i=1;i<=3;i++){
+    const el=document.getElementById('step'+i);
+    el.className='ov-step '+(i<n?'done':i===n?'cur':'pend');
+    el.querySelector('.ov-si').textContent=i<n?'✓':''+i;
+  }
+}
+function setStatus(msg,cls){
+  ['statusMsg','statusMsgM'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.textContent=msg;el.className='status-msg '+(cls||'');}
+  });
+}
+function showDl(url){
+  const href = url || '/samsung_premium.pptx';
+  const name = href.split('/').pop() || 'presentation.pptx';
+  const html=`<a class="dl-link" href="${href}" download="${name}">📥 PPTX 다운로드</a>`;
+  ['dlArea','dlAreaM'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
+}
+
+// ── CHIPS ─────────────────────────────────────────────────
+function setChip(el){ document.getElementById('promptInput').value=el.textContent.slice(3).trim(); }
+function setChipM(el){ document.getElementById('promptInputMobile').value=el.textContent.slice(3).trim(); }
+
+// ── COMBOS ────────────────────────────────────────────────
+function buildCombos(){
+  allCombos=[];
+  themes.forEach(t=>fonts.forEach(f=>allCombos.push({t,f})));
+  const sel=document.getElementById('filterFont');
+  fonts.forEach(f=>{const o=document.createElement('option');o.value=f.key;o.textContent=f.name;sel.appendChild(o);});
+  filterCombos();
+}
+function filterCombos(){
+  const ff=document.getElementById('filterFont').value;
+  const fd=document.getElementById('filterDark').value;
+  let list=allCombos;
+  if(ff) list=list.filter(c=>c.f.key===ff);
+  if(fd==='dark') list=list.filter(c=>c.t.dark);
+  if(fd==='light') list=list.filter(c=>!c.t.dark);
+  document.getElementById('comboFilterCount').textContent=list.length;
+  document.getElementById('comboList').innerHTML=list.map(({t,f})=>`
+<div class="combo-card" onclick="applyCombo('${t.key}','${f.key}')" title="${t.name} + ${f.name}">
+  <div class="combo-preview" style="background:${t.preview};position:relative;">
+    <div style="position:absolute;inset:0;padding:7px;display:flex;flex-direction:column;gap:2px;">
+      <div style="height:2px;background:rgba(255,255,255,.55);border-radius:1px;width:90%"></div>
+      <div style="height:4px;background:rgba(255,255,255,.35);border-radius:2px;width:60%"></div>
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:4px;">
+        <div style="background:rgba(255,255,255,.15);border-radius:2px"></div>
+        <div style="background:rgba(255,255,255,.15);border-radius:2px"></div>
+        <div style="background:rgba(255,255,255,.15);border-radius:2px"></div>
+      </div>
+    </div>
+    <div style="position:absolute;top:4px;right:5px;font-size:11px;">${t.emoji}</div>
+  </div>
+  <div class="combo-info">
+    <div class="combo-name">${t.name}</div>
+    <div class="combo-font">${f.name} · ${f.label}</div>
+  </div>
+</div>`).join('');
+}
+function applyCombo(tk,fk){ switchTab('design'); selectTheme(tk); selectFont(fk); }
+
+// ── TABS (desktop) ────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('.htab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.getElementById('designPane').style.display  = tab==='design'?'flex':'none';
+  document.getElementById('combosPane').classList.toggle('active',tab==='combos');
+  if(tab==='design') setTimeout(autoFit,50);
+}
+document.querySelectorAll('.htab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+
+// ── MOBILE TAB ────────────────────────────────────────────
+function mobileTab(tab){
+  // update bottom nav active state
+  document.querySelectorAll('.mnav-item').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('mntb-'+tab);
+  if(btn) btn.classList.add('active');
+
+  if(tab==='design'){
+    document.getElementById('designPane').style.display='flex';
+    document.getElementById('combosPane').classList.remove('active');
+    setTimeout(autoFit,50);
+  } else if(tab==='combos'){
+    document.getElementById('designPane').style.display='none';
+    document.getElementById('combosPane').classList.add('active');
+  }
+}
+
+// ── MOBILE SHEETS ─────────────────────────────────────────
+let activeSheet = null;
+function openSheet(name){
+  closeSheet();
+  const sheet = document.getElementById('sheet'+name.charAt(0).toUpperCase()+name.slice(1));
+  const bd = document.getElementById('sheetBackdrop');
+  if(!sheet) return;
+  bd.classList.add('open');
+  sheet.classList.add('open');
+  activeSheet = sheet;
+  document.body.style.overflow='hidden';
+  // mark nav active
+  document.querySelectorAll('.mnav-item').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('mntb-'+name);
+  if(btn) btn.classList.add('active');
+}
+function closeSheet(){
+  if(activeSheet){ activeSheet.classList.remove('open'); activeSheet=null; }
+  document.getElementById('sheetBackdrop').classList.remove('open');
+  document.body.style.overflow='';
+  // restore nav
+  document.querySelectorAll('.mnav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mntb-design')?.classList.add('active');
+}
+
+// ── SIDEBAR TOGGLE (mobile) ───────────────────────────────
+function openSidebar(){
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sheetBackdrop').classList.remove('open');
+}
+function closeRightPanel(){
+  document.getElementById('rightPanel').classList.remove('open');
+  document.getElementById('sheetBackdrop').classList.remove('open');
+}
+// Backdrop click: close either sheet or sidebar
+document.getElementById('sheetBackdrop').addEventListener('click',()=>{
+  closeSheet();
+  closeSidebar();
+  closeRightPanel();
+});
+
+// ── KEYBOARD ──────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='TEXTAREA') return;
+  if(e.key==='ArrowLeft')  navigate(-1);
+  if(e.key==='ArrowRight') navigate(1);
+  if(e.key==='+') setZoom(.1);
+  if(e.key==='-') setZoom(-.1);
+  if(e.key==='f'||e.key==='F') autoFit();
+});
+
+// ── SWIPE (mobile slide nav) ───────────────────────────────
+let touchX=0;
+document.getElementById('slideFrame').addEventListener('touchstart',e=>{touchX=e.touches[0].clientX;},{passive:true});
+document.getElementById('slideFrame').addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-touchX;
+  if(Math.abs(dx)>50){ navigate(dx<0?1:-1); }
+},{passive:true});
+
+// ── RESIZE ────────────────────────────────────────────────
+let resizeTimer;
+window.addEventListener('resize',()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(autoFit,120);
+});
+
+// ── SIDEBAR CLOSE BTN visibility ──────────────────────────
+function updateSidebarCloseBtn(){
+  const btn=document.getElementById('sidebarCloseBtn');
+  if(btn) btn.style.display=isMobile()?'flex':'none';
+}
+
+// ── CHAT UI ───────────────────────────────────────────────
+const ORCH_URL = 'http://localhost:3000';
+let chatHistory = [];
+let pendingFile = null;
+let pendingImage = null;
+let isChatBusy = false;
+let chatSessionId = 'ppt_' + Date.now();
+
+// Progress helper
+function setProgress(pct) {
+  ['progFill','progFillM'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.width = pct + '%';
+  });
+}
+
+// Refresh slides after generation
+function refreshSlides(data) {
+  if (data.pptxUrl) showDl();
+  if (data.slides || data.slideCount) {
+    // Reload current slide
+    setTimeout(() => {
+      if (typeof renderSlide === 'function') renderSlide(curIdx);
+    }, 500);
+  }
+}
+
+function scrollChat() {
+  const el = document.getElementById('chatMessages');
+  if (el) el.scrollTop = el.scrollHeight;
+}
+
+function addChatMsg(role, content, isTyping = false) {
+  const el = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  const avatar = role === 'user' ? '👤' : '🤖';
+  if (isTyping) {
+    div.id = 'typingIndicator';
+    div.innerHTML = `<div class="msg-avatar">${avatar}</div><div class="msg-bubble typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  } else {
+    const sanitized = content.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    div.innerHTML = `<div class="msg-avatar">${avatar}</div><div class="msg-bubble">${sanitized}</div>`;
+  }
+  el.appendChild(div);
+  scrollChat();
+  return div;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typingIndicator');
+  if (t) t.remove();
+}
+
+function setChatBusy(busy) {
+  isChatBusy = busy;
+  const btn = document.getElementById('chatSendBtn');
+  const inp = document.getElementById('chatInput');
+  if (btn) btn.disabled = busy;
+  if (inp) inp.disabled = busy;
+}
+
+function chatInputHandler(el) {
+  // Auto-resize
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  // URL detection
+  const val = el.value;
+  const urlBar = document.getElementById('urlDetectedBar');
+  const hasUrl = /https?:\/\/[^\s]+/.test(val);
+  if (urlBar) urlBar.style.display = hasUrl ? 'block' : 'none';
+}
+
+function chatKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+}
+
+function chatQuick(text) {
+  const inp = document.getElementById('chatInput');
+  if (inp) { inp.value = text; inp.focus(); }
+  sendChatMessage();
+}
+
+function clearChat() {
+  chatHistory = [];
+  chatSessionId = 'ppt_' + Date.now();
+  const el = document.getElementById('chatMessages');
+  if (el) {
+    el.innerHTML = `<div class="chat-msg ai">
+      <div class="msg-avatar">🤖</div>
+      <div class="msg-bubble">
+        <div style="font-size:12px;line-height:1.6;">대화가 초기화되었습니다. 새 PPT 주제를 입력해주세요!</div>
+      </div>
+    </div>`;
+  }
+}
+
+function chatFileUpload() { document.getElementById('fileInput').click(); }
+function chatImageUpload() { document.getElementById('imageInput').click(); }
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  pendingFile = file;
+  pendingImage = null;
+  const preview = document.getElementById('uploadPreview');
+  const icon = document.getElementById('uploadPreviewIcon');
+  const name = document.getElementById('uploadPreviewName');
+  const size = document.getElementById('uploadPreviewSize');
+  if (preview) preview.style.display = 'block';
+  if (icon) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    icon.textContent = ext === 'pdf' ? '📄' : ext.includes('doc') ? '📝' : ext.includes('ppt') ? '📊' : '📎';
+  }
+  if (name) name.textContent = file.name;
+  if (size) size.textContent = (file.size / 1024).toFixed(1) + ' KB';
+  event.target.value = '';
+}
+
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  pendingImage = file;
+  pendingFile = null;
+  const preview = document.getElementById('uploadPreview');
+  const icon = document.getElementById('uploadPreviewIcon');
+  const name = document.getElementById('uploadPreviewName');
+  const size = document.getElementById('uploadPreviewSize');
+  if (preview) preview.style.display = 'block';
+  if (icon) icon.textContent = '🖼';
+  if (name) name.textContent = file.name;
+  if (size) size.textContent = (file.size / 1024).toFixed(1) + ' KB';
+  event.target.value = '';
+}
+
+function clearUpload() {
+  pendingFile = null;
+  pendingImage = null;
+  const preview = document.getElementById('uploadPreview');
+  if (preview) preview.style.display = 'none';
+}
+
+async function sendChatMessage() {
+  if (isChatBusy) return;
+  const inp = document.getElementById('chatInput');
+  const text = inp ? inp.value.trim() : '';
+  if (!text && !pendingFile && !pendingImage) return;
+
+  // Build user message display
+  let displayText = text || (pendingFile ? `📎 ${pendingFile.name}` : `🖼 ${pendingImage.name}`);
+  if (text && (pendingFile || pendingImage)) displayText = `${text}\n📎 ${(pendingFile || pendingImage).name}`;
+  addChatMsg('user', displayText);
+
+  // Clear input
+  if (inp) { inp.value = ''; inp.style.height = 'auto'; }
+  const urlBar = document.getElementById('urlDetectedBar');
+  if (urlBar) urlBar.style.display = 'none';
+
+  setChatBusy(true);
+  addChatMsg('ai', '', true); // typing
+
+  try {
+    let response;
+
+    // Check for URL in message
+    const urlMatch = text.match(/https?:\/\/[^\s]+/);
+
+    if (pendingImage) {
+      response = await handleImageOCR(pendingImage, text);
+      clearUpload();
+    } else if (pendingFile) {
+      response = await handleFileParse(pendingFile, text);
+      clearUpload();
+    } else if (urlMatch) {
+      response = await handleURLAnalysis(urlMatch[0], text);
+    } else {
+      response = await handleTextChat(text);
+    }
+
+    removeTyping();
+
+    // Show AI response
+    const aiMsg = addChatMsg('ai', response.message || response.reply || '처리가 완료되었습니다.');
+
+    // If PPT data available, show generate button
+    if (response.pptData || response.slides) {
+      const bubble = aiMsg.querySelector('.msg-bubble');
+      if (bubble) {
+        const genBtn = document.createElement('button');
+        genBtn.className = 'btn btn-primary';
+        genBtn.style.cssText = 'width:100%;margin-top:8px;padding:8px;font-size:11px;';
+        genBtn.textContent = '⚡ 이 내용으로 PPT 생성';
+        genBtn.onclick = () => generateFromChat(response.pptData || response.slides, response.topic || text);
+        bubble.appendChild(genBtn);
+      }
+    }
+
+    // Add to history
+    chatHistory.push({ role: 'user', content: displayText });
+    chatHistory.push({ role: 'assistant', content: response.message || response.reply || '' });
+
+  } catch(e) {
+    removeTyping();
+    addChatMsg('ai', `❌ 오류가 발생했습니다: ${e.message}\n\n잠시 후 다시 시도해주세요.`);
+  }
+
+  setChatBusy(false);
+}
+
+async function handleTextChat(text) {
+  // Check if PPT generation request
+  const isPPTRequest = /ppt|프레젠테이션|슬라이드|발표|분석|보고서|제안서|기획서/.test(text.toLowerCase());
+
+  if (isPPTRequest) {
+    // Direct PPT generation via orchestrator
+    const isResearch = /분석해서|리서치|조사해서|검색해서|분석 후/.test(text);
+    setStatus(isResearch ? '🔍 리서치 중... (약 30~40초 소요)' : '🤖 AI가 PPT를 생성 중입니다...', 'ok');
+    setProgress(10);
+
+    // research_ppt 진행 상황 애니메이션
+    let _progTimer = null;
+    if (isResearch) {
+      let _p = 10;
+      const _steps = [
+        [3000, 20, '🌐 검색팀: Brave/Tavily로 데이터 수집 중...'],
+        [8000, 35, '🕷️ 크롤팀: 웹페이지 내용 추출 중...'],
+        [14000, 50, '🧠 Claude: 산업/경쟁 분석 중...'],
+        [20000, 65, '📊 GPT-4o: 재무 데이터 구조화 중...'],
+        [26000, 80, '🔀 데이터 병합 및 슬라이드 구성 중...'],
+        [31000, 90, '📄 PPTX 파일 생성 중...'],
+      ];
+      _steps.forEach(([ms, prog, msg]) => {
+        const t = setTimeout(() => { setProgress(prog); setStatus(msg, 'ok'); }, ms);
+        if (!_progTimer) _progTimer = [];
+        _progTimer.push(t);
+      });
+    }
+
+    try {
+      // Try orchestrator first
+      const orchRes = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          sessionId: chatSessionId,
+          context: { type: 'ppt', theme: curTheme, font: curFont }
+        })
+      });
+
+      if (orchRes.ok) {
+        const data = await orchRes.json();
+        if (_progTimer) { _progTimer.forEach(clearTimeout); _progTimer = null; }
+
+        // research_ppt: 실제 파일 생성된 경우
+        if (data.hasFile && data.pptxUrl) {
+          setProgress(100);
+          setStatus('✅ PPT 생성 완료!', 'ok');
+          showDl(data.pptxUrl);
+          return { message: `✅ **PPT 생성 완료!**\n\n📥 [${data.fileName || 'PPTX 다운로드'}](${data.pptxUrl})`, pptData: data };
+        }
+
+        setProgress(50);
+        return {
+          message: data.reply || `📊 "${text}" PPT 분석을 완료했습니다!\n\n테마와 폰트를 선택한 후 아래 버튼으로 PPT를 생성하세요.`,
+          pptData: data,
+          topic: text
+        };
+      }
+    } catch(e) {
+      if (_progTimer) { _progTimer.forEach(clearTimeout); _progTimer = null; }
+      console.warn('Orchestrator unavailable, using direct generation');
+    }
+
+    // Fallback: direct generation
+    setProgress(30);
+    const res = await fetch('/api/regenerate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ theme: curTheme, font: curFont, prompt: text })
+    });
+    const data = await res.json();
+    setProgress(100);
+    if (data.ok) {
+      setStatus(`✅ ${data.msg}`, 'ok');
+      refreshSlides(data);
+      return { message: `✅ PPT 생성 완료! ${data.slideCount}개 슬라이드\n📥 다운로드 버튼을 확인하세요.` };
+    }
+    return { message: '❌ PPT 생성 실패. 다시 시도해주세요.' };
+  }
+
+  // Regular chat via orchestrator
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        sessionId: chatSessionId,
+        history: chatHistory.slice(-6)
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { message: data.reply || '응답을 받았습니다.' };
+    }
+  } catch(e) { /* fallback below */ }
+
+  // Simple fallback
+  return { message: `💡 "${text}" 주제로 PPT를 만들어드릴까요?\n\n"네"라고 하시거나 더 자세한 내용을 입력해주세요.` };
+}
+
+async function handleURLAnalysis(url, additionalText) {
+  setStatus('🔗 URL 분석 중...', 'ok');
+  setProgress(20);
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `이 URL을 분석해서 PPT를 만들어줘: ${url}${additionalText ? '\n' + additionalText : ''}`,
+        sessionId: chatSessionId,
+        context: { type: 'research_ppt', url, theme: curTheme, font: curFont }
+      })
+    });
+    setProgress(60);
+    if (res.ok) {
+      const data = await res.json();
+      setProgress(100);
+      return {
+        message: data.reply || `🔗 URL 분석 완료!\n${url}\n\n테마를 선택하고 PPT 생성 버튼을 눌러주세요.`,
+        pptData: data,
+        topic: url
+      };
+    }
+  } catch(e) { console.warn('URL analysis error:', e); }
+  return { message: `🔗 URL "${url.substring(0,50)}..." 분석을 요청했습니다.\n잠시 후 결과를 확인해주세요.` };
+}
+
+async function handleFileParse(file, additionalText) {
+  setStatus('📎 파일 분석 중...', 'ok');
+  setProgress(20);
+
+  const formData = new FormData();
+  formData.append('file', file);
+  if (additionalText) formData.append('prompt', additionalText);
+  formData.append('theme', curTheme);
+  formData.append('font', curFont);
+
+  try {
+    // Try orchestrator upload endpoint
+    const res = await fetch(`${ORCH_URL}/api/integrations/storage/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    setProgress(60);
+    if (res.ok) {
+      const data = await res.json();
+      setProgress(100);
+      return {
+        message: `📎 파일 "${file.name}" 업로드 완료!\n\n내용을 분석해서 PPT를 만들어드릴까요? "네"라고 입력해주세요.`,
+        fileId: data.assetId || data.id
+      };
+    }
+  } catch(e) { console.warn('File upload error:', e); }
+
+  // Fallback: read as text
+  try {
+    const text = await file.text();
+    const preview = text.substring(0, 500);
+    return {
+      message: `📎 파일 "${file.name}" 읽기 완료!\n\n내용 미리보기:\n${preview}...\n\n이 내용으로 PPT를 만들어드릴까요?`,
+      fileContent: text
+    };
+  } catch(e) {
+    return { message: `📎 "${file.name}" 파일을 받았습니다. PPT 주제를 알려주시면 이 파일을 참고해서 만들어드릴게요.` };
+  }
+}
+
+async function handleImageOCR(image, additionalText) {
+  setStatus('🖼 이미지 분석 중 (OCR)...', 'ok');
+  setProgress(20);
+
+  // Convert image to base64
+  const base64 = await new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result.split(',')[1]);
+    reader.readAsDataURL(image);
+  });
+
+  try {
+    // Try vision API via orchestrator
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `이미지에서 텍스트를 추출하고 PPT를 만들어줘${additionalText ? ': ' + additionalText : ''}`,
+        sessionId: chatSessionId,
+        image: base64,
+        context: { type: 'vision', theme: curTheme, font: curFont }
+      })
+    });
+    setProgress(70);
+    if (res.ok) {
+      const data = await res.json();
+      setProgress(100);
+      return {
+        message: data.reply || `🖼 이미지 분석 완료!\n\n텍스트가 추출되었습니다. PPT를 생성해드릴까요?`,
+        pptData: data
+      };
+    }
+  } catch(e) { console.warn('Image OCR error:', e); }
+
+  return { message: `🖼 이미지 "${image.name}"를 받았습니다.\n이미지 내용을 설명해주시면 PPT를 만들어드릴게요.` };
+}
+
+async function generateFromChat(data, topic) {
+  setStatus('⚡ PPT 생성 중...', 'ok');
+  setProgress(20);
+  try {
+    const res = await fetch('/api/regenerate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        theme: curTheme, font: curFont,
+        prompt: typeof topic === 'string' ? topic : JSON.stringify(topic)
+      })
+    });
+    const result = await res.json();
+    setProgress(100);
+    if (result.ok) {
+      setStatus(`✅ ${result.msg}`, 'ok');
+      refreshSlides(result);
+      addChatMsg('ai', `✅ PPT 생성 완료! ${result.slideCount}개 슬라이드가 만들어졌습니다.\n📥 아래에서 다운로드 가능합니다.`);
+    }
+  } catch(e) {
+    setStatus('❌ 생성 실패', 'err');
+    addChatMsg('ai', '❌ PPT 생성에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+// Update getPrompt to also check chat
+const _origGetPrompt = typeof getPrompt === 'function' ? getPrompt : () => '';
+function getPrompt() {
+  const chatInp = document.getElementById('chatInput');
+  const chatText = chatInp ? chatInp.value.trim() : '';
+  const orig = _origGetPrompt();
+  return chatText || orig;
+}
+
+// Open right panel when chat icon is clicked
+function openChatPanel() {
+  const rp = document.getElementById('rightPanel');
+  const backdrop = document.getElementById('sheetBackdrop');
+  if (rp) rp.classList.add('open');
+  if (backdrop) backdrop.classList.add('open');
+  setTimeout(() => {
+    const inp = document.getElementById('chatInput');
+    if (inp) inp.focus();
+  }, 300);
+}
+
+// ── START ─────────────────────────────────────────────────
+init().then(()=>{
+  autoFit();
+  updateSidebarCloseBtn();
+  window.addEventListener('resize',updateSidebarCloseBtn);
+});
+</script>
+</body>
+</html>

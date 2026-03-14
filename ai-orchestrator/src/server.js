@@ -36,7 +36,7 @@ const { v4: uuidv4 } = require('uuid');
 const OpenAI = require('openai');
 
 const IntentAnalyzer = require('./orchestrator/intentAnalyzer');
-const MasterOrchestrator = require('./orchestrator/masterOrchestrator');
+const moduleBridge = require('./services/moduleBridge');  // Python AI 모듈 브릿지
 const DynamicOrchestrator = require('./orchestrator/dynamicOrchestrator');
 const MemoryEngine = require('./memory/memoryEngine');
 const { TASK_STATUS } = require('./types');
@@ -45,11 +45,30 @@ const { TASK_STATUS } = require('./types');
 const ComboOptimizer  = require('./orchestrator/comboOptimizer');
 const ModelBenchmark  = require('./orchestrator/modelBenchmark');
 const { API_ADAPTERS, INTEGRATION_PRIORITY, MISSING_TECH_SOLUTIONS } = require('./orchestrator/apiAdapters');
+const { TOOL_DEFINITIONS, executeTool, shouldUseTools,
+        getToolPriorityHint, selectPriorityTool } = require('./orchestrator/functionTools');
+const toolObs = require('./services/toolObservability');  // STEP 7
+
+// ── STEP 10~15: Agent Runtime (Planner + ToolChain + SkillLib + AgentRuntime) ──
+const {
+  createAgentRuntime,
+  taskStateEngine,
+  skillLibrary,
+  costController,
+  failureStore,
+  cacheLayer,
+  searchEngine,
+  parallelExecutor,
+  TASK_STATE,
+  AGENT_CONFIG,
+} = require('./agent');  // src/agent/index.js
 
 // ── 클라이언트 초기화 ──────────────────────────────────────
 // GenSpark LLM Proxy 지원: OPENAI_BASE_URL 사용
 const openaiConfig = {
-  apiKey: process.env.OPENAI_API_KEY || 'demo-mode'
+  apiKey:  process.env.OPENAI_API_KEY || 'demo-mode',
+  timeout: 20000,   // 20초 타임아웃 (SDK 생성자에서만 지원)
+  maxRetries: 1,    // 1회 재시도 (기본 2회 → 실패 시 빠른 포기)
 };
 if (process.env.OPENAI_BASE_URL) {
   openaiConfig.baseURL = process.env.OPENAI_BASE_URL;
@@ -76,6 +95,10 @@ const memory = new MemoryEngine();
 const comboOptimizer = new ComboOptimizer();
 const modelBenchmark = new ModelBenchmark();
 
+// ── STEP 10~15: Agent Runtime 초기화 ─────────────────────────
+// executeTool은 functionTools.js에서 가져옴 (아래 require 후 연결)
+let agentRuntime = null;  // openai 준비 완료 후 초기화
+
 // ── Express 앱 설정 ────────────────────────────────────────
 const app = express();
 
@@ -97,6 +120,11 @@ app.use(security.globalLimiter);
 // ── 어드민 전용 URL (/admin → admin.html) — static보다 먼저 등록 ──
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/admin.html'));
+});
+
+// ── Phase 3: Failure Replay Debug UI ─────────────────────────────────────
+app.get('/failures', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/failures.html'));
 });
 
 app.use(express.static(path.join(__dirname, '../public')));
@@ -128,6 +156,399 @@ app.get('/health', (req, res) => {
     hasAnthropic: !!process.env.ANTHROPIC_API_KEY,
     demoMode: !process.env.OPENAI_API_KEY
   });
+});
+
+// ── STEP 7: Tool Observability KPI 엔드포인트 ────────────────────────────
+// /api/kpi — 단축 별칭 (Regression Suite I1 테스트용)
+app.get('/api/kpi', (req, res) => {
+  try {
+    const toolKpi      = toolObs.getKPI();
+    const budgetKpi    = costController    ? costController.getBudgetKPI()    : {};
+    const cacheKpi     = cacheLayer        ? cacheLayer.getStats()            : {};
+    const failureKpi   = _buildFailureKpi();
+    const searchKpi    = searchEngine      ? searchEngine.getKPI()            : {};
+    const parallelKpi  = parallelExecutor  ? parallelExecutor.getParallelKPI(): {};
+    res.json({ ...toolKpi, budget: budgetKpi, cache: cacheKpi, failures: failureKpi, search: searchKpi, parallel: parallelKpi });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/observability/kpi', (req, res) => {
+  try {
+    const toolKpi      = toolObs.getKPI();
+    const budgetKpi    = costController    ? costController.getBudgetKPI()    : {};
+    const cacheKpi     = cacheLayer        ? cacheLayer.getStats()            : {};
+    const failureKpi   = _buildFailureKpi();
+    const searchKpi    = searchEngine      ? searchEngine.getKPI()            : {};
+    const parallelKpi  = parallelExecutor  ? parallelExecutor.getParallelKPI(): {};
+    res.json({ ...toolKpi, budget: budgetKpi, cache: cacheKpi, failures: failureKpi, search: searchKpi, parallel: parallelKpi });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+function _buildFailureKpi() {
+  if (!failureStore) return {};
+  try {
+    const s = failureStore.getReplayStats();
+    const total     = s.total_failures || 0;
+    const replays   = s.total_replays  || 0;
+    const replayRuns= s.replay_runs    || 0;
+    const budgetKpi = costController ? costController.getBudgetKPI() : {};
+    const partial   = parseFloat(budgetKpi.partial_result_rate) || 0;
+    return {
+      total_failures:          total,
+      failure_rate:            total > 0 ? (total / Math.max(total, 1) * 100).toFixed(1) + '%' : '0%',
+      partial_rate:            budgetKpi.partial_result_rate || '0%',
+      budget_exceeded_count:   s.budget_exceeded || 0,
+      timeout_count:           s.timeout         || 0,
+      llm_error_count:         s.llm_error       || 0,
+      chain_error_count:       s.chain_error      || 0,
+      total_replays:           replays,
+      replay_runs:             replayRuns,
+      replay_success_rate:     replayRuns > 0
+        ? ((replays / replayRuns) * 100).toFixed(1) + '%'
+        : '0%',
+    };
+  } catch (err) {
+    return {};
+  }
+}
+app.get('/api/observability/logs', (req, res) => {
+  const n       = Math.min(parseInt(req.query.n || '50'), 200);
+  const filter  = {
+    type:     req.query.type     || undefined,
+    tool:     req.query.tool     || undefined,
+    strategy: req.query.strategy || undefined,
+  };
+  try { res.json(toolObs.getRecentLogs(n, filter)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── STEP 10~15: Agent API 엔드포인트 ─────────────────────────────────────
+
+// GET /api/agent/skills — 사용 가능한 스킬 목록
+app.get('/api/agent/skills', (req, res) => {
+  try {
+    res.json({ skills: skillLibrary.listSkills() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/agent/plan/status/:planId — 태스크 플랜 상태 조회 (STEP 12)
+app.get('/api/agent/plan/status/:planId', (req, res) => {
+  try {
+    const summary = taskStateEngine.getSummary(req.params.planId);
+    if (!summary) return res.status(404).json({ error: 'Plan not found' });
+    res.json(summary);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/agent/status — Agent Runtime 상태
+app.get('/api/agent/status', (req, res) => {
+  res.json({
+    agentEnabled:    !!agentRuntime,
+    autonomousStrategies: AGENT_CONFIG.AUTONOMOUS_STRATEGIES,
+    skipTypes:       Array.from(AGENT_CONFIG.SKIP_AUTONOMOUS_TYPES),
+    autonomousTypes: Array.from(AGENT_CONFIG.AUTONOMOUS_TASK_TYPES),
+    maxMs:           AGENT_CONFIG.MAX_AUTONOMOUS_MS,
+    skills:          skillLibrary.listSkills().map(s => s.id),
+    // STEP 10~15 구성 확인
+    components: {
+      planner:        true,
+      taskStateEngine: true,
+      toolChain:      true,
+      selfCorrection:  true,
+      skillLibrary:    true,
+      autonomousMode:  !!agentRuntime,
+    },
+    version: 'STEP 10~15 v1.0',
+  });
+});
+
+// POST /api/agent/plan — 요청에서 태스크 플랜 생성 (STEP 10)
+app.post('/api/agent/plan', async (req, res) => {
+  if (!agentRuntime) return res.status(503).json({ error: 'AgentRuntime 미초기화' });
+  try {
+    const { message, taskType = 'analysis', strategy = 'deep' } = req.body || {};
+    if (!message) return res.status(400).json({ error: 'message 필드 필요' });
+    const { AgentPlanner } = require('./agent');
+    const planner = new AgentPlanner(openai);
+    const plan = await planner.createPlan(message, taskType, strategy, {});
+    res.json({
+      success: true,
+      planId:     plan.planId,
+      complexity: plan.complexity,
+      reasoning:  plan.reasoning,
+      totalSteps: plan.totalSteps,
+      tasks:      plan.tasks.map(t => ({ id: t.id, name: t.name, type: t.type, tool: t.tool, dependsOn: t.dependsOn })),
+      task_state: plan.task_state,
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /api/agent/run — 자율 에이전트 직접 실행 (STEP 15)
+app.post('/api/agent/run', async (req, res) => {
+  if (!agentRuntime) return res.status(503).json({ error: 'AgentRuntime 미초기화' });
+  try {
+    const {
+      message,
+      taskType   = 'analysis',
+      strategy   = 'deep',
+      sessionId  = uuidv4(),
+      maxTokens  = 3000,
+    } = req.body || {};
+    if (!message) return res.status(400).json({ error: 'message 필드 필요' });
+
+    const runStart = Date.now();
+    const result = await agentRuntime.run({
+      message,
+      taskType,
+      strategy,
+      sessionId,
+      systemPrompt: `You are a highly capable autonomous AI agent. Respond in Korean.`,
+      selectedModel: 'gpt-4o-mini',
+      maxTokens,
+      temperature: 0.7,
+      memoryContext: null,
+    });
+
+    if (!result) {
+      return res.json({ success: true, agentMode: false, message: 'simple plan — 직접 LLM 사용' });
+    }
+
+    res.json({
+      success:     true,
+      agentMode:   true,
+      content:     result.content,
+      planId:      result.planId,
+      complexity:  result.plan?.complexity,
+      totalSteps:  result.plan?.totalSteps,
+      chainLog:    result.chainLog?.map(s => ({ id: s.taskId, name: s.taskName, success: s.success, ms: s.ms })),
+      corrections: result.corrections?.length || 0,
+      stateSummary: result.stateSummary,
+      totalMs:     Date.now() - runStart,
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── Phase 6: Cache Layer API ────────────────────────────────────────────────
+app.get('/api/cache/stats', (req, res) => {
+  if (!cacheLayer) return res.status(503).json({ error: 'cacheLayer 미초기화' });
+  res.json({ success: true, cache: cacheLayer.getStats() });
+});
+app.delete('/api/cache', (req, res) => {
+  if (!cacheLayer) return res.status(503).json({ error: 'cacheLayer 미초기화' });
+  const { type } = req.query;
+  if (type) {
+    cacheLayer.invalidateByType(type);
+    res.json({ success: true, message: `${type} 캐시 삭제 완료` });
+  } else {
+    cacheLayer.clear();
+    res.json({ success: true, message: '전체 캐시 초기화 완료' });
+  }
+});
+
+// ── Phase 5: Search Engine API ──────────────────────────────────────────────
+// GET  /api/search/providers  — 활성 프로바이더 목록 및 KPI
+// GET  /api/search/test       — 프로바이더 테스트 (쿼리: ?q=검색어)
+
+app.get('/api/search/providers', (req, res) => {
+  try {
+    const kpi = searchEngine ? searchEngine.getKPI() : {};
+    res.json({ success: true, ...kpi });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/search/test', async (req, res) => {
+  const query = req.query.q || '오늘 날씨 서울';
+  try {
+    const start  = Date.now();
+    const result = await searchEngine.search(query, { maxResults: 3 });
+    res.json({
+      success:    !!result,
+      query,
+      latency_ms: Date.now() - start,
+      result:     result ? result.slice(0, 500) : null,
+      kpi:        searchEngine.getKPI(),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Phase 4: Parallel Executor API ─────────────────────────────────────────
+// GET  /api/parallel/kpi         — 병렬 실행 KPI
+// POST /api/parallel/config      — max_parallel_tools 동적 변경
+
+app.get('/api/parallel/kpi', (req, res) => {
+  try {
+    const kpi = parallelExecutor ? parallelExecutor.getParallelKPI() : {};
+    res.json({ success: true, ...kpi });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/parallel/config', (req, res) => {
+  try {
+    const { max_parallel_tools } = req.body;
+    if (typeof max_parallel_tools === 'number' && max_parallel_tools >= 1 && max_parallel_tools <= 5) {
+      parallelExecutor.setMaxParallelTools(max_parallel_tools);
+      res.json({ success: true, max_parallel_tools: parallelExecutor.PARALLEL_CONFIG.MAX_PARALLEL_TOOLS });
+    } else {
+      res.status(400).json({ error: 'max_parallel_tools must be 1-5' });
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Phase 3: Failure Replay System ─────────────────────────────────────────
+// GET  /api/agent/failures          — 실패 목록 조회
+// GET  /api/agent/failure/:id       — 특정 실패 상세 조회
+// POST /api/agent/replay/:id        — 특정 실패 재실행
+// GET  /api/agent/failures/stats    — 실패 통계
+
+app.get('/api/agent/failures/stats', (req, res) => {
+  if (!failureStore) return res.status(503).json({ error: 'failureStore 미초기화' });
+  try {
+    res.json({ success: true, stats: failureStore.getReplayStats() });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/agent/failures', (req, res) => {
+  if (!failureStore) return res.status(503).json({ error: 'failureStore 미초기화' });
+  try {
+    const limit  = Math.min(parseInt(req.query.limit  || '20'), 100);
+    const offset = parseInt(req.query.offset || '0');
+    res.json({ success: true, ...failureStore.getFailures(limit, offset) });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/agent/failure/:id', (req, res) => {
+  if (!failureStore) return res.status(503).json({ error: 'failureStore 미초기화' });
+  try {
+    const id   = parseInt(req.params.id);
+    const item = failureStore.getFailure(id);
+    if (!item) return res.status(404).json({ success: false, error: '해당 실패 기록 없음' });
+    res.json({ success: true, failure: item });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/agent/replay/:id', async (req, res) => {
+  if (!failureStore) return res.status(503).json({ error: 'failureStore 미초기화' });
+  if (!agentRuntime) return res.status(503).json({ error: 'AgentRuntime 미초기화' });
+
+  try {
+    const id = parseInt(req.params.id);
+    const failure = failureStore.getFailure(id);
+    if (!failure) return res.status(404).json({ success: false, error: '해당 실패 기록 없음' });
+
+    const {
+      overridePlan,  // true → 원본 plan 재사용, false → 새로 계획 (기본: false)
+    } = req.body || {};
+
+    const runStart  = Date.now();
+    const sessionId = `replay_${id}_${Date.now()}`;
+
+    let result;
+    if (overridePlan && failure.plan) {
+      // 원본 plan을 직접 ToolChainExecutor에 전달
+      const { ToolChainExecutor } = require('./agent');
+      const chainExec = new ToolChainExecutor(openai, callWithFunctionTools, taskStateEngine);
+      const { costController: cc } = require('./agent');
+      const replayBudget = cc.createExecutionBudget(failure.complexity || 'normal');
+      taskStateEngine.register(failure.plan);
+
+      const chainResult = await chainExec.executeChain(failure.plan, `You are a highly capable autonomous AI agent. Respond in Korean.`, {
+        userMessage:   failure.userMessage,
+        sessionId,
+        maxTokens:     3000,
+        temperature:   0.7,
+        selectedModel: failure.model || 'gpt-4o-mini',
+        budget:        replayBudget,
+      });
+
+      if (chainResult?.finalResult) {
+        result = {
+          content:     typeof chainResult.finalResult === 'string' ? chainResult.finalResult : JSON.stringify(chainResult.finalResult, null, 2),
+          planId:      failure.planId,
+          plan:        failure.plan,
+          chainLog:    chainResult.chainLog,
+          corrections: chainResult.corrections,
+          totalMs:     Date.now() - runStart,
+          isReplay:    true,
+          replayedFrom: id,
+          budgetSummary: cc.getBudgetSummary(replayBudget),
+        };
+      }
+    } else {
+      // 새로운 입력으로 agentRuntime.run() 재실행
+      result = await agentRuntime.run({
+        message:       failure.userMessage,
+        taskType:      failure.plan?.taskType || 'analysis',
+        strategy:      failure.strategy || 'deep',
+        sessionId,
+        systemPrompt:  `You are a highly capable autonomous AI agent. Respond in Korean.`,
+        selectedModel: failure.model || 'gpt-4o-mini',
+        maxTokens:     3000,
+        temperature:   0.7,
+        memoryContext: null,
+      });
+    }
+
+    // replay 성공 시 원본 failure에 replay_count 증가
+    failureStore.markReplayed(id);
+
+    // 새 실행 결과를 failureStore에 replay 기록
+    let newFailureId = null;
+    if (!result) {
+      newFailureId = failureStore.captureFailure({
+        planId:        `replay_${id}_${Date.now()}`,
+        sessionId,
+        userMessage:   failure.userMessage,
+        strategy:      failure.strategy,
+        model:         failure.model,
+        complexity:    failure.complexity,
+        finalError:    'replay returned null',
+        errorType:     'chain_error',
+        replayedFrom:  id,
+      });
+    }
+
+    res.json({
+      success:      !!result,
+      replayedFrom: id,
+      sessionId,
+      content:      result?.content        || null,
+      planId:       result?.planId         || null,
+      chainLog:     result?.chainLog?.map(s => ({ id: s.taskId, name: s.taskName, success: s.success, ms: s.ms })) || [],
+      corrections:  result?.corrections?.length || 0,
+      totalMs:      Date.now() - runStart,
+      isReplay:     true,
+      newFailureId: newFailureId || null,
+    });
+  } catch (e) {
+    console.error('[ReplayAPI] 재실행 오류:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── STEP 6: Regression Test Suite 실행 엔드포인트 ────────────────────────
+app.post('/api/regression/run', async (req, res) => {
+  try {
+    const { runAITestSuite } = require('./testcases/regressionSuite');
+    const url      = `http://localhost:${process.env.PORT || 3000}`;
+    const fastMode = req.body?.mode === 'fast';
+    const summary  = await runAITestSuite({ url, fastMode });
+    res.json({ success: true, summary });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // 세션 생성
@@ -165,14 +586,18 @@ app.delete('/api/memory-legacy/:sessionId', (req, res) => {
 
 // 메시지 처리 (REST fallback)
 app.post('/api/message', async (req, res) => {
-  const { sessionId, message } = req.body;
+  const { sessionId, message, mode } = req.body;
   if (!sessionId || !message) {
     return res.status(400).json({ error: '세션ID와 메시지가 필요합니다.' });
   }
 
   const session = getOrCreateSession(sessionId);
+  // [FIX] mode 파라미터를 processMessage에 전달 (chat → fast 전략 강제)
+  if (mode && ['chat', 'agent', 'research'].includes(mode)) {
+    session._clientMode = mode;
+  }
   try {
-    const result = await processMessage(session, message);
+    const result = await processMessage(session, message, mode);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -827,8 +1252,16 @@ const integrationService = require('./services/integrationService');
 const aiConnector        = require('./services/aiConnector');
 const multimodalPipeline = require('./pipelines/multimodalPipeline');
 
+// ── 신규 툴 파이프라인 ──────────────────────────────────────────────────────
+const pptPipeline    = require('./pipelines/pptPipeline');
+const pdfPipeline    = require('./pipelines/pdfPipeline');
+const excelPipeline  = require('./pipelines/excelPipeline');
+const researchPipeline   = require('./pipelines/researchPipeline');
+const htmlSlidePipeline  = require('./pipelines/htmlSlidePipeline');
+const extraTools     = require('./tools/extraTools');
+
 // ── Phase 14: Platform Layer engines ─────────────────────────────────────
-const memoryEngine      = require('./services/memoryEngine');
+const memoryEngine      = require('./services/sessionStore');
 const storageEngine     = require('./services/storageEngine');
 const observability     = require('./services/observabilityEngine');
 const analytics         = require('./services/analyticsEngine');
@@ -1380,8 +1813,10 @@ io.on('connection', (socket) => {
     socket.emit('ready', { message: '연결 완료' });
   });
 
-  socket.on('message', async ({ sessionId, message }) => {
+  socket.on('message', async ({ sessionId, message, mode }) => {
     const session = getOrCreateSession(sessionId);
+    // Phase 5: mode 저장 ('chat' | 'agent' | 'research')
+    const clientMode = (mode === 'chat' || mode === 'agent' || mode === 'research') ? mode : null;
 
     try {
       // ① L1 메모리에 사용자 발화 기록
@@ -1438,6 +1873,24 @@ io.on('connection', (socket) => {
       // ③ 메모리 컨텍스트 빌드 (L2+L3 이전 작업/선호도 참조)
       session.pendingAnalysis = null;
       const taskInfo = { ...analysis.extractedInfo, ...analysis.inferredInfo };
+
+      // Phase 5: clientMode → taskInfo에 주입
+      if (clientMode) {
+        taskInfo._clientMode = clientMode;
+        // chat 모드: strategy를 fast로 강제
+        if (clientMode === 'chat' && analysis.strategy !== 'fast') {
+          analysis.strategy = 'fast';
+        }
+        // research 모드: strategy를 deep으로 강제
+        if (clientMode === 'research') {
+          analysis.strategy = 'deep';
+        }
+        // agent 모드: balanced 이상 보장
+        if (clientMode === 'agent' && analysis.strategy === 'fast') {
+          analysis.strategy = 'balanced';
+        }
+      }
+
       const memoryContext = memory.buildContext(sessionId, analysis.taskType);
 
       // 메모리에서 알아낸 선호도 자동 채우기
@@ -2323,9 +2776,998 @@ function getDemoResumeContent(message) {
 }
 
 // ── 유틸리티 ──────────────────────────────────────────────
-async function processMessage(session, message) {
+// ── 실시간 정보 조회 헬퍼 ────────────────────────────────────────────────────
+// ── 웹 검색 (Phase 5: searchEngine 위임 — Brave → SerpAPI → Serper → Tavily → DDG) ──
+async function _webSearch(query, maxResults = 5) {
+  const result = await searchEngine.search(query, { maxResults });
+  if (result) return result;
+  return null;
+}
+
+async function _fetchRealtimeContext(message) {
+  const msg = message.toLowerCase();
+  const now = new Date();
+  const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+
+  // ── 1. 날짜/시간 질문 ──────────────────────────────────────────────────────
+  const dateTimeMatch = msg.match(
+    /오늘.*날짜|오늘.*몇월|오늘.*며칠|지금.*날짜|현재.*날짜|오늘이 언제|오늘 날짜|몇 월 며칠|날짜가 어떻게|날짜.*알려|오늘.*무슨 날|오늘은 몇|오늘.*요일|무슨 요일|현재.*요일|지금.*요일|what.*date|today.*date|what day/
+  );
+  const timeMatch = msg.match(
+    /지금.*몇 시|현재.*시간|몇 시야|몇시야|지금.*시각|현재.*시각|몇시 몇분|what.*time|current.*time/
+  );
+
+  if (dateTimeMatch || timeMatch) {
+    const dayNames = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+    const year = koreaTime.getFullYear();
+    const month = koreaTime.getMonth() + 1;
+    const day = koreaTime.getDate();
+    const dayName = dayNames[koreaTime.getDay()];
+    const hours = koreaTime.getHours();
+    const minutes = String(koreaTime.getMinutes()).padStart(2, '0');
+    const ampm = hours < 12 ? '오전' : '오후';
+    const hours12 = hours % 12 || 12;
+
+    return `[현재 날짜/시간 정보]
+오늘 날짜: ${year}년 ${month}월 ${day}일 (${dayName})
+현재 시각: ${ampm} ${hours12}시 ${minutes}분 (한국 표준시, KST)
+타임존: Asia/Seoul (UTC+9)`;
+  }
+
+  // ── 2. 날씨 감지 ──────────────────────────────────────────────────────────
+  const weatherMatch = msg.match(/날씨|기온|온도|비.오|눈.오|흐림|맑음|weather|기상/);
+  if (weatherMatch) {
+    // 도시명 추출 - 한국어 우선, 영문은 후순위
+    const cityMap = {
+      '서울':'Seoul','부산':'Busan','인천':'Incheon','대구':'Daegu','대전':'Daejeon',
+      '광주':'Gwangju','울산':'Ulsan','제주':'Jeju','수원':'Suwon','성남':'Seongnam',
+      '춘천':'Chuncheon','청주':'Cheongju','전주':'Jeonju','포항':'Pohang','창원':'Changwon',
+      '도쿄':'Tokyo','오사카':'Osaka','베이징':'Beijing','상하이':'Shanghai',
+      '뉴욕':'New+York','런던':'London','파리':'Paris','LA':'Los+Angeles',
+      '싱가포르':'Singapore','방콕':'Bangkok','홍콩':'Hong+Kong','타이베이':'Taipei',
+    };
+    let city = 'Seoul';
+    let cityKr = '서울';
+    // 1) 한국어 도시명 먼저 확인
+    for (const [kr, en] of Object.entries(cityMap)) {
+      if (msg.includes(kr)) { city = en; cityKr = kr; break; }
+    }
+    // 2) 영문 도시명은 한국어 도시가 없을 때만, 그리고 날씨 단어 옆에 있을 때만
+    if (city === 'Seoul') {
+      const enCityMatch = message.match(/\b([A-Z][a-z]{2,})(?:\s[A-Z][a-z]+)?\b/);
+      if (enCityMatch && !['Sunny','Cloudy','Rainy','Clear','What','How','The'].includes(enCityMatch[1])) {
+        city = enCityMatch[1];
+        cityKr = enCityMatch[1];
+      }
+    }
+
+    try {
+      const res = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const data = await res.json();
+        const cur = data.current_condition?.[0];
+        const area = data.nearest_area?.[0];
+        const detectedCity = area?.areaName?.[0]?.value || cityKr;
+        const country = area?.country?.[0]?.value || '';
+        const tempC = cur?.temp_C;
+        const feelsC = cur?.FeelsLikeC;
+        const desc = cur?.weatherDesc?.[0]?.value || '';
+        const humidity = cur?.humidity;
+        const windKmph = cur?.windspeedKmph;
+        const visibility = cur?.visibility;
+        const uvIndex = cur?.uvIndex;
+
+        // 내일/모레 예보
+        const forecasts = (data.weather || []).slice(0, 3).map(day => {
+          const avgTmp = day.hourly ? Math.round(day.hourly.reduce((s,h)=>s+Number(h.tempC),0)/day.hourly.length) : '?';
+          const dayDesc = day.hourly?.[4]?.weatherDesc?.[0]?.value || '';
+          return `${day.date}: 평균 ${avgTmp}°C, ${dayDesc}`;
+        }).join(' | ');
+
+        return `[실시간 날씨 데이터 — ${detectedCity}, ${country}]
+현재 기온: ${tempC}°C (체감 ${feelsC}°C)
+날씨 상태: ${desc}
+습도: ${humidity}% | 풍속: ${windKmph}km/h | 가시거리: ${visibility}km | UV지수: ${uvIndex}
+예보: ${forecasts}
+데이터 출처: wttr.in (${new Date().toLocaleString('ko-KR', {timeZone:'Asia/Seoul'})})`;
+      }
+    } catch (_) {}
+    // 날씨 API 실패 시 웹 검색 시도
+    const citySearchResult = await _webSearch(`${cityKr} 날씨 오늘`);
+    if (citySearchResult) {
+      return `[날씨 정보 (웹 검색) — ${cityKr}]\n${citySearchResult}`;
+    }
+    return null;
+  }
+
+  // ── 환율 감지 ────────────────────────────────────────────────────────────
+  const exchangeMatch = msg.match(/환율|달러|엔화|유로|원화|위안|환전|exchange rate/);
+  if (exchangeMatch) {
+    try {
+      const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD', { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const data = await res.json();
+        const krw = data.rates?.KRW?.toFixed(0);
+        const jpy = data.rates?.JPY?.toFixed(2);
+        const eur = data.rates?.EUR?.toFixed(4);
+        const cny = data.rates?.CNY?.toFixed(4);
+        return `[실시간 환율 데이터 — ${new Date().toLocaleString('ko-KR', {timeZone:'Asia/Seoul'})}]
+1 USD = ${krw}원 (KRW) | ${jpy}엔 (JPY) | ${eur}유로 (EUR) | ${cny}위안 (CNY)
+데이터 출처: exchangerate-api.com`;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ── 3. 웹 검색이 필요한 최신 정보 질문 ────────────────────────────────────
+  // 뉴스, 최신 이벤트, 주가, 스포츠 결과 등
+  const searchMatch = msg.match(
+    /최신|뉴스|오늘의|이번\s*주|지난주|최근|어제|그제|현재.*상황|지금.*상황|지금.*어떻|지금.*얼마|지금.*몇|현재.*가격|현재.*얼마|얼마야|얼마예요|얼마임|가격.*알려|시세|주가|주식.*가격|주식.*얼마|코스피|코스닥|나스닥|비트코인|이더리움|암호화폐|코인.*가격|crypto|stock.*price|nasdaq|경기.*결과|점수.*얼마|누가\s*이겼|승패|올림픽|월드컵|챔피언스리그|프리미어리그|EPL|MLB|NBA|NFL|K리그|손흥민|이강인|황희찬|류현진|오타니|메시|호날두|선수.*골|골.*기록|최근.*경기|경기.*스코어|선거|정치.*뉴스|탄핵|임명|임기|취임|사임|사퇴|검색해줘|검색해 줘|찾아줘|찾아 줘|new|news|latest|recent|current.*price|업데이트.*됐|업데이트.*되었|출시됐|출시.*됐|발표됐|발표.*됐/i
+  );
+
+  if (searchMatch) {
+    // 검색 쿼리 정제: 질문 어미 + 불필요한 단어 제거
+    const cleanQuery = message
+      .replace(/검색해\s*줘|찾아\s*줘|알려\s*줘|말해\s*줘/g, '')
+      .replace(/알려주세요|찾아주세요|알고\s*싶어|궁금해|궁금한데/g, '')
+      .replace(/어때요?|이야|이에요|이냐|냐|요$|까$|거야|야$|어\??$/g, '')
+      .replace(/뉴스|최신\s*|정보$/g, '')
+      .trim() || message.trim();
+
+    const searchResult = await _webSearch(cleanQuery);
+    if (searchResult) {
+      return `[웹 검색 결과 — "${cleanQuery}" (${koreaTime.toLocaleDateString('ko-KR')})]
+${searchResult}
+
+※ 위 정보를 바탕으로 답변하되, 확실하지 않은 정보는 명시해 주세요.`;
+    }
+  }
+
+  return null;
+}
+
+// ── selectMaxTokens: strategy + taskType → max_tokens 결정 ─────────────
+//
+// 전략    기본값    taskType 세분화
+// ─────────────────────────────────────────────────────────────────────
+// fast      1200    (모두 동일 — 인사/번역/단순 사실)
+// balanced  3000    summarize → 2500 (요약은 출력 자체가 짧음)
+// ── callWithFunctionTools: Function Calling 루프 (STEP 5) ────────────────
+// LLM이 tool_calls를 반환하면 실행 → 결과 주입 → 재호출 (최대 3회)
+// 지원 모델: gpt-4o, gpt-4o-mini (OpenAI only — Anthropic/Google은 직접 호출로 폴백)
+async function callWithFunctionTools({
+  messages,
+  systemPrompt,
+  selectedModel,
+  strategy,
+  taskType,
+  maxTokens,
+  temperature,
+  userId,
+  sessionId,   // STEP 7: observability용
+  userMessage, // STEP 7+9: 툴 우선순위 힌트용
+}) {
+  // OpenAI 클라이언트가 없으면 function-calling 불가
+  if (!openai || !openai.chat) return null;
+
+  // [FIX] gpt-4o / gpt-4o-mini 모델만 지원
+  // claude / gemini 가 선택된 경우 → gpt-4o-mini로 자동 교체하여 tool 사용 보장
+  // (이전 코드: 비-GPT 모델이면 null 반환 → toolCallRate = 0% 유발)
+  const modelLower = (selectedModel || '').toLowerCase();
+  let toolModel = selectedModel;
+  if (!modelLower.startsWith('gpt')) {
+    // claude, gemini 등 → function-calling 지원 GPT 모델로 교체
+    toolModel = 'gpt-4o-mini';
+    console.log(`[functionCall] 모델 교체: ${selectedModel} → ${toolModel} (function-calling 지원)`);
+  }
+
+  const maxToolRounds = 3;   // 최대 tool-call 라운드 수
+  let roundMessages = [
+    { role: 'system', content: systemPrompt },
+    ...messages,
+  ];
+
+  let toolsUsed = [];        // 사용된 툴 목록 (로깅용)
+  let lastContent = null;
+
+  // 1라운드에서 toolPriorityHint 있으면 tool 호출 강제 (환율/날씨/뉴스 등)
+  const _hasPriorityHint = userMessage ? !!getToolPriorityHint(userMessage) : false;
+
+  for (let round = 0; round < maxToolRounds; round++) {
+    let response;
+    try {
+      // 1라운드 + 툴 우선순위 힌트 있으면 'required' (강제 호출), 이후 'auto'
+      const toolChoice = (round === 0 && _hasPriorityHint && toolsUsed.length === 0)
+        ? 'required'
+        : 'auto';
+      response = await openai.chat.completions.create({
+        model:       toolModel,   // [FIX] toolModel 사용 (claude→gpt-4o-mini 교체 반영)
+        messages:    roundMessages,
+        tools:       TOOL_DEFINITIONS,
+        tool_choice: toolChoice,
+        max_tokens:  maxTokens,
+        temperature,
+        // NOTE: timeout은 SDK 생성자(httpAgent)에서만 설정 가능, 여기선 제거
+      });
+    } catch (err) {
+      console.warn(`[functionCall] round ${round} LLM 오류:`, err.message);
+      // [FIX] 오류 시 lastContent 있으면 반환 (tool 결과는 살림)
+      // round > 0 이면 tool 실행 완료 후 2차 LLM 실패 → tool 결과를 직접 응답으로 사용
+      if (lastContent) {
+        return { content: lastContent, model: toolModel, provider: 'openai', toolsUsed, isFallback: true };
+      }
+      // round > 0 이고 roundMessages에 tool 결과가 있으면 tool 결과를 내용으로 조합
+      if (round > 0 && toolsUsed.length > 0) {
+        const toolContents = roundMessages
+          .filter(m => m.role === 'tool')
+          .map(m => m.content)
+          .filter(Boolean)
+          .join('\n\n');
+        if (toolContents) {
+          return { content: toolContents, model: toolModel, provider: 'openai', toolsUsed, isFallback: true };
+        }
+      }
+      return null;  // 실패 시 일반 callLLM 폴백
+    }
+
+    const choice = response.choices?.[0];
+    if (!choice) return null;
+
+    const msg = choice.message;
+    lastContent = msg.content;
+
+    // tool_calls 없으면 → 최종 응답
+    if (!msg.tool_calls || msg.tool_calls.length === 0) {
+      console.log(`[functionCall] round ${round}: 최종 응답 (툴 사용: ${toolsUsed.join(', ') || '없음'})`);
+      return {
+        content:    lastContent,
+        model:      response.model || toolModel,
+        provider:   'openai',
+        toolsUsed,
+        usage:      response.usage,
+        ms:         Date.now(),
+        isFallback: false,
+      };
+    }
+
+    // tool_calls 있음 → 각 툴 실행
+    // 어시스턴트 메시지 (tool_calls 포함) 추가
+    roundMessages.push({
+      role:       'assistant',
+      content:    msg.content || null,
+      tool_calls: msg.tool_calls,
+    });
+
+    for (const tc of msg.tool_calls) {
+      const toolName = tc.function?.name;
+      let toolArgs = {};
+      try { toolArgs = JSON.parse(tc.function?.arguments || '{}'); } catch (_) {}
+
+      console.log(`[functionCall] round ${round}: 툴 실행 → ${toolName}(${JSON.stringify(toolArgs)})`);
+      toolsUsed.push(toolName);
+
+      const toolStart = Date.now();
+      let toolResult, toolSuccess = true, toolErr = null;
+      try {
+        toolResult = await executeTool(toolName, toolArgs, { _webSearch });
+        toolSuccess = !toolResult?.startsWith?.('[툴 실행 오류') && !toolResult?.startsWith?.('[알 수 없는 툴');
+      } catch (e) {
+        toolResult = `[툴 실행 오류: ${toolName}] ${e.message}`;
+        toolSuccess = false;
+        toolErr = e.message;
+      }
+      const toolLatencyMs = Date.now() - toolStart;
+
+      // STEP 7: Tool Observability 로그
+      try {
+        toolObs.logToolCall({
+          sessionId,
+          query:       userMessage,
+          strategy,
+          model:       selectedModel,
+          taskType,
+          toolName,
+          toolArgs,
+          toolLatencyMs,
+          toolSuccess,
+          errorMsg:    toolErr,
+        });
+      } catch (_) {}
+
+      // tool 결과 메시지 추가
+      roundMessages.push({
+        role:         'tool',
+        tool_call_id: tc.id,
+        content:      toolResult,
+      });
+    }
+    // 다음 라운드: tool 결과 포함하여 재호출
+  }
+
+  // 최대 라운드 초과 → 마지막 content 반환 (있으면)
+  console.warn(`[functionCall] 최대 ${maxToolRounds}라운드 초과 — 마지막 응답 사용`);
+  return lastContent
+    ? { content: lastContent, model: toolModel, provider: 'openai', toolsUsed, isFallback: false }
+    : null;
+}
+
+// deep      6000    code       → 7000 (코드 + 설명 + 예시 충분히)
+//                   ppt/report → 7000 (긴 문서 구조)
+//                   website    → 6500 (아키텍처 + 컴포넌트)
+//                   그 외 deep → 6000
+function selectMaxTokens(strategy, taskType) {
+  switch (strategy) {
+    case 'fast':
+      return 1200;
+
+    case 'balanced':
+      if (['summarize', 'summarise'].includes(taskType)) return 2500;
+      return 3000;
+
+    case 'deep':
+      if (['code', 'ppt', 'report', 'document'].includes(taskType)) return 7000;
+      if (taskType === 'website') return 6500;
+      return 6000;
+
+    default:
+      return 3000;
+  }
+}
+
+// ── selectModel: strategy → 구체적 모델 ID 결정 ──────────────────────────
+// [FIX] deep 기본값을 gpt-4o-mini로 변경
+// - 이전: deep=claude-sonnet (모든 타입) → CB OPEN 시 tool 호출 불가, 비용 높음
+// - 수정: resume/report/document만 claude, 나머지 deep은 gpt-4o-mini
+function selectModel(strategy, taskType) {
+  switch (strategy) {
+    case 'deep':
+      if (['code', 'website', 'reasoning'].includes(taskType)) return 'gpt-4o';
+      if (['resume', 'report', 'document'].includes(taskType)) return 'claude-sonnet-4-5-20250929';
+      return 'gpt-4o-mini'; // 그 외 deep → gpt-4o-mini (안정성 우선)
+    case 'balanced':
+      return 'gpt-4o-mini'; // [FIX] gpt-4o → gpt-4o-mini (비용/속도 밸런스)
+    case 'fast':
+    default:
+      return 'gpt-4o-mini';
+  }
+}
+
+async function processMessage(session, message, clientMode = null) {
+  const sessionId = session.id;
+
+  // ── L1: 현재 user 발화 즉시 기록 + L3 사실 자동 추출 ──────────────────
+  memory.recordTurn(sessionId, 'user', message, {});
+
+  // 1단계: 의도 분석
   const analysis = await intentAnalyzer.analyze(message, session.history);
-  return { analysis, session: session.id };
+
+  // 2단계: 실제 AI 호출 체인 연결
+  const taskType  = analysis?.taskType  || 'text';
+
+  // Phase 5: clientMode로 strategy 오버라이드
+  let strategy = analysis?.strategy || 'balanced';
+  if (clientMode === 'chat') {
+    strategy = 'fast';       // chat → 빠른 응답
+  } else if (clientMode === 'research') {
+    strategy = 'deep';       // research → 심층 분석
+  } else if (clientMode === 'agent') {
+    strategy = strategy === 'fast' ? 'balanced' : strategy; // agent → 최소 balanced
+  }
+  const confidence = analysis?.confidence || 0;
+
+  // 2.1단계: strategy → 모델 ID 확정
+  const selectedModel = selectModel(strategy, taskType);
+  console.log(`[strategyRouter] ${taskType} / strategy:${strategy} → model:${selectedModel}`);
+
+  // ── 처리 시작 시간 기록 (STEP 7: response latency 측정) ─────────────────
+  const _processStart = Date.now();
+
+  // 2.5단계: 실시간 정보 자동 조회 (날씨·환율 등)
+  let realtimeContext = null;
+  try { realtimeContext = await _fetchRealtimeContext(message); } catch (_) {}
+
+  // ── L1/L2/L3 메모리 컨텍스트 로드 (STEP 8: buildContextSmart — 관련 기억만 주입) ──
+  // L1: MemoryEngine의 WorkingMemory에서 최근 8턴 (session.history 대신)
+  // L2: 이전 에피소드 이력 + 대화 요약
+  // L3: 사용자 선언 사실 (프로젝트, 선호도, 신원)
+  const memCtx = memory.buildContextSmart
+    ? memory.buildContextSmart(sessionId, taskType, message)
+    : memory.buildContext(sessionId, taskType);
+  const l1History     = memCtx.conversationHistory;
+  const memoryPrompt  = memCtx.memoryPrompt;
+
+  // ── 자동 대화 요약 트리거 (20턴 이상 시 system_summary 메시지 생성) ─────
+  // 실제 LLM 요약은 비용·지연이 있으므로 간단한 압축 요약으로 처리
+  const autoSumCheck = memory.checkAutoSummarize(sessionId, 20);
+  if (autoSumCheck.shouldSummarize) {
+    // 아직 요약이 없거나 마지막 요약 이후 10턴 이상 쌓인 경우만 생성
+    const lastSumm = memory.summaries.getLatestSummary(sessionId);
+    const lastSummTurns = lastSumm?.turnCount || 0;
+    if (autoSumCheck.turnCount - lastSummTurns >= 10) {
+      // 간단 요약: 최근 20턴 앞부분을 합쳐서 텍스트로 압축
+      const summaryText = autoSumCheck.turns
+        .slice(0, autoSumCheck.turns.length - 8)   // 마지막 8턴 이전 내용
+        .map(t => `${t.role === 'user' ? 'User' : 'AI'}: ${String(t.content).substring(0, 120)}`)
+        .join('\n');
+      memory.saveSummary(sessionId, summaryText, autoSumCheck.turnCount);
+      console.log(`[memoryEngine] 세션 ${sessionId.slice(0,8)} 자동 요약 저장 (${autoSumCheck.turnCount}턴)`);
+    }
+  }
+
+  // STEP 8: 30턴마다 에피소드 정제 (checkEpisodicSummary)
+  try { memory.checkEpisodicSummary?.(sessionId); } catch (_) {}
+
+  // 실시간 데이터가 있으면 user 메시지 앞에 컨텍스트 주입
+  const userContent = realtimeContext
+    ? `${realtimeContext}\n\n위 실시간 데이터를 참고하여 다음 질문에 한국어로 친절하게 답변해 주세요:\n${message}`
+    : message;
+
+  // ── 메시지 배열 구성: L1 대화 히스토리 + 현재 user 메시지 ──────────────
+  const messages = [
+    ...l1History.filter(h => h.role !== 'user' || h.content !== message), // 중복 방지
+    { role: 'user', content: userContent },
+  ];
+
+  // ── 현재 날짜/시간을 시스템 프롬프트에 항상 주입 ────────────────────────
+  // 이렇게 해야 AI가 자신의 학습 데이터 날짜(e.g. 2024년)로 답변하지 않음
+  const _nowKST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  const _dayNames = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+  const _currentDateStr = `${_nowKST.getFullYear()}년 ${_nowKST.getMonth()+1}월 ${_nowKST.getDate()}일 (${_dayNames[_nowKST.getDay()]})`;
+  const _currentTimeStr = (() => {
+    const h = _nowKST.getHours(), m = String(_nowKST.getMinutes()).padStart(2,'0');
+    return `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}시 ${m}분 (KST)`;
+  })();
+  const DATE_SYSTEM_PREFIX = `[시스템 정보] 오늘 날짜: ${_currentDateStr} | 현재 시각: ${_currentTimeStr}\n사용자가 날짜, 시간, 요일을 물을 경우 반드시 위의 정확한 날짜/시각을 사용하여 답변하십시오. 절대로 학습 데이터의 날짜를 사용하지 마십시오.\n\n`;
+
+  // ── BASE system prompt (모든 task 공통) ──────────────────────────────────
+  const BASE_SYSTEM_PROMPT = `You are a highly capable AI assistant.
+
+Your primary goal is to carefully understand the user's intent and provide clear, accurate, and helpful responses.
+
+General behavior rules:
+1. Always analyze the user's intent before answering.
+2. If the request requires reasoning, think through the problem step by step before responding.
+3. When the request is ambiguous, infer the most likely meaning based on context.
+4. Provide clear and well-structured responses.
+5. Prefer concise answers unless the user asks for detailed explanations.
+
+Language rules:
+- Respond primarily in Korean unless the user explicitly asks for another language.
+- Maintain natural and professional tone.
+
+External information rules:
+- If external information such as search results, realtime data, or tool outputs is provided, prioritize that information over internal knowledge.
+- If the external data conflicts with your internal knowledge, prefer the external data.
+- When search results are included, cite them naturally in your response.
+
+Uncertainty rules:
+- If information is uncertain or incomplete, clearly state the uncertainty.
+- Never fabricate unknown facts.
+
+Formatting rules:
+- Use structured explanations when appropriate.
+- Break down complex answers into clear sections.`;
+
+  // ── deep 전략 추가 규칙 ───────────────────────────────────────────────────
+  const DEEP_ADDON = `
+
+Complex task rules:
+For complex tasks such as coding, system design, or strategy analysis,
+break the solution into logical steps before providing the final answer.
+Show your reasoning process clearly before presenting conclusions.`;
+
+  // ── task별 역할 특화 프롬프트 ─────────────────────────────────────────────
+  const TASK_ROLE_PROMPTS = {
+    ppt:      'You are an expert presentation designer. Create detailed, structured PPT outlines with clear sections, key points, and speaker notes.',
+    website:  'You are a senior web developer and UX designer. Provide clear website architecture, component structure, and content plans.',
+    blog:     'You are a professional blogger and content strategist. Write engaging, well-structured blog posts with compelling hooks and clear takeaways.',
+    report:   'You are a business analyst and data scientist. Provide comprehensive, evidence-based analysis reports with actionable insights.',
+    code:     'You are a senior software engineer with expertise in multiple languages. Write clean, efficient, well-documented code with step-by-step explanations.',
+    email:    'You are a professional business communications expert. Write clear, concise, and effective emails appropriate for the context.',
+    resume:   'You are a career counselor and resume expert. Create compelling, achievement-focused resumes and cover letters tailored to the role.',
+    text:     'You are a skilled writer and communicator. Respond clearly, accurately, and concisely.',
+    chat:     'You are a knowledgeable conversational assistant. Engage naturally, understand context, and provide helpful, thoughtful responses.',
+    analysis: 'You are an expert analyst with strong critical thinking skills. Provide thorough, multi-perspective analysis with clear reasoning.',
+    creative: 'You are a creative writer with a strong sense of style and narrative. Produce imaginative, original, high-quality content.',
+    translation: 'You are a professional translator fluent in multiple languages. Translate accurately while preserving tone, nuance, and context.',
+    summarize:   'You are an expert at distilling information. Produce concise, accurate summaries that capture the key points and insights.',
+    default:  'You are a knowledgeable and helpful assistant. Provide accurate, well-reasoned responses.',
+  };
+
+  // ── 최종 system prompt 조합 ───────────────────────────────────────────────
+  // 구조: DATE_PREFIX + BASE + task역할 + (deep 전략이면 DEEP_ADDON) + 메모리 컨텍스트
+  const taskRole = TASK_ROLE_PROMPTS[taskType] || TASK_ROLE_PROMPTS.default;
+  const deepAddon = (strategy === 'deep') ? DEEP_ADDON : '';
+  // ★ memoryPrompt 주입: 사용자 사실(L3) + 이전 에피소드(L2) + 선호도 정보
+  const memorySection = memoryPrompt
+    ? `\n\n--- Memory Context ---\n${memoryPrompt}\n--- End Memory ---`
+    : '';
+  const systemPrompt = DATE_SYSTEM_PREFIX + BASE_SYSTEM_PROMPT
+    + `\n\nYour current role: ${taskRole}` + deepAddon + memorySection;
+
+  if (memoryPrompt) {
+    console.log(`[memoryEngine] 메모리 주입됨 (세션 ${sessionId.slice(0,8)}): facts=${memCtx.raw.userFacts?.length||0} episodes=${memCtx.raw.recentEpisodes?.length||0}`);
+  }
+
+  // ── 모듈 브릿지 자동 분기 (Python FastAPI AI 모듈 서버) ──────────────
+  // taskType이 summarize / translate / analysis / extract / classify / code / document 이면
+  // Python FastAPI 모듈 서버(포트 8000)로 라우팅
+  const MODULE_TASK_TYPES = new Set(moduleBridge.getSupportedTaskTypes());
+
+  // ── 신규 툴 자동 분기 ─────────────────────────────────────────────────
+  // ppt_file / pdf / excel / youtube / qrcode / tts / palette / regex / summarycard / chat2pdf
+  const TOOL_TASK_MAP = {
+    ppt_file:   async () => pptPipeline.run({ topic: analysis?.extractedInfo?.topic || message }),
+    research_ppt: async () => {
+      const urlMatch = message.match(/https?:\/\/[^\s]+/);
+      const isPitchDeck = /투자 제안서|투자제안서|사업계획서|사업 계획서|피칭|피치덱|pitch deck|투자자 발표/i.test(message);
+      const rawTopic = analysis?.extractedInfo?.topic
+        || message.replace(/https?:\/\/[^\s]+/g, '').replace(/분석해서|ppt|만들어줘|생성해줘|리서치|조사해서|투자 제안서|투자제안서|사업계획서|피칭|피치덱|만들어|써줘/gi, '').trim()
+        || message;
+      const topic = rawTopic || message;
+      const theme = message.includes('corporate') ? 'corporate'
+        : message.includes('nature') ? 'nature'
+        : message.includes('executive') ? 'executive'
+        : isPitchDeck ? 'corporate' : 'modern';
+      // 1단계: researchPipeline으로 데이터 수집 + 구조화
+      const researchResult = await researchPipeline.run({
+        topic,
+        url: urlMatch ? urlMatch[0] : null,
+        query: isPitchDeck ? `${topic} AI 스타트업 투자 시장 트렌드 2025` : topic,
+        outputType: isPitchDeck ? 'pitch' : 'ppt',
+        isPitchDeck,
+      });
+      if (!researchResult?.success || !researchResult.structured?.sections?.length) {
+        throw new Error('리서치 데이터 수집 실패');
+      }
+      // 2단계: htmlSlidePipeline으로 고품질 PPT 생성
+      return htmlSlidePipeline.run({
+        structured: researchResult.structured,
+        topic,
+        theme,
+        usePuppeteer: true,
+        isPitchDeck,
+      });
+    },
+    pdf:        async () => pdfPipeline.run({ title: analysis?.extractedInfo?.topic || message, aiGenerate: true }),
+    excel:      async () => excelPipeline.run({ topic: analysis?.extractedInfo?.topic || message }),
+    youtube:    async () => {
+      const urlMatch = message.match(/https?:\/\/[^\s]+/);
+      return extraTools.run('youtube', { url: urlMatch?.[0] || message });
+    },
+    qrcode:     async () => {
+      const urlMatch = message.match(/https?:\/\/[^\s]+/);
+      const text = urlMatch?.[0] || message.replace(/qr코드|qrcode|큐알코드|만들어줘|생성해줘/gi,'').trim();
+      return extraTools.run('qrcode', { text, format: 'dataurl' });
+    },
+    tts:        async () => {
+      const text = message.replace(/음성으로|읽어줘|tts|텍스트 음성|mp3로|음성 파일|목소리로/gi,'').trim();
+      return extraTools.run('tts', { text: text || message });
+    },
+    palette:    async () => {
+      const theme = message.replace(/색상 팔레트|컬러 팔레트|색깔 추천|브랜드 색상|색상 추천|만들어줘|생성해줘/gi,'').trim();
+      return extraTools.run('palette', { theme: theme || message });
+    },
+    regex:      async () => extraTools.run('regex', { description: message }),
+    summarycard: async () => extraTools.run('summarycard', { content: message, title: '요약 카드' }),
+    chat2pdf:   async () => extraTools.run('chat2pdf', { messages: session.history || [], title: '대화 내보내기' }),
+    removebg:   async () => {
+      const urlMatch = message.match(/https?:\/\/[^\s]+/);
+      return extraTools.run('removebg', { imageUrl: urlMatch?.[0] });
+    },
+  };
+
+  if (TOOL_TASK_MAP[taskType]) {
+    try {
+      const toolResult = await TOOL_TASK_MAP[taskType]();
+      let reply = '';
+
+      if (toolResult?.success) {
+        if (toolResult.fileBuf) {
+          // 파일은 base64로 embed 후 다운로드 링크 안내
+          const b64  = toolResult.fileBuf.toString('base64');
+          const mime = toolResult.mimeType || 'application/octet-stream';
+          reply = `✅ **${toolResult.fileName || '파일'}** 생성 완료!\n\n` +
+                  `[📥 다운로드](#download:${toolResult.fileName})\n\n` +
+                  `_파일 데이터가 준비되었습니다. 아래 API를 직접 호출하면 파일을 받을 수 있습니다._`;
+          // pipelineData에 실제 파일 데이터 포함
+          if (!session.history) session.history = [];
+          session.history.push({ role: 'user', content: message });
+          session.history.push({ role: 'assistant', content: reply });
+          return {
+            analysis, session: session.id,
+            reply,
+            model:    'tool-pipeline',
+            provider: 'tools',
+            pipeline: taskType,
+            pipelineData: { ...toolResult, fileBuf: undefined, fileBase64: b64, mimeType: mime },
+            ms: Date.now(),
+            error: null,
+          };
+        } else if (toolResult.dataUrl) {
+          // QR코드, SVG 카드 등 — 인라인 표시
+          reply = toolResult.summary
+            || toolResult.analysis
+            || (toolResult.palette ? JSON.stringify(toolResult.palette, null, 2) : null)
+            || (toolResult.pattern ? `**정규식:** \`${toolResult.pattern}\`\n**설명:** ${toolResult.explanation}\n\n**JavaScript:** \`\`\`js\n${toolResult.code?.javascript}\n\`\`\`` : null)
+            || '생성 완료';
+          if (!session.history) session.history = [];
+          session.history.push({ role: 'user', content: message });
+          session.history.push({ role: 'assistant', content: reply });
+          return {
+            analysis, session: session.id,
+            reply,
+            model:    'tool-pipeline',
+            provider: 'tools',
+            pipeline: taskType,
+            pipelineData: toolResult,
+            ms: Date.now(),
+            error: null,
+          };
+        } else {
+          reply = toolResult.summary
+            || toolResult.analysis
+            || toolResult.text
+            || (toolResult.palette ? `🎨 **${toolResult.palette?.name}**\n\n${toolResult.palette?.colors?.map(c=>`• **${c.name}** \`${c.hex}\` — ${c.usage}`).join('\n')}` : null)
+            || (toolResult.pattern ? `✅ **정규식:** \`${toolResult.pattern}\`\n\n**설명:** ${toolResult.explanation}\n\n**JavaScript:**\n\`\`\`js\n${toolResult.code?.javascript}\n\`\`\`\n\n**Python:**\n\`\`\`python\n${toolResult.code?.python}\n\`\`\`` : null)
+            || toolResult.raw
+            || '처리 완료';
+        }
+      } else {
+        reply = `❌ ${toolResult?.error || '처리 중 오류가 발생했습니다.'}`;
+        if (toolResult?.tip) reply += `\n\n💡 ${toolResult.tip}`;
+      }
+
+      if (!session.history) session.history = [];
+      session.history.push({ role: 'user', content: message });
+      session.history.push({ role: 'assistant', content: reply });
+      return {
+        analysis, session: session.id,
+        reply,
+        model:    'tool-pipeline',
+        provider: 'tools',
+        pipeline: taskType,
+        pipelineData: toolResult,
+        ms: Date.now(),
+        error: null,
+      };
+    } catch (toolErr) {
+      console.error(`[Tool:${taskType}] 오류:`, toolErr.message);
+      // 실패 시 AI fallback으로 계속
+    }
+  }
+
+  if (MODULE_TASK_TYPES.has(taskType) && !['code', 'text', 'chat'].includes(taskType)) {
+    // code는 아래 pipeline에서 처리하므로 제외, text/chat은 AI fallback 사용
+    // [FIX] 툴 우선순위 힌트가 있으면(날씨/환율/뉴스 등) function-calling 경로 우선 → ai-module-server 스킵
+    const _skipModule = !!getToolPriorityHint(message);
+    if (_skipModule) {
+      console.log(`[moduleBridge] taskType=${taskType} but toolPriorityHint exists → skip module, use function-calling`);
+    } else {
+
+    // ── translate: 목표 언어 파싱 ─────────────────────────────────────
+    const moduleExtra = {};
+    if (taskType === 'translate') {
+      const langMap = {
+        '영어': 'en', '영문': 'en', 'english': 'en',
+        '한국어': 'ko', '한글': 'ko', 'korean': 'ko',
+        '일본어': 'ja', '일어': 'ja', 'japanese': 'ja',
+        '중국어': 'zh', '중문': 'zh', 'chinese': 'zh',
+        '프랑스어': 'fr', 'french': 'fr',
+        '독일어': 'de', 'german': 'de',
+        '스페인어': 'es', 'spanish': 'es',
+        '베트남어': 'vi', 'vietnamese': 'vi',
+      };
+      const msgLower = message.toLowerCase();
+      for (const [keyword, code] of Object.entries(langMap)) {
+        if (msgLower.includes(keyword)) { moduleExtra.target_lang = code; break; }
+      }
+      if (!moduleExtra.target_lang) moduleExtra.target_lang = 'en'; // 기본 영어
+    }
+
+    const moduleResult = await moduleBridge.callModule(taskType, message, moduleExtra);
+    if (moduleResult && moduleResult.success && moduleResult.output) {
+      if (!session.history) session.history = [];
+      session.history.push({ role: 'user', content: message });
+      session.history.push({ role: 'assistant', content: moduleResult.output });
+      // ★ MemoryEngine: module 경로도 L1 기록 + L2 에피소드 저장
+      memory.recordTurn(sessionId, 'assistant', moduleResult.output, { taskType, model: 'ai-module-server' });
+      try {
+        const COMPLETABLE_TYPES = new Set(['code','ppt','website','blog','report','email','resume',
+                                            'analysis','summarize','translate','creative','document']);
+        if (COMPLETABLE_TYPES.has(taskType)) {
+          memory.recordCompletion(sessionId, {
+            taskType,
+            taskInfo:   analysis?.extractedInfo || {},
+            validation: { score: analysis?.confidence || 75 },
+            result:     { content: moduleResult.output },
+          });
+        }
+      } catch (_) {}
+      return {
+        analysis,
+        session:       session.id,
+        reply:         moduleResult.output,
+        model:         'ai-module-server',
+        provider:      'python-module',
+        pipeline:      moduleResult.module,
+        pipelineData:  moduleResult.raw,
+        isFallback:    false,
+        ms:            moduleResult.ms,
+        strategy,                // ★ strategy 필드 추가
+        selectedModel,           // ★ selectedModel 필드 추가
+        error:         null,
+        // ★ 메모리 상태
+        memoryState: {
+          factsCount:   memCtx.raw.userFacts?.length || 0,
+          episodeCount: memCtx.raw.recentEpisodes?.length || 0,
+          hasMemory:    !!memoryPrompt,
+          sessionTurns: memory.working.getAllTurns(sessionId).length,
+        },
+      };
+    }
+    // 모듈 실패 시 AI fallback으로 계속 진행
+    } // end _skipModule else
+  }
+
+  // ── 파이프라인 자동 분기 ──────────────────────────────────────────
+  // taskType이 image / vision / stt / crawl 이면 pipelineManager로 라우팅
+  const PIPELINE_TASK_MAP = {
+    image:   'imageGen',
+    vision:  'vision',
+    stt:     'stt',
+    crawl:   'crawler',
+  };
+  const targetPipeline = PIPELINE_TASK_MAP[taskType];
+
+  if (targetPipeline) {
+    let pipelineResult = null;
+    let pipelineError  = null;
+    try {
+      // URL 추출 (vision/crawl용)
+      const urlMatch = message.match(/https?:\/\/[^\s]+/);
+      const pipelineOpts = {
+        sessionId: session.id,
+        message,
+        prompt: message,
+        url:    urlMatch ? urlMatch[0] : undefined,
+        imageUrl: urlMatch ? urlMatch[0] : undefined,
+      };
+      pipelineResult = await pipelineManager.run(targetPipeline, pipelineOpts);
+    } catch (err) {
+      pipelineError = err.message || String(err);
+    }
+
+    // 파이프라인 성공 시 결과 반환
+    if (pipelineResult && !pipelineError) {
+      // crawler는 content/text, imageGen은 result, 기타는 text/url
+      const pipelineReply = pipelineResult.result || pipelineResult.content || pipelineResult.text || pipelineResult.url || JSON.stringify(pipelineResult);
+      if (!session.history) session.history = [];
+      session.history.push({ role: 'user', content: message });
+      session.history.push({ role: 'assistant', content: typeof pipelineReply === 'string' ? pipelineReply : JSON.stringify(pipelineReply) });
+      return {
+        analysis,
+        session:    session.id,
+        reply:      typeof pipelineReply === 'string' ? pipelineReply : JSON.stringify(pipelineReply, null, 2),
+        model:      pipelineResult.model || targetPipeline,
+        provider:   'pipeline',
+        pipeline:   targetPipeline,
+        pipelineData: pipelineResult,
+        isFallback: false,
+        error:      null,
+      };
+    }
+    // 파이프라인 실패 시 AI fallback으로 계속 진행
+  }
+
+  // ── maxTokens: strategy + taskType 세분화 결정 ─────────────────────────
+  //   fast     → 1200  (짧고 빠른 응답)
+  //   balanced → 3000  (일반 설명·분석, summarize는 2500)
+  //   deep     → 6000+ (코드 7000 / ppt·report 7000 / website 6500 / 기타 6000)
+  const maxTokens = selectMaxTokens(strategy, taskType);
+  console.log(`[tokenRouter] ${taskType} / strategy:${strategy} → maxTokens:${maxTokens}`);
+
+  const _temperature = strategy === 'deep' ? 0.6 : (taskType === 'creative' ? 0.85 : 0.7);
+
+  // ── STEP 9: Tool Priority Hint 사전 계산 (Agent Runtime + Function Calling에서 공용) ──
+  const toolPriorityHint    = getToolPriorityHint(message);
+  const systemPromptWithHint = toolPriorityHint
+    ? systemPrompt + toolPriorityHint
+    : systemPrompt;
+
+  let aiResult = null;
+  let aiError  = null;
+
+  // ── STEP 10~15: Agent Runtime (Planner + ToolChain + Self-Correction) ────
+  // deep/balanced 전략 + complex 태스크 → 자율 에이전트 실행
+  // simple/fast 태스크 → 일반 LLM 경로
+  let agentMeta = null;  // 에이전트 실행 메타 정보 (plan, chainLog 등)
+  const _useAgent = agentRuntime
+    && agentRuntime.shouldRunAutonomous(strategy, taskType, message);
+
+  if (_useAgent) {
+    try {
+      console.log(`[AgentRuntime] 자율 모드 시도: strategy=${strategy} taskType=${taskType}`);
+      const agentResult = await agentRuntime.run({
+        message,
+        taskType,
+        strategy,
+        sessionId,
+        systemPrompt:  systemPromptWithHint || systemPrompt,
+        selectedModel,
+        maxTokens,
+        temperature:   _temperature,
+        memoryContext: memCtx,
+      });
+
+      if (agentResult && agentResult.content) {
+        // [FIX] toolsUsed 하드코딩 [] 제거 → agentResult.toolsUsed 또는 chainLog 에서 추출
+        // 이전: toolsUsed: [] → KPI toolCallRequests 집계 불가 (toolCallRate = 0%)
+        const agentToolsUsed = agentResult.toolsUsed
+          || (agentResult.chainLog?.flatMap(step => step.toolsUsed || []) ?? []);
+        aiResult = {
+          content:    agentResult.content,
+          model:      selectedModel,
+          provider:   'agent-runtime',
+          ms:         agentResult.totalMs,
+          isFallback: false,
+          toolsUsed:  agentToolsUsed,
+          usage:      null,
+        };
+        agentMeta = {
+          planId:        agentResult.planId,
+          complexity:    agentResult.plan?.complexity,
+          totalSteps:    agentResult.plan?.totalSteps,
+          chainLog:      agentResult.chainLog,
+          corrections:   agentResult.corrections,
+          stateSummary:  agentResult.stateSummary,
+          // Phase 2: budget 사용량 기록
+          budgetSummary: agentResult.budgetSummary || null,
+          isPartial:     agentResult.isPartial || false,
+        };
+        console.log(`[AgentRuntime] 완료: planId=${agentMeta.planId} steps=${agentMeta.totalSteps} corrections=${agentResult.corrections?.length} partial=${agentMeta.isPartial}`);
+      } else {
+        console.log('[AgentRuntime] 결과 없음 (simple plan), 일반 LLM 사용');
+      }
+    } catch (agentErr) {
+      console.warn('[AgentRuntime] 오류, 일반 LLM 폴백:', agentErr.message);
+    }
+  }
+
+  // ── STEP 5: Function Calling (자율 툴 사용) ────────────────────────────
+  // balanced/deep 전략 + 일반 chat/text/unknown/code/analysis 타입에서
+  // LLM이 자율적으로 web_search / get_weather / get_exchange_rate / get_datetime 호출
+  const useFunctionCalling = !aiResult && shouldUseTools(strategy, taskType);
+
+  if (useFunctionCalling) {
+    try {
+      const fcResult = await callWithFunctionTools({
+        messages,
+        systemPrompt: systemPromptWithHint,
+        selectedModel,
+        strategy,
+        taskType,
+        maxTokens,
+        temperature: _temperature,
+        userId:      session.userId || 'anonymous',
+        sessionId,    // STEP 7: observability
+        userMessage:  message, // STEP 7+9
+      });
+      if (fcResult) {
+        aiResult = fcResult;
+        if (fcResult.toolsUsed?.length > 0) {
+          console.log(`[functionCall] 툴 사용 완료: ${fcResult.toolsUsed.join(', ')} → ${taskType}/${strategy}`);
+        }
+      }
+    } catch (fcErr) {
+      console.warn('[functionCall] 오류, 일반 callLLM 폴백:', fcErr.message);
+    }
+  }
+
+  // ── 일반 LLM 호출 (function-calling 미사용 또는 실패 시) ──────────────
+  if (!aiResult) {
+    try {
+      aiResult = await aiConnector.callLLM({
+        messages,
+        system:      systemPrompt,
+        model:       selectedModel,        // ★ 확정 모델 직접 지정
+        strategy,                          // 폴백 시 참고용
+        task:        taskType,
+        maxTokens,
+        temperature: _temperature,
+        userId:      session.userId || 'anonymous',
+        pipeline:    'api/message',
+        useCache:    false,
+      });
+    } catch (err) {
+      aiError = err.message || String(err);
+    }
+  }
+
+  // ── 세션 히스토리 + MemoryEngine 업데이트 ─────────────────────────────
+  if (!session.history) session.history = [];
+  session.history.push({ role: 'user', content: message });
+  if (aiResult?.content) {
+    session.history.push({ role: 'assistant', content: aiResult.content });
+    // L1: assistant 발화 기록
+    memory.recordTurn(sessionId, 'assistant', aiResult.content, { taskType, model: aiResult.model });
+    // STEP 8: isCompletionWorthy — 일회성 대화는 L2에 저장 안 함
+    const worthy = memory.isCompletionWorthy
+      ? memory.isCompletionWorthy(taskType)
+      : !['chat','text','unknown','greeting'].includes(taskType);
+    if (worthy) {
+      try {
+        memory.recordCompletion(sessionId, {
+          taskType,
+          taskInfo:     analysis?.extractedInfo || {},
+          validation:   { score: analysis?.confidence || 75 },
+          result:       { content: aiResult.content },
+        });
+      } catch (_) {}
+    }
+    // STEP 8: UserFacts 정제 (비동기, 비차단)
+    try { memory.pruneUserFacts?.(sessionId); } catch (_) {}
+    // STEP 8: 30턴마다 에피소드 정제 (오래된 에피소드 삭제)
+    try {
+      const totalTurns = memory.working.getAllTurns(sessionId).length;
+      if (totalTurns % 30 === 0 && totalTurns > 0) {
+        memory.pruneEpisodes?.(sessionId);
+        console.log(`[memoryQC] 세션 ${sessionId.slice(0,8)} 에피소드 정제 (${totalTurns}턴)`);
+      }
+    } catch (_) {}
+  }
+
+  // STEP 7: Tool Observability — 요청 단위 로그 (responseMs + hasMemory 포함)
+  try {
+    // [FIX] agent-runtime 경로: toolsUsed 가 빈 배열이어도 agentMeta.chainLog 에서 추출
+    // 이전: toolsUsed: [] 로 고정 → toolCallRequests 카운트 불가
+    let _toolsUsed = aiResult?.toolsUsed || [];
+    if (_toolsUsed.length === 0 && agentMeta?.chainLog?.length > 0) {
+      _toolsUsed = agentMeta.chainLog.flatMap(step => step.toolsUsed || step.tools || []);
+    }
+    // agent-runtime 실행 자체를 하나의 "tool" 사용으로 집계
+    if (_toolsUsed.length === 0 && aiResult?.provider === 'agent-runtime') {
+      _toolsUsed = ['agent_chain'];
+    }
+    toolObs.logRequest({
+      sessionId,
+      query:          message,
+      strategy,
+      model:          aiResult?.model || selectedModel,
+      taskType,
+      toolsUsed:      _toolsUsed,
+      responseTokens: aiResult?.usage?.completion_tokens || 0,
+      responseMs:     Date.now() - _processStart,  // ★ STEP 7
+      hasMemory:      !!memoryPrompt,              // ★ STEP 7
+    });
+  } catch (_) {}
+
+  return {
+    analysis,
+    session:       session.id,
+    // AI 응답
+    reply:         aiResult?.content  || null,
+    model:         aiResult?.model    || selectedModel,
+    provider:      aiResult?.provider || null,
+    ms:            aiResult?.ms       || null,
+    isFallback:    aiResult?.isFallback || false,
+    usage:         aiResult?.usage    || null,
+    // strategy 라우팅 정보 (디버깅·프론트 표시용)
+    strategy,
+    selectedModel,
+    // ★ function-calling 툴 사용 정보
+    toolsUsed:     aiResult?.toolsUsed || [],
+    error:         aiError            || null,
+    // ★ 메모리 상태 (디버깅·프론트 표시용)
+    memoryState: {
+      factsCount:    memCtx.raw.userFacts?.length   || 0,
+      episodeCount:  memCtx.raw.recentEpisodes?.length || 0,
+      hasMemory:     !!memoryPrompt,
+      sessionTurns:  memory.working.getAllTurns(sessionId).length,
+    },
+    // ★ STEP 10~15: Agent Runtime 메타 정보
+    agentMeta:     agentMeta || null,
+  };
 }
 
 function getTaskTypeName(type) {
@@ -3185,12 +4627,13 @@ app.get('/api/ai/chat/stream',
   req.on('close', () => { /* client disconnected */ });
 
   try {
-    const { messages: rawMsgs, model, strategy = 'fast', task, maxTokens = 1000, pipeline = 'stream-chat', userId: qUserId } = req.query;
+    const { messages: rawMsgs, model, strategy = 'fast', task, maxTokens: qMaxTokens, pipeline = 'stream-chat', userId: qUserId } = req.query;
     const userId = req.user?.id || req.user?.userId || qUserId || 'anon';
     const messages = rawMsgs ? JSON.parse(rawMsgs) : [{ role: 'user', content: req.query.prompt || 'Hello' }];
+    const resolvedMaxTokens = qMaxTokens ? (parseInt(qMaxTokens) || 3000) : selectMaxTokens(strategy, task || 'chat');
     await aiConnector.callLLMStream({
       messages, model, strategy, task,
-      maxTokens: parseInt(maxTokens) || 1000,
+      maxTokens: resolvedMaxTokens,
       temperature: 0.7,
       userId,
       pipeline,
@@ -3228,11 +4671,12 @@ app.post('/api/ai/chat/stream',
   req.on('close', () => { /* client disconnected */ });
 
   try {
-    const { messages, system, model, strategy = 'fast', task, maxTokens = 1000, pipeline = 'stream-chat' } = req.body;
+    const { messages, system, model, strategy = 'fast', task, maxTokens: bMaxTokens, pipeline = 'stream-chat' } = req.body;
     const userId = req.user?.id || req.user?.userId || req.body.userId || 'anon';
+    const resolvedStreamTokens = bMaxTokens ? (parseInt(bMaxTokens) || 3000) : selectMaxTokens(strategy, task || 'chat');
     await aiConnector.callLLMStream({
       messages, system, model, strategy, task,
-      maxTokens: parseInt(maxTokens) || 1000,
+      maxTokens: resolvedStreamTokens,
       temperature: 0.7,
       userId,
       pipeline,
@@ -3758,6 +5202,8 @@ app.use(security.errorHandler);
 
 // ── 서버 시작 ─────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
+server.timeout = 180000;       // 3분 — research_ppt 파이프라인 대응
+server.keepAliveTimeout = 185000;
 server.listen(PORT, '0.0.0.0', async () => {
   console.log(`\n🚀 AI 오케스트레이터 서버 시작!`);
   console.log(`📡 주소: http://localhost:${PORT}`);
@@ -3766,7 +5212,14 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log(`🔑 OpenAI API: ${process.env.OPENAI_API_KEY ? '✅ 연결됨' : '⚠️ 없음 (데모 모드)'}`);
   console.log(`🔑 Anthropic API: ${process.env.ANTHROPIC_API_KEY ? '✅ 연결됨' : '⚠️ 없음 (OpenAI로 대체)'}`);
 
-  // ── 기본 어드민 계정 자동 생성 ─────────────────────────
+  // ── STEP 10~15: Agent Runtime 초기화 ─────────────────────
+  try {
+    agentRuntime = createAgentRuntime(openai, executeTool);
+    if (io) agentRuntime.setIO(io);
+    console.log('🤖 Agent Runtime 초기화 완료 (STEP 10~15: Planner + ToolChain + SkillLib + SelfCorrection)');
+  } catch (agentErr) {
+    console.warn('⚠️  Agent Runtime 초기화 실패:', agentErr.message);
+  }
   try {
     const bcrypt = require('bcryptjs');
     const adminEmail = process.env.ADMIN_EMAIL    || 'admin@ai-orch.local';
@@ -3850,5 +5303,9 @@ server.listen(PORT, '0.0.0.0', async () => {
   }, 30 * 1000);
   console.log('[HealthProbe] 프로바이더 자동 상태 체크 스케줄 등록 (5분 간격)');
 });
+
+
+// ── 툴 API 라우트 (src/routes/toolRoutes.js 로 분리) ─────────────────────
+require('./routes/toolRoutes')(app, { pptPipeline, pdfPipeline, excelPipeline, researchPipeline, htmlSlidePipeline, extraTools });
 
 module.exports = { app, server };

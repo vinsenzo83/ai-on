@@ -1,42 +1,55 @@
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-*.egg-info/
-dist/
-build/
-*.egg
-.eggs/
+# ── Node.js ───────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+.npm
 
-.venv/
-venv/
-env/
-ENV/
-
+# ── 환경변수 (절대 커밋 금지) ─────────────────────────────
 .env
-!.env.sample
+.env.local
+.env.production
+!.env.example
 
+# ── 데이터/로그 ───────────────────────────────────────────
+ai-orchestrator/data/*.db
+ai-orchestrator/data/*.db-shm
+ai-orchestrator/data/*.db-wal
+ai-orchestrator/logs/
 *.log
-*.pot
+
+# ── 개발/테스트 파일 ─────────────────────────────────────
+orchestration_test.js
+engine_*.js
+phase*.js
+*_test.js
+*_val*.js
+
+# ── 백업 파일 ─────────────────────────────────────────────
+*.bak*
+*.tar.gz
+
+# ── FastAPI/Python (분리됨) ───────────────────────────────
+app/
+dashboard/
+fixtures/
+infra/
+migrations/
+scripts/
+tests/
+*.py
 *.pyc
-
+__pycache__/
 .pytest_cache/
-.coverage
-htmlcov/
-.mypy_cache/
-.ruff_cache/
+.env.sample
+*.md
+!ai-orchestrator/README.md
+Makefile
+ecosystem.config.cjs
 
+# ── GitHub Actions (권한 없음) ────────────────────────────
+.github/
+
+# ── 기타 ─────────────────────────────────────────────────
 .DS_Store
 *.swp
-*.swo
-
 .idea/
 .vscode/
-*.iml
-
-# Next.js dashboard
-dashboard/.next/
-dashboard/node_modules/
-dashboard/.env.local
-dashboard/next-env.d.ts
