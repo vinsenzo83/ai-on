@@ -16,7 +16,7 @@
 
 ```bash
 # 1. 스크립트 다운로드
-curl -fsSL https://raw.githubusercontent.com/vinsenzo83/kbeauty-autocommerce/genspark_ai_developer/ai-orchestrator/deploy/deploy.sh -o deploy.sh
+curl -fsSL https://raw.githubusercontent.com/vinsenzo83/ai-on/genspark_ai_developer/ai-orchestrator/deploy/deploy.sh -o deploy.sh
 
 # 2. 도메인 없이 바로 배포 (IP 접근)
 sudo bash deploy.sh --no-ssl
@@ -52,7 +52,7 @@ sudo chown -R aiorch:aiorch /opt/ai-orchestrator
 # 저장소 클론
 sudo -u aiorch git clone \
   --branch genspark_ai_developer \
-  https://github.com/vinsenzo83/kbeauty-autocommerce.git \
+  https://github.com/vinsenzo83/ai-on.git \
   /opt/ai-orchestrator/app
 
 # 의존성 설치
