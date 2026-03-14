@@ -17,6 +17,29 @@ class IntentAnalyzer {
 
   // 핵심: 사용자 입력 분석
   async analyze(userInput, conversationHistory = []) {
+    // ── research_ppt 키워드 사전 매칭 (LLM보다 먼저) ──────────────────────
+    const _lower = userInput.toLowerCase();
+    const RESEARCH_PPT_KEYWORDS = [
+      '분석해서 ppt', '분석해서 발표', '리서치 ppt', '리서치 발표',
+      '조사해서 ppt', '조사해서 발표', '검색해서 ppt', '검색해서 발표',
+      '조사해서 ppt', '리서치해서 ppt', '분석 후 ppt', '분석 후 발표',
+      '투자 제안서 ppt', '투자제안서 ppt', '사업계획서 ppt', '사업 계획서 ppt',
+      '투자 제안서 만들어', '투자제안서 만들어', '사업계획서 만들어',
+      '피칭 자료', '피치덱', 'pitch deck', '투자자 발표',
+    ];
+    if (RESEARCH_PPT_KEYWORDS.some(k => _lower.includes(k))) {
+      const topic = userInput
+        .replace(/https?:\/\/\S+/g, '')
+        .replace(/분석해서|리서치|조사해서|검색해서|분석 후|리서치해서|ppt|발표자료|만들어줘|생성해줘|해줘/gi, '')
+        .trim() || userInput;
+      return {
+        taskType: 'research_ppt', strategy: 'deep', confidence: 95,
+        extractedInfo: { topic },
+        inferredInfo: { audience: '비즈니스 전문가', purpose: 'PPT 프레젠테이션', length: '12슬라이드' },
+        needsQuestion: false, question: '', reasoning: 'research_ppt keyword matched',
+      };
+    }
+
     const systemPrompt = `당신은 사용자의 요청을 분석하는 AI입니다.
 사용자의 입력을 분석하여 JSON 형식으로 반환하세요.
 

@@ -3300,14 +3300,22 @@ Show your reasoning process clearly before presenting conclusions.`;
     ppt_file:   async () => pptPipeline.run({ topic: analysis?.extractedInfo?.topic || message }),
     research_ppt: async () => {
       const urlMatch = message.match(/https?:\/\/[^\s]+/);
-      const topic = analysis?.extractedInfo?.topic || message.replace(/https?:\/\/[^\s]+/g, '').replace(/분석해서|ppt|만들어줘|생성해줘|리서치|조사해서/gi, '').trim() || message;
-      const theme = message.includes('corporate') ? 'corporate' : message.includes('nature') ? 'nature' : message.includes('executive') ? 'executive' : 'modern';
+      const isPitchDeck = /투자 제안서|투자제안서|사업계획서|사업 계획서|피칭|피치덱|pitch deck|투자자 발표/i.test(message);
+      const rawTopic = analysis?.extractedInfo?.topic
+        || message.replace(/https?:\/\/[^\s]+/g, '').replace(/분석해서|ppt|만들어줘|생성해줘|리서치|조사해서|투자 제안서|투자제안서|사업계획서|피칭|피치덱|만들어|써줘/gi, '').trim()
+        || message;
+      const topic = rawTopic || message;
+      const theme = message.includes('corporate') ? 'corporate'
+        : message.includes('nature') ? 'nature'
+        : message.includes('executive') ? 'executive'
+        : isPitchDeck ? 'corporate' : 'modern';
       // 1단계: researchPipeline으로 데이터 수집 + 구조화
       const researchResult = await researchPipeline.run({
         topic,
         url: urlMatch ? urlMatch[0] : null,
-        query: topic,
-        outputType: 'ppt',
+        query: isPitchDeck ? `${topic} AI 스타트업 투자 시장 트렌드 2025` : topic,
+        outputType: isPitchDeck ? 'pitch' : 'ppt',
+        isPitchDeck,
       });
       if (!researchResult?.success || !researchResult.structured?.sections?.length) {
         throw new Error('리서치 데이터 수집 실패');
@@ -3318,6 +3326,7 @@ Show your reasoning process clearly before presenting conclusions.`;
         topic,
         theme,
         usePuppeteer: true,
+        isPitchDeck,
       });
     },
     pdf:        async () => pdfPipeline.run({ title: analysis?.extractedInfo?.topic || message, aiGenerate: true }),
@@ -5193,6 +5202,8 @@ app.use(security.errorHandler);
 
 // ── 서버 시작 ─────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
+server.timeout = 180000;       // 3분 — research_ppt 파이프라인 대응
+server.keepAliveTimeout = 185000;
 server.listen(PORT, '0.0.0.0', async () => {
   console.log(`\n🚀 AI 오케스트레이터 서버 시작!`);
   console.log(`📡 주소: http://localhost:${PORT}`);

@@ -96,17 +96,17 @@ const LATENCY_WINDOW = 20;
 
 // 초기 기본값 (과거 데이터 기반)
 const PROVIDER_DEFAULT_TIMEOUT = {
-  openai:     8_000, // [FIX] 20s→8s: CB 누적 방지, 빠른 폴백
-  anthropic: 20_000,
-  google:     6_000, // [FIX] 15s→6s: CB OPEN 반복 핵심 원인, 빠른 포기
-  mistral:   10_000,
-  moonshot:  15_000,
-  deepseek:   8_000,
-  xai:        5_000,
-  groq:       8_000,
-  meta:      15_000,
-  alibaba:   15_000,
-  default:   10_000,
+  openai:     60_000, // [FIX v3] 20s→60s: PPT/보고서 등 긴 요청 지원
+  anthropic:  60_000, // 25s→60s
+  google:     45_000, // 20s→45s: gemini-2.5-flash
+  mistral:    30_000,
+  moonshot:   30_000,
+  deepseek:   30_000,
+  xai:        20_000,
+  groq:       15_000,
+  meta:       30_000,
+  alibaba:    30_000,
+  default:    30_000,
 };
 
 function _recordLatency(provider, ms) {
@@ -120,19 +120,17 @@ function _recordLatency(provider, ms) {
 function _getAdaptiveTimeout(provider, model, strategy, explicitMs) {
   if (explicitMs > 0) return explicitMs;
 
-  // 샘플 있으면 P95 × 1.3 사용
+  // 샘플 있으면 P95 × 1.3 사용 (최대 60s)
   const samples = _latencySamples[provider];
   if (samples && samples.length >= 5) {
     const sorted = [...samples].sort((a, b) => a - b);
     const p95 = sorted[Math.floor(sorted.length * 0.95)];
-    return Math.min(Math.max(p95 * 1.3, 5_000), 30_000); // 5s~30s 클램프
+    return Math.min(Math.max(p95 * 1.3, 10_000), 60_000); // 10s~60s 클램프
   }
 
-  // fast 모델이면 기본값의 60%
-  const isFast = strategy === 'fast' ||
-    (model && (model.includes('mini') || model.includes('haiku') || model.includes('flash') || model.includes('nano')));
+  // 항상 기본값 그대로 사용 (fast 전략도 감소 없음)
   const base = PROVIDER_DEFAULT_TIMEOUT[provider] || PROVIDER_DEFAULT_TIMEOUT.default;
-  return isFast ? Math.floor(base * 0.6) : base;
+  return base;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -221,15 +219,15 @@ const PROVIDER_BASE_URL = {
   openrouter: 'https://openrouter.ai/api/v1',
   deepseek:   'https://api.deepseek.com/v1',
   xai:        'https://api.x.ai/v1',
-  moonshot:   'https://api.moonshot.ai/v1',
+  moonshot:   'https://api.moonshot.cn/v1',
   mistral:    'https://api.mistral.ai/v1',
   alibaba:    'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
   meta:       'https://api.together.xyz/v1',
 };
 
-// [FIX] 폴백 우선순위 체인 — google 제거(CB OPEN 반복), openai 제일 뒤(CB 누적)
-// 순서: mistral → anthropic → moonshot → deepseek → openai (google 완전 제거)
-const FALLBACK_CHAIN = ['mistral', 'anthropic', 'moonshot', 'deepseek', 'openai'];
+// [FIX v2] 폴백 우선순위 체인 — Google 복원 (gemini-2.5-flash 정상), xai/groq 추가
+// 순서: google → anthropic → deepseek → mistral → moonshot → openai
+const FALLBACK_CHAIN = ['google', 'anthropic', 'deepseek', 'mistral', 'moonshot', 'openai'];
 
 // ── 런타임 클라이언트 캐시 ─────────────────────────────────────
 const _clients = {};
@@ -277,7 +275,9 @@ function _getClient(provider) {
   }
 
   try {
-    const client = new OpenAI({ apiKey, baseURL, defaultHeaders: _getProviderHeaders(provider) });
+    // SDK 레벨 timeout 설정 (AbortController 충돌 방지)
+    const sdkTimeout = PROVIDER_DEFAULT_TIMEOUT[provider] || PROVIDER_DEFAULT_TIMEOUT.default;
+    const client = new OpenAI({ apiKey, baseURL, timeout: sdkTimeout, maxRetries: 0, defaultHeaders: _getProviderHeaders(provider) });
     _clients[provider] = client;
     return client;
   } catch { return null; }
@@ -294,8 +294,9 @@ function refreshClient(provider, apiKey, baseUrl) {
   delete _clients[provider];
   if (!apiKey) return;
   const bURL = baseUrl || PROVIDER_BASE_URL[provider] || 'https://api.openai.com/v1';
+  const sdkTimeout = PROVIDER_DEFAULT_TIMEOUT[provider] || PROVIDER_DEFAULT_TIMEOUT.default;
   try {
-    _clients[provider] = new OpenAI({ apiKey, baseURL: bURL, defaultHeaders: _getProviderHeaders(provider) });
+    _clients[provider] = new OpenAI({ apiKey, baseURL: bURL, timeout: sdkTimeout, maxRetries: 0, defaultHeaders: _getProviderHeaders(provider) });
   } catch(e) {
     console.warn('[aiConnector] 클라이언트 생성 실패:', provider, e.message);
   }
@@ -396,11 +397,11 @@ const TASK_PROVIDER_PRIORITY = {
   summarization:   ['moonshot', 'deepseek', 'openai'],
 
   // ── 실제 taskType 키 (intentAnalyzer 반환값과 일치) ─────────
-  // [FIX] unknown/text/chat/fast: google 제거 → CB OPEN 연쇄 장애 방지
-  unknown:    ['openai', 'anthropic', 'mistral'],      // 일반 질문: OpenAI 우선
-  text:       ['openai', 'anthropic', 'mistral'],      // 텍스트: OpenAI 우선
-  chat:       ['openai', 'anthropic', 'mistral'],      // 채팅: OpenAI 우선
-  fast:       ['openai', 'mistral', 'anthropic'],      // 빠른 응답: OpenAI 우선
+  // 멀티AI 최적 배분 — 각 AI 특기 활용
+  unknown:    ['openai', 'google', 'anthropic'],       // 일반 질문: OpenAI 우선
+  text:       ['openai', 'google', 'anthropic'],       // 텍스트: OpenAI 우선
+  chat:       ['openai', 'anthropic', 'google'],       // 채팅: OpenAI 우선
+  fast:       ['openai', 'mistral', 'google'],         // 빠른 응답: OpenAI 우선 (안정적)
 
   summarize:  ['moonshot', 'deepseek', 'google'],      // 요약: Moonshot 우선
   summarise:  ['moonshot', 'deepseek', 'google'],
@@ -415,12 +416,14 @@ const TASK_PROVIDER_PRIORITY = {
   code:       ['openai', 'anthropic', 'deepseek'],     // 코드: OpenAI 우선
   reasoning:  ['openai', 'anthropic', 'google'],       // 추론: OpenAI 우선
 
-  ppt:        ['openai', 'anthropic', 'deepseek'],     // PPT: OpenAI 우선 (balanced)
+  ppt:        ['openai', 'anthropic', 'deepseek'],       // PPT: OpenAI 우선 (안정적)
   blog:       ['openai', 'anthropic', 'deepseek'],     // 블로그: OpenAI 우선
   email:      ['openai', 'anthropic', 'mistral'],      // 이메일: OpenAI 우선
   resume:     ['anthropic', 'openai', 'deepseek'],     // 자소서: Claude 우선
   website:    ['openai', 'anthropic', 'deepseek'],     // 웹사이트: OpenAI 우선 (deep)
   report:     ['anthropic', 'openai', 'google'],       // 리포트: Claude 우선
+  ppt_file:   ['anthropic', 'openai', 'google'],       // PPT 파일: Claude 우선
+  research:   ['openai', 'google', 'anthropic'],       // 리서치: OpenAI 우선
   document:   ['anthropic', 'openai', 'deepseek'],     // 문서: Claude 우선
   image:      ['openai', 'google', 'anthropic'],       // 이미지: OpenAI 우선 (DALL-E)
 };
@@ -723,13 +726,11 @@ async function _callOpenAI({ oai, messages, system, model, maxTokens, temperatur
   const opts = { model, messages: msgs, max_tokens: safeMaxTokens, temperature };
   if (responseFormat === 'json') opts.response_format = { type: 'json_object' };
 
-  const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  // SDK 클라이언트에 이미 timeout 설정됨 — AbortController 불필요 (충돌 방지)
   try {
     const start = Date.now();
-    const res   = await oai.chat.completions.create(opts, { signal: ac.signal });
+    const res   = await oai.chat.completions.create(opts, { timeout: timeoutMs });
     const ms    = Date.now() - start;
-    clearTimeout(timer);
     const usage = res.usage || {};
     costTracker.record({ userId, pipeline, model, inputTokens: usage.prompt_tokens || 0, outputTokens: usage.completion_tokens || 0, metadata: { ms, finishReason: res.choices[0]?.finish_reason } });
     return {
@@ -738,20 +739,17 @@ async function _callOpenAI({ oai, messages, system, model, maxTokens, temperatur
       provider: _guessProvider(model),
       finishReason: res.choices[0]?.finish_reason,
     };
-  } catch(e) { clearTimeout(timer); throw e; }
+  } catch(e) { throw e; }
 }
 
 // ── _callAnthropic ────────────────────────────────────────────
 async function _callAnthropic({ ant, messages, system, model, maxTokens, temperature, userId, pipeline, timeoutMs = 25_000 }) {
   const opts = { model, messages, max_tokens: maxTokens, temperature };
   if (system) opts.system = system;
-  const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), timeoutMs);
   try {
     const start = Date.now();
-    const res   = await ant.messages.create(opts, { signal: ac.signal });
+    const res   = await ant.messages.create(opts, { timeout: timeoutMs });
     const ms    = Date.now() - start;
-    clearTimeout(timer);
     const inputTokens  = res.usage?.input_tokens  || 0;
     const outputTokens = res.usage?.output_tokens || 0;
     costTracker.record({ userId, pipeline, model, inputTokens, outputTokens, metadata: { ms } });
@@ -762,7 +760,7 @@ async function _callAnthropic({ ant, messages, system, model, maxTokens, tempera
       ms,
       provider: 'anthropic',
     };
-  } catch(e) { clearTimeout(timer); throw e; }
+  } catch(e) { throw e; }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -796,36 +794,26 @@ async function callLLMStream({
     if (provider === 'anthropic') {
       const ant = _getAnthropic();
       if (!ant) throw new AIError('Anthropic 키 없음', { code: 'NO_API_KEY', provider: 'anthropic' });
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), effectiveTimeout);
       const opts = { model: resolvedModel, messages, max_tokens: maxTokens, temperature, stream: true };
       if (system) opts.system = system;
-      try {
-        const stream = await ant.messages.stream(opts, { signal: ac.signal });
-        for await (const chunk of stream) {
-          if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-            fullContent += chunk.delta.text; onChunk(chunk.delta.text);
-          }
+      const stream = await ant.messages.stream(opts);
+      for await (const chunk of stream) {
+        if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+          fullContent += chunk.delta.text; onChunk(chunk.delta.text);
         }
-        clearTimeout(timer);
-      } catch(e) { clearTimeout(timer); throw e; }
+      }
     } else {
       const client = _getClient(provider) || _getClient('openai');
       if (!client) throw new AIError(`${provider} 클라이언트 없음`, { code: 'NO_API_KEY', provider });
       const msgs = system ? [{ role: 'system', content: system }, ...messages] : messages;
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), effectiveTimeout);
-      try {
-        const stream = await client.chat.completions.create(
-          { model: resolvedModel, messages: msgs, max_tokens: maxTokens, temperature, stream: true },
-          { signal: ac.signal }
-        );
-        for await (const chunk of stream) {
-          const text = chunk.choices[0]?.delta?.content || '';
-          if (text) { fullContent += text; onChunk(text); }
-        }
-        clearTimeout(timer);
-      } catch(e) { clearTimeout(timer); throw e; }
+      const stream = await client.chat.completions.create(
+        { model: resolvedModel, messages: msgs, max_tokens: maxTokens, temperature, stream: true },
+        { timeout: effectiveTimeout }
+      );
+      for await (const chunk of stream) {
+        const text = chunk.choices[0]?.delta?.content || '';
+        if (text) { fullContent += text; onChunk(text); }
+      }
     }
 
     const ms = Date.now() - start;

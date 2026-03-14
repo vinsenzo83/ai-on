@@ -29,6 +29,7 @@
     "openai": "^4.28.0",
     "pg": "^8.20.0",
     "pptxgenjs": "^4.0.1",
+    "puppeteer-core": "^24.39.1",
     "rate-limiter-flexible": "^9.1.1",
     "socket.io": "^4.7.4",
     "uuid": "^9.0.0",
